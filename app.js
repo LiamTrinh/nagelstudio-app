@@ -7,20 +7,20 @@ const $ = id => document.getElementById(id);
 // https://DEINNAME.github.io/tt-nagelstudio/?studio=freund-test
 // Neue Studios kannst du hier ergänzen oder verlängern.
 const STUDIOS = {
-  "freund-test": {
-    name: "Freund Teststudio",
-    type: "trial",
-    validUntil: "2026-07-12"
-  },
-  "maria-nails": {
-    name: "Maria Nails",
-    type: "trial",
-    validUntil: "2026-07-12"
-  },
-  "anna-beauty": {
-    name: "Anna Beauty",
+  "vollversion": {
+    name: "Vollversion",
     type: "full",
     validUntil: null
+  },
+  "test-nails": {
+    name: "Test Nails",
+    type: "trial",
+    validUntil: "2026-06-12"
+  },
+  "beauty-world": {
+    name: "Beauty World",
+    type: "trial",
+    validUntil: "2026-07-31"
   }
 };
 
