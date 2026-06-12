@@ -14,8 +14,8 @@ const STUDIOS = {
   },
   "kawaii-nails": {
     name: "Kawaii Nails",
-    type: "trial",
-    validUntil: "2026-07-31"
+    type: "full",
+    validUntil: null
   },
   "beauty-world": {
     name: "Beauty World",
