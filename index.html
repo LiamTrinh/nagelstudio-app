@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7d7e6">
+  <title>Nagelstudio Terminplaner</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="logo-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <section id="setupScreen" class="screen">
+    <div class="setup-card">
+      <img class="setup-logo" src="logo-192.png" alt="Logo">
+      <h1 data-i18n="initialSetup">Ersteinrichtung</h1>
+      <p data-i18n="setupHint">Die App läuft lokal auf diesem Gerät. Cloud-Backup nutzt aktuell Export oder Teilen-Menü.</p>
+      <label><span data-i18n="studioName">Studio-Name</span>
+        <input id="studioNameInput" placeholder="z. B. Beauty Nails">
+      </label>
+      <label><span data-i18n="studioPhone">Telefonnummer vom Studio</span>
+        <input id="studioPhoneInput" placeholder="z. B. 0123 456789">
+      </label>
+      <label><span data-i18n="studioAddress">Adresse vom Studio</span>
+        <input id="studioAddressInput" placeholder="Straße, PLZ Ort">
+      </label>
+      <div class="grid-2">
+        <label><span data-i18n="opensAt">Öffnet um</span>
+          <input id="openTimeInput" type="time" value="08:00">
+        </label>
+        <label><span data-i18n="closesAt">Schließt um</span>
+          <input id="closeTimeInput" type="time" value="20:00">
+        </label>
+      </div>
+      <label><span data-i18n="initialEmployees">Erste Mitarbeiter, getrennt mit Komma</span>
+        <textarea id="employeesInput">Anna, Lisa, Sarah, Mia, Emma</textarea>
+      </label>
+      <button id="finishSetupBtn" data-i18n="startApp">App starten</button>
+    </div>
+  </section>
+
+  <section id="mainScreen" class="screen hidden">
+    <header class="topbar">
+      <div class="brand-row">
+        <div class="app-logo"><img src="logo-header.png" alt="Logo"></div>
+        <div class="studio-title-block">
+          <h1 id="studioTitle">Nagelstudio</h1>
+          <p id="studioContactLine"></p>
+        </div>
+        <div class="date-nav">
+          <button id="prevDayBtn" class="nav-btn">‹</button>
+          <input id="currentDateInput" type="date">
+          <button id="nextDayBtn" class="nav-btn">›</button>
+          <button id="todayBtn" class="today-btn" data-i18n="today">Heute</button>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="revenueHeaderButton" class="icon-tab revenue-feature" data-tab="reportTab" title="Umsatzbericht">📊</button>
+        <button id="dashboardCleanupBackupBtn" class="settings-button backup-dashboard-button"><img class="backup-button-icon" src="backup-modern-icon.png" alt="" aria-hidden="true"><span data-i18n="dashboardCleanupBackup">Backup</span></button>
+        <button id="settingsBtn" class="settings-button">⚙️ <span data-i18n="settings">Einstellungen</span></button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <div class="panel appointment-form-panel">
+          <h2 data-i18n="newAppointment">Neuer Termin</h2>
+
+          <div class="appointment-form-block appointment-form-block-customer">
+            <h3 data-i18n="appointmentBlockCustomer">Kundendaten</h3>
+            <label><span data-i18n="customer">Kunde</span>
+              <input id="customerName" list="customersDatalist" placeholder="Vollständiger Name">
+              <datalist id="customersDatalist"></datalist>
+              <div class="suggestion-box" id="customerSuggestions"></div>
+            </label>
+
+            <div class="phone-split-row">
+              <label><span data-i18n="phonePrefix">Vorwahl</span>
+                <input id="customerPhonePrefix" list="mobilePrefixDatalist" inputmode="tel" autocomplete="tel-area-code" placeholder="z. B. 0171">
+                <datalist id="mobilePrefixDatalist">
+                  <option value="0151"></option>
+                  <option value="0152"></option>
+                  <option value="0155"></option>
+                  <option value="0157"></option>
+                  <option value="0159"></option>
+                  <option value="0160"></option>
+                  <option value="0162"></option>
+                  <option value="0163"></option>
+                  <option value="0170"></option>
+                  <option value="0171"></option>
+                  <option value="0172"></option>
+                  <option value="0173"></option>
+                  <option value="0174"></option>
+                  <option value="0175"></option>
+                  <option value="0176"></option>
+                  <option value="0177"></option>
+                  <option value="0178"></option>
+                  <option value="0179"></option>
+                </datalist>
+              </label>
+              <label><span data-i18n="phoneNumber">Nummer</span>
+                <input id="customerPhoneNumber" inputmode="tel" autocomplete="tel-local" placeholder="Telefonnummer">
+              </label>
+            </div>
+          </div>
+
+          <div class="appointment-form-block appointment-form-block-service">
+            <h3 data-i18n="appointmentBlockService">Leistung</h3>
+            <label><span data-i18n="service">Leistung</span>
+              <input id="serviceName" list="servicesDatalist" placeholder="Ersten Buchstaben tippen">
+              <datalist id="servicesDatalist"></datalist>
+            </label>
+            <div class="suggestion-box" id="serviceSuggestions"></div>
+
+            <div class="grid-2">
+              <label><span data-i18n="price">Preis €</span>
+                <input id="price" type="number" min="0" step="0.01" value="0">
+              </label>
+              <label><span data-i18n="duration">Dauer Min</span>
+                <input id="duration" type="number" min="5" step="5" value="60" inputmode="numeric" placeholder="Minuten">
+              </label>
+            </div>
+          </div>
+
+          <div class="appointment-form-block appointment-form-block-time">
+            <h3 data-i18n="appointmentBlockTime">Termin</h3>
+            <label><span data-i18n="appointmentWithEmployee">Termin bei Mitarbeiter</span>
+              <div class="employee-select-any-row">
+                <select id="employeeSelect"></select>
+                <button id="employeeAnyBtn" type="button" class="employee-any-btn" aria-pressed="false">Egal</button>
+              </div>
+            </label>
+
+            <label class="time-field-label"><span data-i18n="time">Uhrzeit</span>
+              <select id="startTime" class="time-select-fixed"></select>
+            </label>
+
+            <label><span data-i18n="note">Notiz</span>
+              <textarea id="note" placeholder="Optional"></textarea>
+            </label>
+          </div>
+
+          <div class="appointment-form-actions">
+            <button id="saveAppointmentBtn" data-i18n="saveAppointment">Termin speichern</button>
+            <button id="clearFormBtn" class="secondary" data-i18n="clearForm">Formular leeren</button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <div class="panel customer-search-panel">
+          <h2 data-i18n="customerSearch">Kundensuche</h2>
+          <input id="customerSearchInput" placeholder="Name, Telefon oder Leistung suchen">
+          <div id="customerSearchResults" class="search-results"></div>
+        </div>
+        <section id="calendarTab" class="tab-panel">
+          <div class="calendar-toolbar">
+            <strong data-i18n="dailySchedule">Tagesplan</strong>
+            <span id="appointmentCount"></span>
+          </div>
+          <div class="calendar" id="calendar"></div>
+        </section>
+
+        <section id="reportTab" class="tab-panel hidden revenue-feature">
+          <div class="report-header compact-report-header">
+            <h2 data-i18n="revenueReport">Umsatzbericht</h2>
+            <div class="report-mode-tabs" role="group" aria-label="Umsatzbericht Zeitraum">
+              <button id="reportModeDay" type="button" class="report-mode active" data-report-mode="day">Tag</button>
+              <button id="reportModeWeek" type="button" class="report-mode" data-report-mode="week">Woche</button>
+              <button id="reportModeMonth" type="button" class="report-mode" data-report-mode="month">Monat</button>
+            </div>
+            <label class="report-date-label">Datum
+              <input id="reportDate" type="date">
+            </label>
+            <button id="refreshReportBtn" data-i18n="refreshReport">Bericht aktualisieren</button>
+          </div>
+
+          <input id="reportFrom" type="date" class="hidden">
+          <input id="reportTo" type="date" class="hidden">
+
+          <div class="stat-grid compact-stat-grid">
+            <div class="stat-card"><span>Zeitraum</span><strong id="reportRangeLabel">-</strong></div>
+            <div class="stat-card"><span>Tageseinnahme / Gesamt</span><strong id="revenueRange">0,00 €</strong></div>
+            <div class="stat-card"><span>Termine</span><strong id="appointmentsRange">0</strong></div>
+            <div class="stat-card"><span>Mitarbeiter</span><strong id="employeeRevenueCount">0</strong></div>
+          </div>
+          <strong id="revenueToday" class="hidden">0,00 €</strong>
+          <strong id="excludedDaysCount" class="hidden">0 Tage</strong>
+
+          <div class="panel inner compact-revenue-report">
+            <h3>Tagesumsatz nach Mitarbeiter</h3>
+            <p class="hint">Kompakte Übersicht mit Kundenterminen, Leistung und Preis. Der Bericht kann nach Tag, Woche oder Monat angezeigt werden.</p>
+            <div id="dailyReportList" class="daily-list revenue-summary-list"></div>
+          </div>
+
+          <div id="excludedDaysList" class="hidden"></div>
+        </section>
+
+        
+      </section>
+    </main>
+  </section>
+
+  <dialog id="settingsDialog" class="settings-dialog">
+    <div class="settings-dialog-header">
+      <h2 data-i18n="settings">Einstellungen</h2>
+      <div class="settings-tabs" role="tablist" aria-label="Einstellungen Bereiche">
+        <button type="button" class="settings-tab active" data-settings-tab="settingsGeneralTab" data-i18n="settings">Einstellungen</button>
+        <button type="button" class="settings-tab" data-settings-tab="settingsBackupTab" data-i18n="backup">Backup</button>
+        <button type="button" class="settings-tab" data-settings-tab="settingsServicesTab" data-i18n="serviceDatabase">Leistungsdatenbank</button>
+        <button type="button" class="settings-tab" data-settings-tab="settingsCustomersTab" data-i18n="customerFile">Kundendatenbank</button>
+        <button type="button" class="settings-tab" data-settings-tab="settingsWorkTimeTab">Arbeitszeit / Urlaub</button>
+        <button type="button" class="settings-tab" data-settings-tab="settingsSystemTab" data-i18n="systemInfo">System Info</button>
+      </div>
+    </div>
+
+    <div id="settingsGeneralTab" class="settings-tab-panel active">
+      <div class="settings-grid">
+        <div class="settings-section">
+          <h3 data-i18n="settingsStudio">Studio</h3>
+          <label><span data-i18n="language">Sprache</span>
+            <select id="languageSelect">
+              <option value="de">Deutsch</option>
+              <option value="vi">Tiếng Việt</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <label><span data-i18n="studioName">Studio-Name</span>
+            <input id="settingsStudioName">
+          </label>
+          <label><span data-i18n="studioPhone">Telefonnummer vom Studio</span>
+            <input id="settingsStudioPhone">
+          </label>
+          <label><span data-i18n="studioAddress">Adresse vom Studio</span>
+            <input id="settingsStudioAddress">
+          </label>
+          <div class="grid-2">
+            <label><span data-i18n="opensAt">Öffnet um</span>
+              <input id="settingsOpen" type="time">
+            </label>
+            <label><span data-i18n="closesAt">Schließt um</span>
+              <input id="settingsClose" type="time">
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-section device-view-section">
+          <h3 data-i18n="displaySettings">Darstellung / Geräteansicht</h3>
+          <p class="hint" data-i18n="displaySettingsHint">Optimiert die App für iPhone, iPad oder PC. „Automatisch“ erkennt die passende Ansicht selbst.</p>
+          <label><span data-i18n="optimizeForDevice">Darstellung optimieren für</span>
+            <select id="displayDeviceMode">
+              <option value="auto" data-i18n="deviceAuto">Automatisch</option>
+              <option value="iphone" data-i18n="deviceIphone">iPhone</option>
+              <option value="ipad" data-i18n="deviceIpad">iPad</option>
+              <option value="pc" data-i18n="devicePc">PC / Windows</option>
+            </select>
+          </label>
+          <label><span data-i18n="scheduleZoom">Tagesplan-Zoom</span>
+            <select id="scheduleZoom">
+              <option value="small" data-i18n="zoomSmall">Klein</option>
+              <option value="normal" data-i18n="zoomNormal">Normal</option>
+              <option value="large" data-i18n="zoomLarge">Groß</option>
+            </select>
+          </label>
+          <p id="displayModeHint" class="hint">Aktiv: Automatisch</p>
+        </div>
+
+        <div class="settings-section">
+          <h3 data-i18n="employeeDatabase">Mitarbeiter-Datenbank</h3>
+          <p class="hint" data-i18n="employeeHint">Mitarbeiter hier anlegen, verändern oder deaktivieren.</p>
+          <label><span data-i18n="name">Name</span>
+            <input id="settingsEmployeeName" placeholder="Mitarbeitername">
+          </label>
+          <label><span data-i18n="calendarFontColor">Schriftfarbe im Kalender</span>
+            <input id="settingsEmployeeColor" type="color" value="#2d1b25">
+          </label>
+          <button id="saveEmployeeBtn" data-i18n="saveEmployee">Mitarbeiter speichern</button>
+          <button id="cancelEmployeeEditBtn" class="secondary" data-i18n="cancelEdit">Bearbeiten abbrechen</button>
+          <div id="settingsEmployeeList" class="employee-list"></div>
+        </div>
+
+        <div class="settings-section danger-section">
+          <h3 data-i18n="deleteAppointmentsPermanently">Termine endgültig löschen</h3>
+          <p class="hint" data-i18n="deleteAppointmentsHint">Achtung: Diese Funktion löscht Termine endgültig. Es gibt keine Wiederherstellung in der App. Vorher am besten ein Backup exportieren.</p>
+          <label><span data-i18n="selectPeriod">Zeitraum auswählen</span>
+            <select id="deletePeriodType">
+              <option value="day" data-i18n="wholeDay">Ganzer Tag</option>
+              <option value="week" data-i18n="wholeWeek">Ganze Woche</option>
+              <option value="month" data-i18n="wholeMonth">Ganzer Monat</option>
+            </select>
+          </label>
+          <label><span data-i18n="selectDate">Datum auswählen</span>
+            <input id="deleteDayInput" type="date">
+          </label>
+          <p class="hint" id="deletePeriodPreview"></p>
+          <button id="deleteWholeDayBtn" class="danger" data-i18n="deleteAppointmentsPeriod">Termine im gewählten Zeitraum endgültig löschen</button>
+        </div>
+      </div>
+    </div>
+
+
+    <div id="settingsServicesTab" class="settings-tab-panel">
+      <div class="settings-section wide-section">
+        <h3 data-i18n="serviceDatabase">Leistungsdatenbank</h3>
+        <p class="hint" data-i18n="serviceHint">Leistungen mit Preisen und Dauer selbst gestalten und speichern.</p>
+        <label><span data-i18n="serviceName">Name der Leistung</span>
+          <input id="newServiceName" placeholder="z. B. Gelmodellage">
+        </label>
+        <div class="grid-2">
+          <label><span data-i18n="price">Preis €</span>
+            <input id="newServicePrice" type="number" min="0" step="0.01" value="0">
+          </label>
+          <label><span data-i18n="duration">Dauer Min</span>
+            <input id="newServiceDuration" type="number" min="5" step="5" value="60" inputmode="numeric" placeholder="Minuten">
+          </label>
+        </div>
+        <button id="addServiceBtn" data-i18n="saveService">Leistung speichern</button>
+        <div id="serviceList" class="service-list"></div>
+      </div>
+    </div>
+
+    <div id="settingsCustomersTab" class="settings-tab-panel">
+      <div class="settings-section wide-section">
+        <h3 data-i18n="customerFile">Kundendatenbank</h3>
+        <p class="hint" data-i18n="customerHint">Kunden hier anlegen, bearbeiten oder löschen. Beim Eintippen im Terminformular werden Kundendaten vorgeschlagen.</p>
+        <label><span data-i18n="customerName">Kundenname</span>
+          <input id="settingsCustomerName" placeholder="Vollständiger Name">
+        </label>
+        <label><span data-i18n="phone">Telefon</span>
+          <input id="settingsCustomerPhone" placeholder="Telefonnummer">
+        </label>
+        <label><span data-i18n="email">E-Mail</span>
+          <input id="settingsCustomerEmail" placeholder="Optional">
+        </label>
+        <label><span data-i18n="note">Notiz</span>
+          <textarea id="settingsCustomerNote" placeholder="Optional"></textarea>
+        </label>
+        <button id="saveCustomerBtn" data-i18n="saveCustomer">Kunde speichern</button>
+        <button id="cancelCustomerEditBtn" class="secondary" data-i18n="cancelEdit">Bearbeiten abbrechen</button>
+        <div id="settingsCustomerList" class="customer-list"></div>
+      </div>
+    </div>
+
+    <div id="settingsBackupTab" class="settings-tab-panel">
+      <div class="settings-grid">
+        <div class="settings-section backup-section local-backup-section">
+          <h3 data-i18n="localBackup">💾 Lokal Backup</h3>
+          <p class="hint" data-i18n="localBackupHint">Exportiert und importiert lokale JSON-Backups. „Bereinigung + Backup“ löscht alle Termine vor heute und erstellt danach ein Backup. Termine von heute und danach bleiben erhalten.</p>
+          <button id="settingsBackupBtn">💾 <span data-i18n="exportBackup">Backup exportieren</span></button>
+          <label class="import-label"><span data-i18n="importBackup">Backup importieren</span>
+            <input id="settingsImportInput" type="file" accept="application/json,.json">
+          </label>
+          <button id="cleanupPastAndBackupBtn" class="danger">✅ <span data-i18n="cleanupAndBackup">Bereinigung + Backup</span></button>
+          <p class="hint" id="cleanupPreview"></p>
+          <p class="hint" id="localBackupStatus"></p>
+          <div id="lastBackupDownloadArea" class="backup-download-area"></div>
+        </div>
+
+        <div class="settings-section backup-section cloud-backup-section">
+          <h3 data-i18n="cloudBackup">☁️ Cloud Backup</h3>
+          <p class="hint" data-i18n="cloudBackupHint">Aktuell wird eine Backup-Datei erstellt und – wenn möglich – das iPad Teilen/Speichern-Menü geöffnet. APIs für OneDrive, Google Drive und Dropbox bleiben vorbereitet.</p>
+          <label class="toggle-row">
+            <input id="cloudBackupEnabled" type="checkbox">
+            <span data-i18n="enableCloudBackup">Cloud Backup aktivieren</span>
+          </label>
+          <label><span data-i18n="cloudProvider">Cloud-Anbieter</span>
+            <select id="cloudBackupProvider">
+              <option value="onedrive">OneDrive</option>
+              <option value="google">Google Drive</option>
+              <option value="dropbox">Dropbox</option>
+              <option value="icloud">iCloud Drive</option>
+            </select>
+          </label>
+          <button id="cloudBackupNowBtn">☁️ <span data-i18n="cloudBackupNow">Cloud Backup jetzt erstellen</span></button>
+          <label class="toggle-row">
+            <input id="cloudBackupAfterCleanup" type="checkbox">
+            <span data-i18n="autoAfterCleanup">Automatisch nach „Fertig + Backup“</span>
+          </label>
+          <p class="hint" id="cloudBackupStatus"></p>
+        </div>
+      </div>
+    </div>
+
+    <div id="settingsWorkTimeTab" class="settings-tab-panel">
+      <div class="settings-section wide-section worktime-section">
+        <h3>Arbeitszeit / Urlaub</h3>
+        <p class="hint">Alle Mitarbeiter werden hier gelistet. Lege pro Mitarbeiter fest, ob Vollzeit, Aushilfe / Teilzeit, Minijob oder individuell gearbeitet wird. Die freigegebenen Zeiten, Arbeitszeiten nach Wochentagen Montag bis Samstag, Urlaubszeiträume und einzelne Urlaubstage werden im Terminplaner berücksichtigt.</p>
+        <div id="settingsWorkTimeList" class="worktime-list"></div>
+      </div>
+    </div>
+
+    <div id="settingsSystemTab" class="settings-tab-panel">
+      <div class="settings-grid system-info-grid">
+        <div class="settings-section wide-section">
+          <h3 data-i18n="systemInfo">System Info</h3>
+          <p class="hint"><strong>Version:</strong> 4.02</p>
+          <div id="studioLicenseInfo" class="studio-license-info"></div>
+          <p class="hint"><strong>Hersteller / Entwickler:</strong> Liam Trinh</p>
+          <p class="hint"><strong>Copyright:</strong> <button id="hiddenRevenueOpenBtn" type="button" class="hidden-revenue-trigger" title="">Copyright ©</button> 2026 Liam Trinh 鄭慶廉</p>
+        </div>
+        <div class="settings-section system-info-logo-section" aria-label="LT Lotus Logo">
+          <img src="lotus-lt-system-logo.png" alt="LT Lotus Logo" class="system-info-logo">
+        </div>
+      </div>
+    </div>
+
+
+    <menu>
+      <button id="closeSettingsBtn" class="secondary" data-i18n="close">Schließen</button>
+      <button id="saveSettingsBtn" data-i18n="saveStudio">Studio speichern</button>
+    </menu>
+  </dialog>
+
+
+
+  <dialog id="hiddenRevenueDialog" class="settings-dialog hidden-revenue-dialog">
+    <div class="settings-dialog-header">
+      <h2 data-i18n="revenueFeature">Umsatzfunktion</h2>
+    </div>
+    <div class="settings-section wide-section">
+      <h3 data-i18n="revenueFeature">Umsatzfunktion</h3>
+      <label class="toggle-row">
+        <input id="toggleRevenueFeature" type="checkbox">
+        <span data-i18n="enableRevenueArea">Umsatzbereich aktivieren</span>
+      </label>
+      <p class="hint" data-i18n="revenueVisibilityHint">Wenn deaktiviert, werden Umsatzbericht, Umsatzbutton und Umsatzfunktionen ausgeblendet.</p>
+    </div>
+
+    <div class="settings-section wide-section revenue-admin-section">
+      <h3>Umsatz bearbeiten</h3>
+      <p class="hint compact-hint">Tag auswählen, Tagesumsatz prüfen und Termine direkt je Mitarbeiter nachbearbeiten.</p>
+      <div class="grid-2">
+        <label>Tag auswählen
+          <input id="revenueEditDate" type="date">
+        </label>
+        <label>Tagesumsatz
+          <input id="revenueEditTotal" type="text" readonly>
+        </label>
+      </div>
+      <div id="revenueEditDayStatus" class="hint"></div>
+      <div class="revenue-admin-actions">
+        <button id="revenueIncludeDayBtn" type="button" class="secondary">Tag wieder zum Umsatz zählen</button>
+        <button id="revenueExcludeDayBtn" type="button" class="danger">Tag aus Umsatz nehmen</button>
+      </div>
+
+      <h4>Termine nach Mitarbeiter</h4>
+      <div id="revenueEditAppointments" class="daily-list revenue-employee-list"></div>
+
+      <h4>Manuelle Umsatzposition hinzufügen</h4>
+      <div class="grid-2">
+        <label>Bezeichnung
+          <input id="manualRevenueTitle" type="text" placeholder="z. B. Trinkgeld, Verkauf, Korrektur">
+        </label>
+        <label>Betrag
+          <input id="manualRevenueAmount" type="number" step="0.01" placeholder="0.00">
+        </label>
+      </div>
+      <label>Notiz
+        <textarea id="manualRevenueNote" placeholder="Optional"></textarea>
+      </label>
+      <button id="addManualRevenueBtn" type="button">Manuelle Position speichern</button>
+      <div id="manualRevenueList" class="daily-list manual-revenue-list"></div>
+    </div>
+    <menu>
+      <button id="closeHiddenRevenueBtn" class="secondary" data-i18n="close">Schließen</button>
+    </menu>
+  </dialog>
+
+  <dialog id="appointmentDialog">
+    <h2 data-i18n="appointment">Termin</h2>
+    <div id="appointmentDetails"></div>
+
+    <menu>
+      <button id="editAppointmentBtn" class="secondary" data-i18n="edit">Bearbeiten</button>
+      <button id="completeAppointmentBtn" class="success" data-i18n="markDonePaid">Als erledigt / bezahlt</button>
+      <button id="noShowAppointmentBtn" class="secondary" data-i18n="markNoShow">Nicht erschienen</button>
+      <button id="deleteAppointmentBtn" class="danger" data-i18n="delete">Löschen</button>
+      <button id="closeAppointmentBtn" data-i18n="close">Schließen</button>
+    </menu>
+  </dialog>
+
+<script src="app.js"></script>
+</body>
+</html>

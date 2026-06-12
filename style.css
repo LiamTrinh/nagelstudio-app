@@ -1,0 +1,2008 @@
+:root{
+  --bg:#fff7fb;
+  --card:#fff;
+  --line:#ead6e0;
+  --text:#2d1b25;
+  --muted:#7d6570;
+  --accent:#d94f93;
+  --accent-soft:#f7d7e6;
+  --danger:#c62828;
+  --employee-col:190px;
+  --time-col:200px;
+  --row-h:96px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text);background:linear-gradient(135deg,#fff7fb,#f8edf4)}
+button,input,select,textarea{font:inherit;border-radius:14px}
+button{border:0;background:var(--accent);color:#fff;padding:12px 16px;font-weight:800;cursor:pointer}
+button.secondary{background:#eee;color:#333}
+button.danger{background:var(--danger)}
+button:disabled{background:#ccc}
+label{display:block;font-weight:800;margin:12px 0 6px}
+input,select,textarea{width:100%;border:1px solid var(--line);padding:12px;background:#fff}
+textarea{min-height:70px;resize:vertical}
+.screen{min-height:100vh}.hidden{display:none!important}
+.setup-card{max-width:720px;margin:6vh auto;background:var(--card);border:1px solid var(--line);border-radius:28px;padding:32px;box-shadow:0 16px 50px rgba(45,27,37,.10)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.topbar{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:14px 18px;background:rgba(255,247,251,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.brand-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brand-row h1{margin:0;font-size:25px}
+.top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto}
+.top-actions input{width:160px}
+.header-tab{background:#eee;color:#333}
+.header-tab.active{background:var(--accent);color:#fff}
+.layout{display:grid;grid-template-columns:350px 1fr;gap:16px;padding:16px}
+.sidebar{display:flex;flex-direction:column;gap:16px}
+.panel,.workspace,.tab-panel{background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:0 8px 30px rgba(45,27,37,.06)}
+.panel{padding:18px}.panel h2,.panel h3{margin-top:0}.panel.inner{margin:16px;padding:18px}
+.workspace{overflow:hidden;min-width:0}
+.calendar-toolbar,.report-header{display:flex;gap:12px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.report-header h2{margin:0;margin-right:auto}.report-range{width:360px}
+.calendar{overflow:auto;max-height:calc(100vh - 160px);-webkit-overflow-scrolling:touch}
+.grid{display:grid;grid-template-columns:var(--employee-col) repeat(var(--slots), var(--time-col));min-width:max-content}
+.corner,.time-header,.employee-cell,.slot{border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.corner{position:sticky;left:0;top:0;z-index:8;background:#fff;height:56px;display:flex;align-items:center;padding:0 14px;font-weight:900}
+.time-header{position:sticky;top:0;z-index:6;background:#fff;height:56px;display:flex;align-items:center;justify-content:center;font-weight:900}
+.employee-cell{position:sticky;left:0;z-index:5;background:#fff;height:var(--row-h);display:flex;align-items:center;padding:0 14px;font-weight:900}
+.slot{height:var(--row-h);padding:6px;background:#fff;cursor:pointer}
+.slot:hover{background:#fff1f7}
+.appointment{height:100%;min-height:80px;border-radius:16px;padding:8px 10px;color:#fff;font-size:14px;line-height:1.2;overflow:visible;white-space:normal;word-break:break-word;box-shadow:0 6px 14px rgba(0,0,0,.12)}
+.appointment .name{font-weight:900}.appointment .meta{opacity:.96}
+.status-Gebucht{background:#d32f2f;color:#fff}.status-Erledigt{background:#137333}.status-Nicht-erschienen{background:#8a8f98}
+.search-results,.service-list,.daily-list,.suggestion-box,.employee-list{margin-top:10px;display:flex;flex-direction:column;gap:8px;max-height:280px;overflow:auto}
+.search-result,.suggestion{border:1px solid var(--line);background:#fff;border-radius:16px;padding:10px;cursor:pointer}
+.search-result:hover,.suggestion:hover{background:#fff1f7}.search-result small,.service-item small,.daily-item small,.suggestion small,.hint,.employee-item small{color:var(--muted)}
+.suggestion-box:empty{display:none}
+.service-item,.daily-item,.employee-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:16px;background:#fff}
+.service-item button,.daily-item button,.employee-item button{padding:8px 10px;background:#eee;color:#333}.daily-item button.danger{background:var(--danger);color:#fff}
+.stat-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px;padding:16px}
+.stat-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px}.stat-card span{display:block;color:var(--muted);font-weight:800}.stat-card strong{font-size:26px}
+.import-label{display:inline-block;margin:12px 0 0;border-radius:14px;padding:12px 16px;background:#eee;cursor:pointer}.import-label input{display:none}
+dialog{border:0;border-radius:24px;padding:24px;width:min(1100px,94vw);max-height:90vh;overflow:auto;box-shadow:0 24px 80px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(0,0,0,.25)}
+menu{display:flex;justify-content:flex-end;gap:10px;padding:0;position:sticky;bottom:0;background:#fff}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.settings-section{border:1px solid var(--line);border-radius:20px;padding:16px;background:#fff}
+.cloud-box{background:#f7f7f7;border:1px dashed #bbb;border-radius:16px;padding:14px;margin-top:14px}
+@media(max-width:950px){.layout{grid-template-columns:1fr}.sidebar{order:2}.workspace{order:1}:root{--employee-col:160px;--time-col:180px}.stat-grid{grid-template-columns:1fr 1fr}.settings-grid{grid-template-columns:1fr}}
+
+
+/* Version 4 Header nach Wunsch */
+.topbar{
+  min-height:96px;
+  padding:18px 26px;
+  background:rgba(255,250,253,.96);
+  border:1px solid #ead6e0;
+  border-left:0;
+  border-right:0;
+}
+.brand-row{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  flex:1;
+}
+.app-logo{
+  width:56px;
+  height:56px;
+  border-radius:18px;
+  background:linear-gradient(135deg,#d94f93,#c23b84);
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  box-shadow:0 8px 18px rgba(217,79,147,.22);
+}
+.brand-row h1{
+  margin:0;
+  font-size:24px;
+  white-space:nowrap;
+}
+.date-nav{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-left:28px;
+}
+.date-nav input[type="date"]{
+  width:180px;
+  height:58px;
+  border-radius:18px;
+  border:1px solid var(--line);
+  font-size:18px;
+  text-align:center;
+  padding:0 16px;
+  background:#fff;
+}
+.nav-btn{
+  width:58px;
+  height:58px;
+  border-radius:18px;
+  padding:0;
+  font-size:30px;
+  line-height:1;
+}
+.today-btn{
+  height:58px;
+  border-radius:18px;
+  background:#fff;
+  border:1px solid var(--line);
+  color:var(--text);
+  padding:0 24px;
+}
+.top-actions{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  margin-left:auto;
+}
+.icon-tab{
+  width:48px;
+  height:48px;
+  border-radius:14px;
+  background:transparent;
+  color:var(--text);
+  padding:0;
+  font-size:24px;
+}
+.icon-tab.active{
+  background:var(--accent-soft);
+  color:var(--accent);
+}
+.settings-button{
+  height:56px;
+  border-radius:18px;
+  background:#fff;
+  color:var(--text);
+  border:1px solid var(--line);
+  padding:0 22px;
+}
+@media(max-width:950px){
+  .topbar{align-items:flex-start;flex-direction:column}
+  .brand-row{width:100%;flex-wrap:wrap}
+  .date-nav{margin-left:0}
+  .top-actions{width:100%;justify-content:flex-end}
+}
+
+.customer-list{
+  margin-top:10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  max-height:280px;
+  overflow:auto;
+}
+.customer-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding:10px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:#fff;
+}
+.customer-item small{color:var(--muted)}
+.customer-item button{padding:8px 10px;background:#eee;color:#333}
+.customer-item button.danger{background:var(--danger);color:#fff}
+
+.studio-title-block{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.studio-title-block h1{
+  margin:0;
+}
+#studioContactLine{
+  margin:0;
+  font-size:13px;
+  color:var(--muted);
+  font-weight:600;
+  max-width:420px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.danger-section{
+  border-color:#f1b8b8;
+  background:#fffafa;
+}
+@media(max-width:950px){
+  #studioContactLine{white-space:normal}
+}
+
+.employee-cell .employee-name-colored{
+  font-weight:900;
+}
+.calendar-grid-wrap{
+  position:relative;
+  display:inline-block;
+  min-width:max-content;
+}
+.current-time-line{
+  position:absolute;
+  top:56px;
+  bottom:0;
+  width:4px;
+  background:#ffd400;
+  z-index:7;
+  border-radius:4px;
+  box-shadow:0 0 0 2px rgba(255,212,0,.25), 0 0 12px rgba(255,212,0,.75);
+  pointer-events:none;
+}
+.current-time-label{
+  position:absolute;
+  top:8px;
+  transform:translateX(-50%);
+  background:#ffd400;
+  color:#2d1b25;
+  font-size:12px;
+  font-weight:900;
+  padding:4px 8px;
+  border-radius:999px;
+  z-index:9;
+  pointer-events:none;
+  white-space:nowrap;
+}
+
+.app-logo{
+  width:56px;
+  height:56px;
+  border-radius:18px;
+  overflow:hidden;
+  background:#f6e8ec;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 8px 18px rgba(217,79,147,.18);
+  flex-shrink:0;
+}
+.app-logo img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.setup-logo{
+  width:112px;
+  height:112px;
+  border-radius:28px;
+  object-fit:cover;
+  display:block;
+  margin:0 auto 18px auto;
+  box-shadow:0 12px 28px rgba(217,79,147,.18);
+}
+
+.toggle-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.toggle-row input[type="checkbox"]{
+  width:24px;
+  height:24px;
+}
+.revenue-feature.is-hidden{
+  display:none !important;
+}
+
+/* Umsatzbutton Fix */
+.revenue-feature.is-hidden{display:none!important;}
+
+#cleanupPreview,#cloudBackupStatus{
+  margin-top:10px;
+}
+
+.backup-download-area{
+  margin-top:12px;
+}
+.backup-download-area a{
+  display:inline-block;
+  background:var(--accent);
+  color:white;
+  padding:12px 16px;
+  border-radius:14px;
+  text-decoration:none;
+  font-weight:800;
+}
+.backup-download-area small{
+  display:block;
+  margin-top:8px;
+  color:var(--muted);
+}
+
+button.success{
+  background:#25a55f !important;
+  color:#fff !important;
+}
+
+.appointment{
+  touch-action: none;
+  user-select:none;
+}
+.move-mode .slot[data-employee]{
+  outline:2px dashed #ffd400;
+  outline-offset:-6px;
+}
+.move-mode .appointment{
+  opacity:.75;
+}
+.drop-target{
+  background:#fff7c2 !important;
+}
+
+.copyright-box{
+  margin-top:18px;
+  padding:14px;
+  text-align:center;
+  color:var(--muted);
+  font-weight:800;
+  border-top:1px solid var(--line);
+}
+
+/* Version 41: kompaktere, gleichmäßige Uhrzeit-Spalten für iPad */
+:root{
+  --employee-col:170px;
+  --time-col:160px;
+}
+.time-header{
+  min-width:var(--time-col);
+  height:52px;
+}
+.slot{
+  min-width:var(--time-col);
+}
+.corner{
+  height:52px;
+}
+.calendar{
+  overscroll-behavior:contain;
+}
+.appointment{
+  cursor:grab;
+}
+.appointment.dragging-touch{
+  position:fixed;
+  z-index:9999;
+  pointer-events:none;
+  opacity:.92;
+  transform:scale(1.03);
+  width:220px;
+  height:auto;
+  min-height:72px;
+}
+.slot.drop-target{
+  background:#fff7c2 !important;
+  outline:3px solid #ffd400;
+  outline-offset:-6px;
+}
+body.dragging-appointment{
+  user-select:none;
+  -webkit-user-select:none;
+}
+@media(max-width:950px){
+  :root{
+    --employee-col:160px;
+    --time-col:150px;
+  }
+}
+
+
+/* Version 42: Formularfelder links dürfen nicht aus "Neuer Termin" herausragen */
+.sidebar .panel input,
+.sidebar .panel select,
+.sidebar .panel textarea{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  box-sizing:border-box !important;
+}
+
+#startTime{
+  display:block;
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  box-sizing:border-box !important;
+  appearance:auto;
+  -webkit-appearance:none;
+}
+
+.sidebar .panel label{
+  width:100%;
+  max-width:100%;
+  overflow:hidden;
+}
+
+.sidebar .panel{
+  overflow:hidden;
+}
+
+
+/* Version 43: Uhrzeit ist jetzt eine Selectbox, iPad-Safari kann sie nicht mehr überbreit rendern */
+#startTime{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  box-sizing:border-box !important;
+  display:block !important;
+}
+
+.sidebar,
+.sidebar .panel,
+.sidebar .panel label{
+  min-width:0 !important;
+  max-width:100% !important;
+}
+
+.sidebar .panel input,
+.sidebar .panel select,
+.sidebar .panel textarea{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  box-sizing:border-box !important;
+}
+
+
+/* Version 44: endgültiger iPad-Fix für das Uhrzeit-Feld im Formular */
+.sidebar{
+  min-width:0 !important;
+}
+.sidebar .panel{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  overflow:hidden !important;
+  box-sizing:border-box !important;
+}
+.sidebar .panel *{
+  box-sizing:border-box !important;
+}
+.time-field-label,
+.time-field-label select,
+#startTime.time-select-fixed,
+#startTime{
+  display:block !important;
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  inline-size:100% !important;
+  max-inline-size:100% !important;
+  box-sizing:border-box !important;
+}
+#startTime.time-select-fixed,
+#startTime{
+  height:58px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fff;
+  padding:12px;
+  font-size:inherit;
+  -webkit-appearance:menulist !important;
+  appearance:menulist !important;
+}
+@supports (-webkit-touch-callout: none){
+  #startTime.time-select-fixed,
+  #startTime{
+    width:calc(100% - 2px) !important;
+    max-width:calc(100% - 2px) !important;
+    transform:translateZ(0);
+  }
+}
+
+/* Version 45 Cloud Backup */
+
+
+#cloudBackupNowBtn{margin-top:12px}
+
+
+/* Version 48: robuste iPad-Formularbreite und klare Backup-Kästen */
+.sidebar .grid-2, .settings-section .grid-2{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+}
+.sidebar label, .sidebar input, .sidebar select, .sidebar textarea,
+.settings-section label, .settings-section input, .settings-section select, .settings-section textarea{
+  min-width:0;
+  max-width:100%;
+}
+.sidebar select, .sidebar input, .sidebar textarea{
+  display:block;
+  inline-size:100%;
+}
+#startTime{
+  flex:0 1 auto;
+  contain:layout paint;
+}
+.backup-section{
+  border-color:#ead6e0;
+  background:#fffdfd;
+}
+#cleanupPastAndBackupBtn,#cloudBackupNowBtn{
+  width:100%;
+  margin-top:12px;
+}
+@media(max-width:600px){
+  .sidebar .grid-2, .settings-section .grid-2{grid-template-columns:1fr;}
+}
+
+/* Version 49: farbliche Mitarbeiter-Zeilen im Tagesplan */
+.employee-row-colored{
+  background:var(--employee-row-bg,#fff) !important;
+}
+.employee-cell.employee-row-colored{
+  box-shadow:inset -1px 0 0 var(--line);
+  gap:10px;
+}
+.employee-color-bar{
+  display:none;
+}
+.employee-name-colored{
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.slot.employee-row-colored:hover{
+  filter:brightness(0.985);
+}
+.employee-list-name{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.employee-color-dot{
+  width:18px;
+  height:18px;
+  border-radius:999px;
+  background:var(--employee-accent,#d94f93);
+  box-shadow:0 0 0 5px var(--employee-row-bg,#fff0f7);
+  flex:0 0 auto;
+}
+
+/* Version 57: Darstellung / Geräteansicht + Tagesplan-Zoom */
+.device-view-section{
+  border-color:#ead6e0;
+  background:linear-gradient(180deg,#fff,#fff8fc);
+}
+body.schedule-zoom-small{
+  --employee-col:140px;
+  --time-col:120px;
+  --row-h:76px;
+}
+body.schedule-zoom-normal{
+  --employee-col:170px;
+  --time-col:160px;
+  --row-h:96px;
+}
+body.schedule-zoom-large{
+  --employee-col:190px;
+  --time-col:190px;
+  --row-h:116px;
+}
+body.app-device-iphone{
+  --employee-col:118px;
+  --time-col:122px;
+  --row-h:84px;
+}
+body.app-device-iphone.schedule-zoom-small{
+  --employee-col:104px;
+  --time-col:104px;
+  --row-h:72px;
+}
+body.app-device-iphone.schedule-zoom-large{
+  --employee-col:132px;
+  --time-col:142px;
+  --row-h:104px;
+}
+body.app-device-ipad.schedule-zoom-small{
+  --employee-col:150px;
+  --time-col:135px;
+  --row-h:84px;
+}
+body.app-device-ipad.schedule-zoom-normal{
+  --employee-col:165px;
+  --time-col:150px;
+  --row-h:96px;
+}
+body.app-device-ipad.schedule-zoom-large{
+  --employee-col:185px;
+  --time-col:180px;
+  --row-h:116px;
+}
+body.app-device-pc.schedule-zoom-small{
+  --employee-col:160px;
+  --time-col:140px;
+  --row-h:86px;
+}
+body.app-device-pc.schedule-zoom-normal{
+  --employee-col:170px;
+  --time-col:160px;
+  --row-h:96px;
+}
+body.app-device-pc.schedule-zoom-large{
+  --employee-col:200px;
+  --time-col:200px;
+  --row-h:120px;
+}
+body.app-device-iphone .topbar{
+  position:relative;
+  padding:12px;
+  min-height:0;
+}
+body.app-device-iphone .brand-row{
+  gap:10px;
+}
+body.app-device-iphone .brand-row h1{
+  font-size:20px;
+}
+body.app-device-iphone .app-logo{
+  width:46px;
+  height:46px;
+  border-radius:14px;
+}
+body.app-device-iphone .date-nav{
+  width:100%;
+  margin-left:0;
+  gap:8px;
+}
+body.app-device-iphone .date-nav input[type="date"]{
+  flex:1;
+  min-width:0;
+  width:auto;
+  height:50px;
+  font-size:16px;
+}
+body.app-device-iphone .nav-btn,
+body.app-device-iphone .today-btn{
+  height:50px;
+  border-radius:16px;
+}
+body.app-device-iphone .nav-btn{
+  width:50px;
+}
+body.app-device-iphone .today-btn{
+  padding:0 14px;
+}
+body.app-device-iphone .top-actions{
+  width:100%;
+  gap:8px;
+  justify-content:space-between;
+}
+body.app-device-iphone .settings-button{
+  flex:1;
+  height:50px;
+  padding:0 10px;
+}
+body.app-device-iphone .layout{
+  display:flex;
+  flex-direction:column;
+  padding:10px;
+  gap:12px;
+}
+body.app-device-iphone .sidebar{
+  order:1;
+}
+body.app-device-iphone .workspace{
+  order:2;
+}
+body.app-device-iphone .panel{
+  padding:14px;
+  border-radius:20px;
+}
+body.app-device-iphone .calendar{
+  max-height:none;
+  min-height:360px;
+}
+body.app-device-iphone .appointment{
+  min-height:62px;
+  padding:7px 8px;
+  font-size:13px;
+}
+body.app-device-iphone dialog{
+  width:96vw;
+  padding:18px;
+}
+body.app-device-iphone .settings-grid{
+  grid-template-columns:1fr;
+}
+body.app-device-ipad .layout{
+  grid-template-columns:minmax(300px,350px) minmax(0,1fr);
+  gap:14px;
+}
+body.app-device-ipad .sidebar{
+  order:0;
+}
+body.app-device-ipad .workspace{
+  order:0;
+}
+body.app-device-ipad input,
+body.app-device-ipad select,
+body.app-device-ipad textarea,
+body.app-device-ipad button{
+  min-height:46px;
+}
+body.app-device-ipad .appointment{
+  min-height:74px;
+}
+body.app-device-pc .calendar{
+  max-height:calc(100vh - 150px);
+}
+@media(max-width:700px){
+  body.app-device-ipad .layout,
+  body.app-device-pc .layout{
+    grid-template-columns:1fr;
+  }
+  body.app-device-ipad .sidebar,
+  body.app-device-pc .sidebar{order:2;}
+  body.app-device-ipad .workspace,
+  body.app-device-pc .workspace{order:1;}
+}
+
+/* Version 59: Neuer Termin in drei klare Blöcke aufgeteilt */
+.appointment-form-panel{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.appointment-form-panel h2{
+  margin-bottom:4px;
+}
+.appointment-form-block{
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:14px;
+  background:#fff;
+}
+.appointment-form-block h3{
+  margin:0 0 8px 0;
+  font-size:15px;
+}
+.appointment-form-block label:first-of-type{
+  margin-top:6px;
+}
+.appointment-form-block-customer{
+  background:linear-gradient(135deg,#fff7fb,#fff);
+}
+.appointment-form-block-service{
+  background:linear-gradient(135deg,#fff9e8,#fff);
+}
+.appointment-form-block-time{
+  background:linear-gradient(135deg,#f3fbff,#fff);
+}
+.appointment-form-actions{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:2px;
+}
+.appointment-form-actions button{
+  width:100%;
+}
+body.app-device-pc .appointment-form-actions,
+body.app-device-ipad .appointment-form-actions{
+  flex-direction:column;
+}
+@media(max-width:600px){
+  .appointment-form-block{padding:12px;}
+}
+
+/* V60: Kundensuche als breite Leiste über dem Tagesplan */
+.workspace{
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  overflow:visible;
+  min-width:0;
+}
+.customer-search-panel{
+  padding:14px 16px;
+  border-radius:22px;
+}
+.customer-search-panel h2{
+  margin:0 0 10px;
+  font-size:20px;
+}
+.customer-search-panel .search-results{
+  max-height:170px;
+}
+
+
+/* V61: Kundensuche breiter und deutlicher darstellen */
+.customer-search-panel .search-results{
+  max-height:220px;
+  gap:10px;
+}
+.customer-search-panel .search-result.customer-search-result{
+  padding:14px 16px;
+  display:grid;
+  grid-template-columns:minmax(220px,1.1fr) minmax(300px,2fr);
+  gap:8px 20px;
+  align-items:center;
+  cursor:pointer;
+}
+.search-result-name{
+  font-size:24px;
+  line-height:1.15;
+  font-weight:950;
+  color:var(--text);
+}
+.search-result-when{
+  font-size:18px;
+  line-height:1.25;
+  font-weight:850;
+  color:var(--text);
+  text-align:left;
+}
+.search-result-details{
+  grid-column:1 / -1;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px 18px;
+  font-size:17px;
+  line-height:1.25;
+  font-weight:750;
+  color:var(--muted);
+}
+.search-result-details span{
+  display:inline-flex;
+  align-items:center;
+  min-height:26px;
+  padding:3px 10px;
+  border-radius:999px;
+  background:#fff7fb;
+  border:1px solid var(--line);
+}
+@media(max-width:700px){
+  .customer-search-panel .search-result.customer-search-result{
+    grid-template-columns:1fr;
+    gap:6px;
+  }
+  .search-result-name{font-size:20px;}
+  .search-result-when{font-size:15px;}
+  .search-result-details{font-size:14px;gap:6px;}
+}
+
+/* V60: iPhone Querformat kompakt, damit Formular + Suche + Tagesplan nebeneinander nutzbar bleiben */
+@media (orientation: landscape) and (max-height: 520px){
+  body.app-device-iphone{
+    font-size:12px;
+  }
+  body.app-device-iphone .topbar{
+    padding:6px 8px;
+    gap:6px;
+  }
+  body.app-device-iphone .brand-row{
+    gap:6px;
+  }
+  body.app-device-iphone .app-logo{
+    width:34px;
+    height:34px;
+    border-radius:10px;
+  }
+  body.app-device-iphone .brand-row h1{
+    font-size:15px;
+    max-width:165px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  body.app-device-iphone .studio-title-block p{
+    display:none;
+  }
+  body.app-device-iphone .date-nav{
+    width:auto;
+    flex:1;
+    min-width:260px;
+    gap:5px;
+  }
+  body.app-device-iphone .date-nav input[type="date"]{
+    height:34px;
+    font-size:12px;
+    border-radius:10px;
+    padding:0 6px;
+  }
+  body.app-device-iphone .nav-btn,
+  body.app-device-iphone .today-btn{
+    height:34px;
+    border-radius:10px;
+    font-size:16px;
+  }
+  body.app-device-iphone .nav-btn{
+    width:34px;
+  }
+  body.app-device-iphone .today-btn{
+    padding:0 8px;
+  }
+  body.app-device-iphone .top-actions{
+    gap:5px;
+    justify-content:flex-end;
+  }
+  body.app-device-iphone .settings-button,
+  body.app-device-iphone .icon-tab{
+    height:34px;
+    min-height:34px;
+    border-radius:10px;
+    padding:0 8px;
+    font-size:12px;
+    flex:0 1 auto;
+  }
+  body.app-device-iphone .layout{
+    display:grid;
+    grid-template-columns:240px minmax(0,1fr);
+    gap:8px;
+    padding:8px;
+    align-items:start;
+  }
+  body.app-device-iphone .sidebar{
+    order:0;
+    max-height:calc(100vh - 58px);
+    overflow:auto;
+    gap:8px;
+    -webkit-overflow-scrolling:touch;
+  }
+  body.app-device-iphone .workspace{
+    order:0;
+    gap:8px;
+    max-height:calc(100vh - 58px);
+    overflow:hidden;
+  }
+  body.app-device-iphone .panel,
+  body.app-device-iphone .tab-panel{
+    border-radius:14px;
+  }
+  body.app-device-iphone .panel{
+    padding:9px;
+  }
+  body.app-device-iphone .appointment-form-panel h2,
+  body.app-device-iphone .customer-search-panel h2{
+    font-size:14px;
+    margin-bottom:6px;
+  }
+  body.app-device-iphone .appointment-form-block{
+    padding:7px;
+    margin-bottom:7px;
+    border-radius:12px;
+  }
+  body.app-device-iphone .appointment-form-block h3{
+    font-size:12px;
+    margin-bottom:4px;
+  }
+  body.app-device-iphone label{
+    margin:5px 0 3px;
+  }
+  body.app-device-iphone input,
+  body.app-device-iphone select,
+  body.app-device-iphone textarea{
+    min-height:32px;
+    padding:6px 8px;
+    border-radius:10px;
+    font-size:12px;
+  }
+  body.app-device-iphone textarea{
+    min-height:42px;
+  }
+  body.app-device-iphone button{
+    min-height:32px;
+    padding:6px 8px;
+    border-radius:10px;
+    font-size:12px;
+  }
+  body.app-device-iphone .appointment-form-actions{
+    gap:6px;
+  }
+  body.app-device-iphone .customer-search-panel{
+    padding:8px;
+  }
+  body.app-device-iphone .customer-search-panel h2{
+    display:none;
+  }
+  body.app-device-iphone .customer-search-panel .search-results{
+    max-height:78px;
+    gap:5px;
+    margin-top:6px;
+  }
+  body.app-device-iphone .search-result,
+  body.app-device-iphone .suggestion{
+    padding:6px;
+    border-radius:10px;
+  }
+  body.app-device-iphone .calendar-toolbar{
+    padding:7px 9px;
+    gap:8px;
+  }
+  body.app-device-iphone .calendar{
+    max-height:calc(100vh - 154px);
+    min-height:0;
+  }
+  body.app-device-iphone.schedule-zoom-small,
+  body.app-device-iphone.schedule-zoom-normal,
+  body.app-device-iphone.schedule-zoom-large{
+    --employee-col:92px;
+    --time-col:92px;
+    --row-h:58px;
+  }
+  body.app-device-iphone .corner,
+  body.app-device-iphone .time-header{
+    height:36px;
+    padding:0 8px;
+    font-size:12px;
+  }
+  body.app-device-iphone .employee-cell{
+    padding:0 8px;
+    font-size:12px;
+  }
+  body.app-device-iphone .slot{
+    padding:4px;
+  }
+  body.app-device-iphone .appointment{
+    min-height:48px;
+    padding:5px 6px;
+    border-radius:10px;
+    font-size:11px;
+  }
+}
+
+/* Version 64: Einstellungen als Reiter-Fenster */
+.settings-dialog-header{
+  position:sticky;
+  top:-24px;
+  z-index:5;
+  background:#fff;
+  padding-bottom:12px;
+  border-bottom:1px solid var(--line);
+  margin-bottom:16px;
+}
+.settings-dialog-header h2{margin:0 0 14px 0;}
+.settings-tabs{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.settings-tab{
+  background:#eee;
+  color:#333;
+  border:1px solid transparent;
+  padding:11px 14px;
+  border-radius:14px;
+}
+.settings-tab.active{
+  background:var(--accent);
+  color:#fff;
+  border-color:var(--accent);
+}
+.settings-tab-panel{display:none;}
+.settings-tab-panel.active{display:block;}
+.settings-section.wide-section{max-width:760px;}
+@media(max-width:700px){
+  .settings-tabs{display:grid;grid-template-columns:1fr 1fr;}
+  .settings-tab{padding:10px 8px;font-size:14px;}
+}
+body.app-device-iphone .settings-dialog-header{top:-18px;}
+
+.hidden-revenue-trigger{
+  appearance:none;
+  border:0;
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  font-weight:inherit;
+  padding:0;
+  margin:0;
+  cursor:default;
+}
+.hidden-revenue-trigger:hover,
+.hidden-revenue-trigger:focus{
+  text-decoration:none;
+  outline:none;
+}
+.hidden-revenue-dialog{
+  max-width:680px;
+}
+
+.revenue-admin-section h4{margin:18px 0 8px;}
+.revenue-admin-actions{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 14px;}
+.revenue-admin-actions .danger{background:var(--danger);color:#fff;}
+.revenue-edit-item{align-items:flex-start;}
+.revenue-edit-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;}
+.revenue-edit-controls input{width:110px;min-width:110px;}
+.revenue-edit-controls select{width:160px;min-width:160px;}
+.manual-revenue-list{margin-top:12px;}
+@media(max-width:700px){
+  .revenue-edit-controls{justify-content:flex-start;width:100%;}
+  .revenue-edit-controls input,.revenue-edit-controls select{width:100%;}
+}
+.hidden-revenue-dialog{max-width:980px;}
+
+/* Version 69: Umsatzfunktion kompakter + Termine nach Mitarbeiter gruppiert */
+.hidden-revenue-dialog .settings-section{padding:16px 18px;}
+.hidden-revenue-dialog h3{margin-bottom:8px;}
+.hidden-revenue-dialog h4{margin:14px 0 6px;}
+.hidden-revenue-dialog .compact-hint{margin-top:0;margin-bottom:12px;}
+.hidden-revenue-dialog label{gap:5px;}
+.hidden-revenue-dialog input,.hidden-revenue-dialog select,.hidden-revenue-dialog textarea{padding:10px 12px;}
+.hidden-revenue-dialog textarea{min-height:58px;}
+.hidden-revenue-dialog button{padding:10px 14px;}
+.revenue-employee-list{display:flex;flex-direction:column;gap:10px;}
+.revenue-employee-group{border:1px solid var(--line);border-radius:16px;background:#fff;padding:8px;}
+.revenue-employee-header{font-weight:900;display:flex;justify-content:space-between;align-items:center;padding:4px 6px 8px;color:#111;}
+.revenue-employee-header span{font-size:13px;color:var(--muted);font-weight:800;}
+.compact-revenue-item{border-radius:12px;padding:8px;margin-top:6px;gap:8px;}
+.revenue-appointment-info{min-width:210px;}
+.revenue-appointment-info strong{display:block;line-height:1.2;}
+.revenue-appointment-info small{display:block;margin-top:3px;line-height:1.2;}
+.revenue-edit-controls{gap:6px;}
+.revenue-edit-controls input{width:82px;min-width:82px;}
+.revenue-edit-controls select{width:145px;min-width:145px;}
+.revenue-edit-controls button{padding:8px 10px;}
+@media (max-width: 720px){
+  .compact-revenue-item{align-items:flex-start;}
+  .revenue-appointment-info{min-width:0;width:100%;}
+  .revenue-edit-controls input,.revenue-edit-controls select{width:100%;min-width:0;}
+}
+
+/* Version 70: kompakter Umsatzbericht nach Tag/Woche/Monat und Mitarbeiter */
+.compact-report-header{align-items:end}
+.report-mode-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.report-mode{background:#eee;color:#333;padding:12px 18px;border-radius:16px}
+.report-mode.active{background:var(--pink);color:#fff;border:2px solid #222}
+.report-date-label{min-width:170px;font-weight:900;color:var(--text)}
+.report-date-label input{margin-top:6px}
+.compact-stat-grid .stat-card{padding:12px 14px}
+.compact-stat-grid .stat-card strong{font-size:22px}
+.compact-revenue-report{padding:16px}
+.revenue-summary-list{display:flex;flex-direction:column;gap:12px}
+.report-day-block{border:1px solid var(--line);border-radius:18px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:10px}
+.report-day-block.is-excluded{opacity:.65;background:#fafafa}
+.report-day-head{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid var(--line);padding-bottom:8px}
+.report-day-total{display:flex;gap:12px;align-items:baseline;color:var(--muted);font-weight:800}.report-day-total strong{font-size:22px;color:var(--text)}
+.report-employee-block{border:1px solid #f1dce7;border-radius:14px;overflow:hidden;background:#fffafd}
+.report-employee-title{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;background:#fff1f7;font-weight:900}
+.report-customer-rows{display:flex;flex-direction:column}
+.report-customer-row{display:grid;grid-template-columns:58px minmax(120px,1.2fr) minmax(120px,1fr) 90px;gap:8px;align-items:center;padding:7px 10px;border-top:1px solid #f5e3ec;font-size:14px}
+.report-customer-row strong{text-align:right}.report-customer-time,.report-customer-service{color:var(--muted)}.report-customer-name{font-weight:900}
+.manual-report-block .report-employee-title{background:#f6f6f6}
+@media(max-width:760px){.report-customer-row{grid-template-columns:46px 1fr 76px}.report-customer-service{grid-column:2/4}.report-customer-row strong{grid-column:3;grid-row:1;text-align:right}.report-day-head{align-items:flex-start;flex-direction:column}.compact-report-header{align-items:stretch}.report-date-label{width:100%}}
+
+/* Version 71: Fix Umsatzbericht-Reiter Tag/Woche/Monat – aktive Schrift immer sichtbar */
+.report-mode,
+.report-mode:focus,
+.report-mode:active{
+  color:#333 !important;
+}
+.report-mode.active,
+.report-mode.active:focus,
+.report-mode.active:active{
+  background:#fff4fa !important;
+  color:#241922 !important;
+  border:2px solid #222 !important;
+  box-shadow:inset 0 0 0 2px rgba(216,74,150,.18);
+}
+.report-mode.active:hover{
+  color:#241922 !important;
+}
+
+
+/* Version 76: Lotus-Logo neben System Info */
+.system-info-grid{
+  grid-template-columns:minmax(320px, 1.2fr) minmax(220px, .8fr);
+  align-items:stretch;
+}
+.system-info-logo-section{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:180px;
+  background:linear-gradient(135deg,#fff8fb,#fdeaf2);
+}
+.system-info-logo{
+  width:min(240px, 100%);
+  height:auto;
+  display:block;
+  border-radius:28px;
+  filter:drop-shadow(0 10px 22px rgba(134,82,12,.18));
+}
+@media(max-width:950px){
+  .system-info-grid{grid-template-columns:1fr;}
+  .system-info-logo{width:min(220px, 80vw);}
+}
+
+
+/* Version 77: iPhone-Optimierung für Hoch- und besonders Querformat */
+body.app-device-iphone{
+  min-height:100svh;
+  padding-left:env(safe-area-inset-left);
+  padding-right:env(safe-area-inset-right);
+  padding-bottom:env(safe-area-inset-bottom);
+  overflow-x:hidden;
+}
+body.app-device-iphone .screen{min-height:100svh;}
+body.app-device-iphone .topbar{
+  padding-left:calc(10px + env(safe-area-inset-left));
+  padding-right:calc(10px + env(safe-area-inset-right));
+}
+body.app-device-iphone .calendar,
+body.app-device-iphone .sidebar,
+body.app-device-iphone dialog{
+  -webkit-overflow-scrolling:touch;
+}
+body.app-device-iphone .settings-dialog{
+  width:min(96vw, 980px);
+  max-height:calc(100svh - 18px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+}
+
+@media (orientation: portrait) and (max-width: 480px){
+  body.app-device-iphone .topbar{min-height:0;padding-top:10px;padding-bottom:10px;gap:8px;}
+  body.app-device-iphone .brand-row{gap:8px;}
+  body.app-device-iphone .app-logo{width:42px;height:42px;border-radius:14px;}
+  body.app-device-iphone .brand-row h1{font-size:18px;max-width:calc(100vw - 74px);overflow:hidden;text-overflow:ellipsis;}
+  body.app-device-iphone .studio-title-block p{font-size:12px;line-height:1.2;}
+  body.app-device-iphone .top-actions{display:grid;grid-template-columns:44px 1fr 1fr;width:100%;}
+  body.app-device-iphone .icon-tab{width:44px;height:46px;min-height:46px;padding:0;}
+  body.app-device-iphone .settings-button{height:46px;min-height:46px;font-size:13px;}
+  body.app-device-iphone .calendar{max-height:calc(100svh - 210px);}
+}
+
+@media (orientation: landscape) and (max-height: 520px){
+  body.app-device-iphone{
+    font-size:11.5px;
+  }
+  body.app-device-iphone .topbar{
+    position:sticky;
+    top:0;
+    min-height:46px;
+    padding-top:calc(4px + env(safe-area-inset-top));
+    padding-bottom:4px;
+    padding-left:calc(8px + env(safe-area-inset-left));
+    padding-right:calc(8px + env(safe-area-inset-right));
+    gap:6px;
+    flex-wrap:nowrap;
+    align-items:center;
+  }
+  body.app-device-iphone .brand-row{
+    flex:1 1 auto;
+    min-width:0;
+    gap:6px;
+    flex-wrap:nowrap;
+  }
+  body.app-device-iphone .app-logo{
+    width:32px;
+    height:32px;
+    min-width:32px;
+    border-radius:10px;
+  }
+  body.app-device-iphone .app-logo img{width:100%;height:100%;object-fit:cover;}
+  body.app-device-iphone .studio-title-block{min-width:88px;max-width:128px;overflow:hidden;}
+  body.app-device-iphone .brand-row h1{
+    font-size:14px;
+    max-width:128px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  body.app-device-iphone .studio-title-block p{display:none;}
+  body.app-device-iphone .date-nav{
+    flex:1 1 230px;
+    width:auto;
+    min-width:210px;
+    margin-left:0;
+    gap:4px;
+  }
+  body.app-device-iphone .date-nav input[type="date"]{
+    height:32px;
+    min-height:32px;
+    font-size:12px;
+    border-radius:10px;
+    padding:0 4px;
+  }
+  body.app-device-iphone .nav-btn,
+  body.app-device-iphone .today-btn{
+    height:32px;
+    min-height:32px;
+    border-radius:10px;
+    font-size:14px;
+  }
+  body.app-device-iphone .nav-btn{width:32px;min-width:32px;}
+  body.app-device-iphone .today-btn{padding:0 7px;}
+  body.app-device-iphone .top-actions{
+    flex:0 0 auto;
+    width:auto;
+    gap:4px;
+    flex-wrap:nowrap;
+    margin-left:0;
+  }
+  body.app-device-iphone .icon-tab,
+  body.app-device-iphone .settings-button{
+    width:34px;
+    min-width:34px;
+    height:32px;
+    min-height:32px;
+    padding:0;
+    border-radius:10px;
+    font-size:0;
+    line-height:1;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+  body.app-device-iphone .settings-button{font-size:16px;}
+  body.app-device-iphone .settings-button span,
+  body.app-device-iphone .icon-tab span{display:none!important;}
+
+  body.app-device-iphone .layout{
+    display:grid;
+    grid-template-columns:minmax(196px, 32vw) minmax(0, 1fr);
+    gap:6px;
+    padding:6px calc(6px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) calc(6px + env(safe-area-inset-left));
+    align-items:start;
+  }
+  body.app-device-iphone .sidebar{
+    order:0;
+    max-height:calc(100svh - 58px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow:auto;
+    gap:6px;
+  }
+  body.app-device-iphone .workspace{
+    order:0;
+    max-height:calc(100svh - 58px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow:hidden;
+  }
+  body.app-device-iphone .panel,
+  body.app-device-iphone .tab-panel{
+    border-radius:12px;
+  }
+  body.app-device-iphone .panel{padding:7px;}
+  body.app-device-iphone .appointment-form-panel{gap:6px;}
+  body.app-device-iphone .appointment-form-panel h2{display:none;}
+  body.app-device-iphone .appointment-form-block{
+    padding:6px;
+    margin:0;
+    border-radius:10px;
+  }
+  body.app-device-iphone .appointment-form-block h3{
+    font-size:11px;
+    margin:0 0 3px;
+  }
+  body.app-device-iphone label{margin:3px 0 2px;font-size:11px;}
+  body.app-device-iphone input,
+  body.app-device-iphone select,
+  body.app-device-iphone textarea{
+    min-height:28px;
+    padding:4px 6px;
+    border-radius:9px;
+    font-size:11px;
+  }
+  body.app-device-iphone textarea{min-height:34px;}
+  body.app-device-iphone button{
+    min-height:28px;
+    padding:4px 6px;
+    border-radius:9px;
+    font-size:11px;
+  }
+  body.app-device-iphone .appointment-form-actions{gap:4px;}
+  body.app-device-iphone .customer-search-panel{padding:7px;}
+  body.app-device-iphone .customer-search-panel h2{display:none;}
+  body.app-device-iphone .customer-search-panel .search-results{max-height:66px;margin-top:4px;gap:4px;}
+  body.app-device-iphone .search-result,
+  body.app-device-iphone .suggestion{padding:5px;border-radius:9px;}
+  body.app-device-iphone .search-result-name{font-size:14px;}
+  body.app-device-iphone .search-result-when{font-size:11px;}
+  body.app-device-iphone .search-result-details{font-size:10px;gap:4px;}
+  body.app-device-iphone .search-result-details span{min-height:20px;padding:2px 6px;}
+
+  body.app-device-iphone .calendar-toolbar{
+    padding:5px 7px;
+    gap:5px;
+    min-height:34px;
+  }
+  body.app-device-iphone .calendar-toolbar h2,
+  body.app-device-iphone .report-header h2{font-size:13px;margin:0;}
+  body.app-device-iphone .calendar{
+    max-height:calc(100svh - 106px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    min-height:0;
+  }
+  body.app-device-iphone.schedule-zoom-small,
+  body.app-device-iphone.schedule-zoom-normal,
+  body.app-device-iphone.schedule-zoom-large{
+    --employee-col:82px;
+    --time-col:86px;
+    --row-h:52px;
+  }
+  body.app-device-iphone .corner,
+  body.app-device-iphone .time-header{
+    height:30px;
+    padding:0 6px;
+    font-size:10.5px;
+  }
+  body.app-device-iphone .employee-cell{
+    padding:0 6px;
+    font-size:10.5px;
+  }
+  body.app-device-iphone .slot{padding:3px;}
+  body.app-device-iphone .appointment{
+    min-height:42px;
+    padding:4px 5px;
+    border-radius:8px;
+    font-size:10px;
+    line-height:1.1;
+  }
+
+  body.app-device-iphone dialog,
+  body.app-device-iphone .settings-dialog{
+    width:calc(100vw - 10px - env(safe-area-inset-left) - env(safe-area-inset-right));
+    max-width:none;
+    height:calc(100svh - 10px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height:none;
+    padding:10px;
+    border-radius:16px;
+  }
+  body.app-device-iphone .settings-dialog-header{
+    top:-10px;
+    padding-bottom:8px;
+    margin-bottom:8px;
+  }
+  body.app-device-iphone .settings-dialog-header h2{font-size:16px;margin:0 0 8px;}
+  body.app-device-iphone .settings-tabs{
+    display:flex;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    gap:5px;
+    padding-bottom:2px;
+  }
+  body.app-device-iphone .settings-tab{
+    flex:0 0 auto;
+    padding:7px 9px;
+    font-size:11px;
+    border-radius:10px;
+    white-space:nowrap;
+  }
+  body.app-device-iphone .settings-grid{gap:8px;}
+  body.app-device-iphone .settings-section{padding:9px;border-radius:12px;}
+  body.app-device-iphone .settings-section h3{font-size:13px;margin:0 0 6px;}
+  body.app-device-iphone menu{
+    padding-top:6px;
+    gap:6px;
+  }
+  body.app-device-iphone .system-info-grid{grid-template-columns:1fr;}
+  body.app-device-iphone .system-info-logo-section{min-height:96px;padding:6px;}
+  body.app-device-iphone .system-info-logo{width:min(128px, 44vw);border-radius:18px;}
+}
+
+@media (orientation: landscape) and (max-height: 430px){
+  body.app-device-iphone .layout{grid-template-columns:minmax(176px, 30vw) minmax(0,1fr);}
+  body.app-device-iphone .customer-search-panel{display:none;}
+  body.app-device-iphone .calendar{max-height:calc(100svh - 96px - env(safe-area-inset-top) - env(safe-area-inset-bottom));}
+  body.app-device-iphone.schedule-zoom-small,
+  body.app-device-iphone.schedule-zoom-normal,
+  body.app-device-iphone.schedule-zoom-large{
+    --employee-col:76px;
+    --time-col:82px;
+    --row-h:48px;
+  }
+}
+
+/* V78: Telefon im Dashboard in Vorwahl + Nummer aufteilen */
+.phone-split-row{
+  display:grid;
+  grid-template-columns:minmax(105px,.42fr) minmax(150px,1fr);
+  gap:10px;
+  align-items:end;
+}
+.phone-split-row label{
+  margin-top:12px;
+}
+.phone-split-row input{
+  min-width:0;
+}
+@media(max-width:420px){
+  .phone-split-row{grid-template-columns:1fr 1fr;gap:8px;}
+}
+@media(orientation:landscape) and (max-height:480px){
+  body.app-device-iphone .phone-split-row{grid-template-columns:92px minmax(130px,1fr);gap:6px;}
+}
+
+/* Version 79: modernes Backup-Icon im Dashboard */
+.backup-dashboard-button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border:2px solid #dc2626;
+}
+.backup-button-icon{
+  width:26px;
+  height:26px;
+  object-fit:contain;
+  display:inline-block;
+  flex:0 0 auto;
+}
+body.app-device-iphone .backup-button-icon{
+  width:24px;
+  height:24px;
+}
+@media (orientation: landscape){
+  body.app-device-iphone .backup-button-icon{
+    width:22px;
+    height:22px;
+  }
+}
+
+
+/* Version 81: iPhone Header-Fix – Backup-Button nicht abschneiden, wenn Umsatz ausgeblendet ist */
+@media (orientation: portrait) and (max-width: 480px){
+  body.app-device-iphone:not(.revenue-enabled) .top-actions,
+  body.app-device-iphone.revenue-disabled .top-actions{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:8px;
+    width:100%;
+  }
+  body.app-device-iphone:not(.revenue-enabled) .backup-dashboard-button,
+  body.app-device-iphone.revenue-disabled .backup-dashboard-button,
+  body.app-device-iphone:not(.revenue-enabled) #settingsBtn,
+  body.app-device-iphone.revenue-disabled #settingsBtn{
+    width:100%;
+    min-width:0;
+    max-width:none;
+    overflow:hidden;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    padding:0 8px;
+    white-space:nowrap;
+  }
+  body.app-device-iphone:not(.revenue-enabled) .backup-dashboard-button span,
+  body.app-device-iphone.revenue-disabled .backup-dashboard-button span,
+  body.app-device-iphone:not(.revenue-enabled) #settingsBtn span,
+  body.app-device-iphone.revenue-disabled #settingsBtn span{
+    display:inline!important;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  body.app-device-iphone:not(.revenue-enabled) .backup-button-icon,
+  body.app-device-iphone.revenue-disabled .backup-button-icon{
+    width:20px;
+    height:20px;
+  }
+}
+
+/* V83: iPad Dashboard-Fit + klar sichtbare Darstellungsmodi
+   Ziel: auf iPad bleibt die linke Spalte gut lesbar, während der Kalender mehr Platz bekommt. */
+body.app-device-ipad{
+  --employee-col:150px;
+  --time-col:136px;
+  --row-h:86px;
+}
+body.app-device-ipad.schedule-zoom-small{
+  --employee-col:142px;
+  --time-col:124px;
+  --row-h:78px;
+}
+body.app-device-ipad.schedule-zoom-normal{
+  --employee-col:150px;
+  --time-col:136px;
+  --row-h:86px;
+}
+body.app-device-ipad.schedule-zoom-large{
+  --employee-col:164px;
+  --time-col:154px;
+  --row-h:98px;
+}
+body.app-device-ipad .topbar{
+  min-height:74px;
+  padding:10px 14px;
+  gap:12px;
+}
+body.app-device-ipad .brand-row{
+  gap:10px;
+  min-width:0;
+  flex:1 1 auto;
+}
+body.app-device-ipad .app-logo{
+  width:46px;
+  height:46px;
+  border-radius:15px;
+  flex:0 0 auto;
+}
+body.app-device-ipad .studio-title-block{
+  min-width:126px;
+  max-width:220px;
+  overflow:hidden;
+}
+body.app-device-ipad .brand-row h1{
+  font-size:20px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+body.app-device-ipad #studioContactLine{
+  max-width:220px;
+  font-size:12px;
+}
+body.app-device-ipad .date-nav{
+  margin-left:6px;
+  gap:7px;
+  flex:0 1 auto;
+}
+body.app-device-ipad .date-nav input[type="date"]{
+  width:148px;
+  height:48px;
+  font-size:15px;
+  padding:0 8px;
+}
+body.app-device-ipad .nav-btn{
+  width:46px;
+  height:48px;
+  border-radius:15px;
+  font-size:25px;
+}
+body.app-device-ipad .today-btn{
+  height:48px;
+  border-radius:15px;
+  padding:0 14px;
+}
+body.app-device-ipad .top-actions{
+  gap:8px;
+  flex:0 0 auto;
+}
+body.app-device-ipad .icon-tab{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+}
+body.app-device-ipad .settings-button,
+body.app-device-ipad .backup-dashboard-button{
+  height:46px;
+  min-height:46px;
+  border-radius:15px;
+  padding:0 14px;
+}
+body.app-device-ipad .layout{
+  grid-template-columns:clamp(272px, 29vw, 318px) minmax(0,1fr);
+  gap:10px;
+  padding:10px;
+  align-items:start;
+}
+body.app-device-ipad .sidebar{
+  gap:10px;
+  min-width:0;
+}
+body.app-device-ipad .panel,
+body.app-device-ipad .tab-panel{
+  border-radius:20px;
+}
+body.app-device-ipad .panel{
+  padding:12px;
+}
+body.app-device-ipad .appointment-form-panel{
+  gap:9px;
+}
+body.app-device-ipad .appointment-form-block{
+  padding:10px;
+  border-radius:17px;
+}
+body.app-device-ipad .appointment-form-block h3,
+body.app-device-ipad .panel h2{
+  margin-bottom:6px;
+}
+body.app-device-ipad label{
+  margin:7px 0 4px;
+  font-size:13px;
+}
+body.app-device-ipad input,
+body.app-device-ipad select,
+body.app-device-ipad textarea,
+body.app-device-ipad button{
+  min-height:42px;
+  padding:9px 11px;
+  border-radius:13px;
+}
+body.app-device-ipad textarea{
+  min-height:56px;
+}
+body.app-device-ipad .phone-split-row{
+  grid-template-columns:94px minmax(0,1fr);
+  gap:7px;
+}
+body.app-device-ipad .customer-search-panel .search-results,
+body.app-device-ipad .customer-list,
+body.app-device-ipad .service-list,
+body.app-device-ipad .daily-list,
+body.app-device-ipad .suggestion-box,
+body.app-device-ipad .employee-list{
+  max-height:190px;
+}
+body.app-device-ipad .calendar-toolbar,
+body.app-device-ipad .report-header{
+  padding:10px 12px;
+  gap:8px;
+}
+body.app-device-ipad .calendar{
+  max-height:calc(100svh - 106px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-height:420px;
+}
+body.app-device-ipad .corner,
+body.app-device-ipad .time-header{
+  height:48px;
+}
+body.app-device-ipad .employee-cell,
+body.app-device-ipad .slot{
+  height:var(--row-h);
+}
+body.app-device-ipad .appointment{
+  min-height:64px;
+  padding:7px 8px;
+  font-size:13px;
+}
+body.app-device-ipad .settings-dialog{
+  width:min(980px,96vw);
+  max-height:92svh;
+}
+@media (orientation:portrait) and (max-width: 900px){
+  body.app-device-ipad .layout{
+    grid-template-columns:clamp(260px, 34vw, 300px) minmax(0,1fr);
+    padding:8px;
+    gap:8px;
+  }
+  body.app-device-ipad .studio-title-block{max-width:170px;}
+  body.app-device-ipad .topbar{padding:9px 10px;}
+  body.app-device-ipad .settings-button span,
+  body.app-device-ipad .backup-dashboard-button span{display:none!important;}
+}
+@media(max-width:760px){
+  body.app-device-ipad .layout{
+    grid-template-columns:1fr;
+  }
+  body.app-device-ipad .sidebar{order:2;}
+  body.app-device-ipad .workspace{order:1;}
+}
+body.app-device-pc .layout{
+  grid-template-columns:350px minmax(0,1fr);
+}
+body.app-device-pc .topbar{
+  min-height:90px;
+}
+body.app-device-iphone .layout{
+  grid-template-columns:1fr;
+}
+
+/* V84: iPad Tagesplan - 10 Mitarbeiter-Zeilen sichtbar halten
+   Die Zeilenhöhe passt sich an die echte iPad-Höhe an: groß genug für Lesbarkeit,
+   aber so begrenzt, dass 10 Mitarbeiter untereinander in den sichtbaren Tagesplan passen. */
+body.app-device-ipad{
+  --row-h:clamp(60px, calc((100svh - 158px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 10), 76px);
+}
+body.app-device-ipad.schedule-zoom-small{
+  --row-h:clamp(58px, calc((100svh - 166px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 10), 70px);
+}
+body.app-device-ipad.schedule-zoom-normal{
+  --row-h:clamp(60px, calc((100svh - 158px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 10), 76px);
+}
+body.app-device-ipad.schedule-zoom-large{
+  --row-h:clamp(61px, calc((100svh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 10), 82px);
+}
+body.app-device-ipad .calendar{
+  max-height:calc(100svh - 96px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+}
+body.app-device-ipad .employee-cell{
+  padding:0 10px;
+  font-size:14px;
+  line-height:1.15;
+}
+body.app-device-ipad .employee-name-colored{
+  display:block;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:normal;
+}
+body.app-device-ipad .slot{
+  padding:5px;
+}
+body.app-device-ipad .appointment{
+  min-height:calc(var(--row-h) - 10px);
+  padding:6px 7px;
+  font-size:12.5px;
+  line-height:1.12;
+  overflow:hidden;
+}
+body.app-device-ipad .appointment .name{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+body.app-device-ipad .appointment .meta{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+@media (orientation:portrait) and (max-width: 900px){
+  body.app-device-ipad{
+    --row-h:clamp(68px, calc((100svh - 170px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 10), 78px);
+  }
+  body.app-device-ipad.schedule-zoom-small{
+    --row-h:clamp(64px, calc((100svh - 178px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 10), 72px);
+  }
+  body.app-device-ipad.schedule-zoom-large{
+    --row-h:clamp(70px, calc((100svh - 162px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 10), 82px);
+  }
+}
+
+/* V85: iPad Mitarbeiter-Zeilen nochmals reduziert
+   Ziel: 10 Mitarbeiter-Zeilen auch im iPad-Hochformat vollständig sichtbar halten,
+   ohne die linke Namensspalte unleserlich klein zu machen. */
+body.app-device-ipad{
+  --row-h:clamp(50px, calc((100svh - 230px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 10), 60px);
+}
+body.app-device-ipad.schedule-zoom-small{
+  --row-h:clamp(48px, calc((100svh - 238px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 10), 56px);
+}
+body.app-device-ipad.schedule-zoom-normal{
+  --row-h:clamp(50px, calc((100svh - 230px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 10), 60px);
+}
+body.app-device-ipad.schedule-zoom-large{
+  --row-h:clamp(52px, calc((100svh - 222px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 10), 64px);
+}
+body.app-device-ipad .corner,
+body.app-device-ipad .time-header{
+  height:42px;
+  min-height:42px;
+  font-size:12px;
+  padding:0 6px;
+}
+body.app-device-ipad .employee-cell{
+  padding:0 8px;
+  font-size:13.5px;
+  line-height:1.1;
+}
+body.app-device-ipad .employee-color-bar{
+  width:4px;
+}
+body.app-device-ipad .slot{
+  padding:4px;
+}
+body.app-device-ipad .appointment{
+  min-height:calc(var(--row-h) - 8px);
+  padding:5px 6px;
+  font-size:12px;
+  line-height:1.08;
+  border-radius:10px;
+}
+@media (orientation:portrait) and (max-width: 900px){
+  body.app-device-ipad,
+  body.app-device-ipad.schedule-zoom-normal{
+    --row-h:clamp(50px, calc((100svh - 250px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 10), 58px);
+  }
+  body.app-device-ipad.schedule-zoom-small{
+    --row-h:clamp(48px, calc((100svh - 258px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 10), 54px);
+  }
+  body.app-device-ipad.schedule-zoom-large{
+    --row-h:clamp(52px, calc((100svh - 242px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 10), 62px);
+  }
+  body.app-device-ipad .calendar{
+    max-height:calc(100svh - 90px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+}
+
+
+/* Version 65: Arbeitszeit / Urlaub je Mitarbeiter */
+.worktime-list{display:flex;flex-direction:column;gap:12px;margin-top:12px;}
+.worktime-card{border:1px solid var(--line);border-radius:18px;background:#fff;padding:14px;display:flex;flex-direction:column;gap:12px;}
+.worktime-card-header{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.worktime-badge{border-radius:999px;background:#fff1f7;color:var(--accent);font-weight:900;padding:6px 10px;font-size:13px;white-space:nowrap;}
+.worktime-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px;}
+.worktime-vacation-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;align-items:end;}
+.worktime-weekly,.worktime-special-work{border:1px dashed var(--line);border-radius:14px;padding:12px;background:#fffafc;display:flex;flex-direction:column;gap:8px;}
+.worktime-weekly-days{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+.weekday-time-row{display:grid;grid-template-columns:1.2fr 1fr auto 1fr;gap:8px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px;}
+.weekday-time-row span{font-size:12px;color:var(--muted);font-weight:800;}
+.worktime-single-vacation{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;}
+.worktime-single-vacation button{height:44px;}
+.worktime-special-add{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;}
+.worktime-special-add button{height:44px;}
+.worktime-vacation-dates,.worktime-special-dates{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-height:32px;}
+.vacation-date-chip,.special-work-date-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff7fb;border-radius:999px;padding:6px 9px;font-weight:800;font-size:13px;}
+.special-work-date-chip{background:#f6fbff;}
+.vacation-date-chip button,.special-work-date-chip button{border:0;background:transparent;color:var(--danger);font-size:18px;line-height:1;cursor:pointer;padding:0 2px;}
+.inline-checkbox{display:flex;align-items:center;gap:8px;min-height:42px;}
+.inline-checkbox input{width:auto;}
+.worktime-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.unavailable-slot{cursor:not-allowed;opacity:.58;background:repeating-linear-gradient(135deg, rgba(0,0,0,.035), rgba(0,0,0,.035) 6px, rgba(255,255,255,.45) 6px, rgba(255,255,255,.45) 12px) !important;}
+.unavailable-slot:hover{background:repeating-linear-gradient(135deg, rgba(0,0,0,.05), rgba(0,0,0,.05) 6px, rgba(255,255,255,.55) 6px, rgba(255,255,255,.55) 12px) !important;}
+.slot-lock{display:flex;height:100%;align-items:center;justify-content:center;color:var(--muted);font-size:12px;font-weight:900;pointer-events:none;}
+@media(max-width:700px){
+  .worktime-grid,.worktime-vacation-row,.worktime-single-vacation,.worktime-weekly-days,.worktime-special-add{grid-template-columns:1fr;}
+  .weekday-time-row{grid-template-columns:1fr 1fr auto 1fr;}
+  .worktime-card-header{align-items:flex-start;flex-direction:column;}
+}
+
+
+/* Version 99: "Egal" inaktiv nur hellgelber Rand, aktiv gelb */
+.employee-select-any-row{display:flex;gap:8px;align-items:center}
+.employee-select-any-row select{flex:1;min-width:0}
+.employee-any-btn{background:transparent;color:#8a6d00;border:2px solid #ffe8a3;font-weight:800;min-width:72px;box-shadow:none}
+.employee-any-btn.active,.employee-any-btn[aria-pressed="true"]{background:#f2c300;color:#2d2300;border-color:#a87d00;box-shadow:0 0 0 3px rgba(242,195,0,.25)}
+.employee-any-hint{display:block;margin-top:5px;color:#7a6a35;font-size:.82rem}
+.appointment.appointment-any-employee{background:#f2c300!important;color:#2d2300!important;border-color:#a87d00!important}
+.appointment.appointment-any-employee .meta,.appointment.appointment-any-employee .name{color:#2d2300!important}
+.employee-any-edit-label{display:flex;flex-direction:column;gap:4px;justify-content:center}
+.employee-any-edit-label input{width:auto;align-self:flex-start}
+
+
+/* Version 100: Arbeitszeit / Urlaub Mitarbeiter farblich kennzeichnen */
+.worktime-card{
+  background:linear-gradient(90deg, var(--employee-row-bg,#fff) 0%, #fff 42%, #fff 100%);
+  border-left:8px solid var(--employee-accent,#d94f93);
+}
+.worktime-card-title{display:flex;align-items:center;gap:10px;}
+.worktime-card .worktime-badge{background:var(--employee-row-bg,#fff1f7);color:var(--employee-accent,#d94f93);border:1px solid color-mix(in srgb, var(--employee-accent,#d94f93) 28%, transparent);}
+.worktime-card .worktime-weekly,.worktime-card .worktime-special-work{background:color-mix(in srgb, var(--employee-row-bg,#fffafc) 55%, white);}
+
+/* Version 101: Arbeitszeit / Urlaub klarer in Arbeitszeiten und Urlaub trennen */
+.worktime-section{
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  background:#fff;
+}
+.worktime-section-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding-bottom:8px;
+  border-bottom:1px solid var(--line);
+}
+.worktime-section-head strong{
+  font-size:15px;
+  font-weight:900;
+}
+.worktime-section-head small{
+  color:var(--muted);
+  font-weight:700;
+  text-align:right;
+}
+.worktime-section-work{
+  background:linear-gradient(180deg, color-mix(in srgb, var(--employee-row-bg,#fffafc) 38%, white), #fff 65%);
+}
+.worktime-section-vacation{
+  background:linear-gradient(180deg, #fff8f1, #fff 68%);
+  border-color:#ffd9b5;
+}
+.worktime-section-vacation .worktime-section-head{
+  border-bottom-color:#ffd9b5;
+}
+.worktime-section-vacation .worktime-section-head strong{
+  color:#a04a00;
+}
+.worktime-section-vacation .vacation-date-chip{
+  background:#fff3e7;
+  border-color:#ffc98f;
+}
+@media(max-width:700px){
+  .worktime-section-head{flex-direction:column;gap:4px;}
+  .worktime-section-head small{text-align:left;}
+}
+
+.studio-license-info{
+  margin:12px 0;
+  padding:12px;
+  border:1px solid rgba(217,79,147,.25);
+  border-radius:14px;
+  background:rgba(255,240,247,.65);
+}
+.studio-license-info code{
+  display:inline-block;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  padding:4px 6px;
+  border-radius:8px;
+  background:rgba(255,255,255,.8);
+}
