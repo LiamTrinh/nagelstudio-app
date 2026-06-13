@@ -1,0 +1,33 @@
+{
+  "updatedAt": "2026-06-13",
+  "studios": [
+    {
+      "id": "STUDIO-001",
+      "name": "Beauty Nails Teststudio",
+      "plan": "trial",
+      "expiresAt": "2026-07-13",
+      "active": true
+    },
+    {
+      "id": "STUDIO-002",
+      "name": "Lotus Nails Demo",
+      "plan": "trial",
+      "expiresAt": "2026-07-31",
+      "active": true
+    },
+    {
+      "id": "310366",
+      "name": "Vollversion Beispielstudio",
+      "plan": "full",
+      "expiresAt": null,
+      "active": true
+    },
+    {
+      "id": "STUDIO-BLOCKED",
+      "name": "Gesperrtes Beispielstudio",
+      "plan": "blocked",
+      "expiresAt": null,
+      "active": false
+    }
+  ]
+}

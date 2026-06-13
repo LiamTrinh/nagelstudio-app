@@ -1,5 +1,5 @@
-const CACHE = "nail-studio-pwa-v106";
-const FILES = ["./","./index.html","./style.css","./app.js","./manifest.json","./icon.svg","./logo-192.png","./logo-512.png","./logo-header.png","./lotus-lt-system-logo.png","./backup-modern-icon.png"];
+const CACHE = "nail-studio-pwa-v104-studioid";
+const FILES = ["./","./index.html","./style.css","./app.js","./manifest.json","./icon.svg","./logo-192.png","./logo-512.png","./logo-header.png","./lotus-lt-system-logo.png","./backup-modern-icon.png","./studio-licenses.json"];
 self.addEventListener("install", e => {
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));

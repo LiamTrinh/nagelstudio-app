@@ -1,150 +1,6 @@
-const BASE_KEY = "nail_studio_pwa_v62";
-const BASE_OLD_KEYS = ["nail_studio_pwa_v61", "nail_studio_pwa_v60", "nail_studio_pwa_v59", "nail_studio_pwa_v58", "nail_studio_pwa_v57", "nail_studio_pwa_v56", "nail_studio_pwa_v55", "nail_studio_pwa_v54", "nail_studio_pwa_v53", "nail_studio_pwa_v52", "nail_studio_pwa_v51", "nail_studio_pwa_v50", "nail_studio_pwa_v49", "nail_studio_pwa_v48", "nail_studio_pwa_v47", "nail_studio_pwa_v46", "nail_studio_pwa_v45", "nail_studio_pwa_v44", "nail_studio_pwa_v43", "nail_studio_pwa_v42", "nail_studio_pwa_v41", "nail_studio_pwa_v40", "nail_studio_pwa_v39", "nail_studio_pwa_v38", "nail_studio_pwa_v37", "nail_studio_pwa_v36", "nail_studio_pwa_v35", "nail_studio_pwa_v34", "nail_studio_pwa_v33", "nail_studio_pwa_v32", "nail_studio_pwa_v31", "nail_studio_pwa_v30", "nail_studio_pwa_v29", "nail_studio_pwa_v28", "nail_studio_pwa_v27", "nail_studio_pwa_v26", "nail_studio_pwa_v25", "nail_studio_pwa_v24", "nail_studio_pwa_v23", "nail_studio_pwa_v22", "nail_studio_pwa_v21", "nail_studio_pwa_v20", "nail_studio_pwa_v19", "nail_studio_pwa_v18", "nail_studio_pwa_v17", "nail_studio_pwa_v16", "nail_studio_pwa_v15", "nail_studio_pwa_v14", "nail_studio_pwa_v13", "nail_studio_pwa_v12", "nail_studio_pwa_v11", "nail_studio_pwa_v10", "nail_studio_pwa_v9", "nail_studio_pwa_v8", "nail_studio_pwa_v7", "nail_studio_pwa_v6", "nail_studio_pwa_v5", "nail_studio_pwa_v4", "nail_studio_pwa_v3", "nail_studio_pwa_v2", "nail_studio_pwa_v1"];
+const KEY = "nail_studio_pwa_v61";
+const OLD_KEYS = ["nail_studio_pwa_v60", "nail_studio_pwa_v59", "nail_studio_pwa_v58", "nail_studio_pwa_v57", "nail_studio_pwa_v56", "nail_studio_pwa_v55", "nail_studio_pwa_v54", "nail_studio_pwa_v53", "nail_studio_pwa_v52", "nail_studio_pwa_v51", "nail_studio_pwa_v50", "nail_studio_pwa_v49", "nail_studio_pwa_v48", "nail_studio_pwa_v47", "nail_studio_pwa_v46", "nail_studio_pwa_v45", "nail_studio_pwa_v44", "nail_studio_pwa_v43", "nail_studio_pwa_v42", "nail_studio_pwa_v41", "nail_studio_pwa_v40", "nail_studio_pwa_v39", "nail_studio_pwa_v38", "nail_studio_pwa_v37", "nail_studio_pwa_v36", "nail_studio_pwa_v35", "nail_studio_pwa_v34", "nail_studio_pwa_v33", "nail_studio_pwa_v32", "nail_studio_pwa_v31", "nail_studio_pwa_v30", "nail_studio_pwa_v29", "nail_studio_pwa_v28", "nail_studio_pwa_v27", "nail_studio_pwa_v26", "nail_studio_pwa_v25", "nail_studio_pwa_v24", "nail_studio_pwa_v23", "nail_studio_pwa_v22", "nail_studio_pwa_v21", "nail_studio_pwa_v20", "nail_studio_pwa_v19", "nail_studio_pwa_v18", "nail_studio_pwa_v17", "nail_studio_pwa_v16", "nail_studio_pwa_v15", "nail_studio_pwa_v14", "nail_studio_pwa_v13", "nail_studio_pwa_v12", "nail_studio_pwa_v11", "nail_studio_pwa_v10", "nail_studio_pwa_v9", "nail_studio_pwa_v8", "nail_studio_pwa_v7", "nail_studio_pwa_v6", "nail_studio_pwa_v5", "nail_studio_pwa_v4", "nail_studio_pwa_v3", "nail_studio_pwa_v2", "nail_studio_pwa_v1"];
 const $ = id => document.getElementById(id);
-
-// Studio-ID Verwaltung
-// Jeder Kunde bekommt denselben GitHub-Link mit eigener Studio-ID, z. B.:
-// https://DEINNAME.github.io/tt-nagelstudio/?studio=freund-test
-// Neue Studios kannst du hier ergänzen oder verlängern.
-const STUDIOS = {
-  "freund-test": {
-    name: "Freund Teststudio",
-    type: "trial",
-    validUntil: "2026-07-12",
-    maxDevices: 2,
-    allowedDeviceIds: [
-      // Hier Geräte-ID eintragen, z. B. "DEV-ABC123XYZ"
-    ]
-  },
-  "maria-nails": {
-    name: "Maria Nails",
-    type: "trial",
-    validUntil: "2026-07-12",
-    maxDevices: 2,
-    allowedDeviceIds: []
-  },
-  "anna-beauty": {
-    name: "Anna Beauty",
-    type: "full",
-    validUntil: null,
-    maxDevices: 2,
-    allowedDeviceIds: []
-  }
-};
-
-function normalizeStudioId(value){
-  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
-}
-function getStudioIdFromUrl(){
-  const params = new URLSearchParams(window.location.search);
-  const fromUrl = normalizeStudioId(params.get("studio"));
-  if(fromUrl){ localStorage.setItem("nail_studio_last_studio_id", fromUrl); return fromUrl; }
-  return normalizeStudioId(localStorage.getItem("nail_studio_last_studio_id"));
-}
-const CURRENT_STUDIO_ID = getStudioIdFromUrl();
-const CURRENT_STUDIO = CURRENT_STUDIO_ID ? (STUDIOS[CURRENT_STUDIO_ID] || null) : null;
-function studioKeySuffix(){ return CURRENT_STUDIO_ID || "ohne-studio"; }
-function studioStorageKey(baseKey){ return `${baseKey}_${studioKeySuffix()}`; }
-
-// Geräte-Aktivierung
-// Diese Geräte-ID wird einmal pro Browser/Gerät erzeugt und lokal gespeichert.
-// Für echte Kontrolle trägst du diese Geräte-ID beim passenden Studio unter allowedDeviceIds ein.
-const DEVICE_ID_KEY = "nail_studio_device_id";
-function createDeviceId(){
-  const randomPart = (crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()).replace(/[^a-zA-Z0-9]/g, "").slice(0, 12).toUpperCase();
-  return `DEV-${randomPart}`;
-}
-function getDeviceId(){
-  let id = localStorage.getItem(DEVICE_ID_KEY);
-  if(!id){
-    id = createDeviceId();
-    localStorage.setItem(DEVICE_ID_KEY, id);
-  }
-  return id;
-}
-const CURRENT_DEVICE_ID = getDeviceId();
-function getDeviceActivationStatus(){
-  if(!CURRENT_STUDIO){
-    return {status:"invalid", active:false, deviceId:CURRENT_DEVICE_ID, message:"Keine gültige Studio-ID für Geräteprüfung."};
-  }
-  const allowed = Array.isArray(CURRENT_STUDIO.allowedDeviceIds) ? CURRENT_STUDIO.allowedDeviceIds : [];
-  const max = Number(CURRENT_STUDIO.maxDevices || allowed.length || 1);
-  if(allowed.includes(CURRENT_DEVICE_ID)){
-    return {status:"active", active:true, deviceId:CURRENT_DEVICE_ID, maxDevices:max, usedDevices:allowed.length, message:"Dieses Gerät ist für dieses Studio aktiviert."};
-  }
-  if(allowed.length >= max){
-    return {status:"blocked", active:false, deviceId:CURRENT_DEVICE_ID, maxDevices:max, usedDevices:allowed.length, message:"Dieses Gerät ist nicht aktiviert. Die maximale Geräteanzahl ist bereits erreicht."};
-  }
-  return {status:"waiting", active:false, deviceId:CURRENT_DEVICE_ID, maxDevices:max, usedDevices:allowed.length, message:"Dieses Gerät ist noch nicht aktiviert. Geräte-ID an den Entwickler senden und in app.js beim Studio eintragen."};
-}
-function isCurrentDeviceActive(){
-  return getDeviceActivationStatus().active;
-}
-
-const KEY = studioStorageKey(BASE_KEY);
-const OLD_KEYS = [
-  ...BASE_OLD_KEYS.map(studioStorageKey),
-  ...BASE_OLD_KEYS
-];
-
-function getStudioLicenseStatus(){
-  if(!CURRENT_STUDIO_ID){
-    return {status:"invalid", studioId:"", studioName:"", message:"Keine Studio-ID im Link gefunden. Beispiel: ?studio=freund-test"};
-  }
-  if(!CURRENT_STUDIO){
-    return {status:"invalid", studioId:CURRENT_STUDIO_ID, studioName:"", message:`Studio-ID „${CURRENT_STUDIO_ID}“ ist nicht freigeschaltet.`};
-  }
-  if(CURRENT_STUDIO.type === "full"){
-    return {status:"full", studioId:CURRENT_STUDIO_ID, studioName:CURRENT_STUDIO.name, message:"Vollversion aktiv."};
-  }
-  if(CURRENT_STUDIO.type === "trial"){
-    const validUntil = CURRENT_STUDIO.validUntil || "";
-    const end = new Date(validUntil + "T23:59:59");
-    if(validUntil && new Date() <= end){
-      return {status:"trial", studioId:CURRENT_STUDIO_ID, studioName:CURRENT_STUDIO.name, validUntil, message:`Testversion gültig bis ${validUntil}.`};
-    }
-    return {status:"expired", studioId:CURRENT_STUDIO_ID, studioName:CURRENT_STUDIO.name, validUntil, message:"Testversion abgelaufen."};
-  }
-  if(CURRENT_STUDIO.type === "expired"){
-    return {status:"expired", studioId:CURRENT_STUDIO_ID, studioName:CURRENT_STUDIO.name, message:"Lizenz abgelaufen oder gesperrt."};
-  }
-  return {status:"invalid", studioId:CURRENT_STUDIO_ID, studioName:CURRENT_STUDIO.name || "", message:"Ungültiger Lizenzstatus."};
-}
-function isStudioLicenseActive(){
-  const s = getStudioLicenseStatus();
-  return s.status === "full" || s.status === "trial";
-}
-function requireActiveStudioLicense(){
-  const s = getStudioLicenseStatus();
-  if(!isStudioLicenseActive()){
-    alert("Studio-Lizenz nicht aktiv\n\n" + s.message);
-    return false;
-  }
-  const d = getDeviceActivationStatus();
-  if(!d.active){
-    alert("Gerät nicht aktiviert\n\n" + d.message + "\n\nGeräte-ID: " + d.deviceId);
-    return false;
-  }
-  return true;
-}
-function renderStudioLicenseInfo(){
-  const box = $("studioLicenseInfo");
-  if(!box) return;
-  const s = getStudioLicenseStatus();
-  const d = getDeviceActivationStatus();
-  const statusText = s.status === "full" ? "Vollversion" : s.status === "trial" ? "Testversion" : s.status === "expired" ? "Abgelaufen" : "Nicht aktiv";
-  const deviceText = d.active ? "Aktiviert" : d.status === "blocked" ? "Blockiert" : "Wartet auf Freigabe";
-  const link = `${location.origin}${location.pathname}?studio=${encodeURIComponent(s.studioId || "freund-test")}`;
-  box.innerHTML = `
-    <p class="hint"><strong>Studio-ID:</strong> ${escapeHtml(s.studioId || "nicht gesetzt")}</p>
-    <p class="hint"><strong>Studio:</strong> ${escapeHtml(s.studioName || "-")}</p>
-    <p class="hint"><strong>Lizenz:</strong> ${escapeHtml(statusText)}${s.validUntil ? ` · gültig bis ${escapeHtml(s.validUntil)}` : ""}</p>
-    <p class="hint"><strong>Geräte-ID:</strong><br><code>${escapeHtml(d.deviceId)}</code></p>
-    <p class="hint"><strong>Geräte-Aktivierung:</strong> ${escapeHtml(deviceText)}${d.maxDevices ? ` · ${escapeHtml(String(d.usedDevices || 0))}/${escapeHtml(String(d.maxDevices))} Geräte eingetragen` : ""}</p>
-    <p class="hint"><strong>Direkter Studio-Link:</strong><br><code>${escapeHtml(link)}</code></p>
-    <p class="hint">${escapeHtml(s.message)} ${escapeHtml(d.message || "")}</p>
-  `;
-}
 
 let state;
 let editingAppointmentId = null;
@@ -158,6 +14,165 @@ let suppressAppointmentClick = false;
 let editingEmployeeId = null;
 let editingCustomerId = null;
 
+
+// ------------------------------------------------------------
+// STUDIO-ID / LIZENZ-STEUERUNG FÜR MEHRERE TESTSTUDIOS
+// ------------------------------------------------------------
+// Diese Variante lässt alle Funktionen frei, solange die Studio-ID
+// in studio-licenses.json aktiv ist. Du kannst dort pro Studio einstellen:
+// - plan: "trial" oder "full"
+// - expiresAt: Ablaufdatum für Testversion, z. B. "2026-07-31"
+// - active: true/false
+// Hinweis: Auf GitHub Pages ist das clientseitig und nicht manipulationssicher.
+// Für echte bezahlte Abos später Backend + Login + Zahlungsprüfung nutzen.
+const LICENSES_URL = "studio-licenses.json";
+const LICENSE_CACHE_KEY = "nail_studio_license_cache_v2";
+let currentLicenseInfo = null;
+
+function normalizeStudioId(value){
+  return String(value || "").trim().toUpperCase().replace(/\s+/g, "-").replace(/[^A-Z0-9_-]/g, "");
+}
+function todayDateOnly(){
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  return d;
+}
+function parseDateOnly(value){
+  if(!value) return null;
+  const d = new Date(String(value) + "T00:00:00");
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+function daysUntil(value){
+  const d = parseDateOnly(value);
+  if(!d) return null;
+  return Math.ceil((d.getTime() - todayDateOnly().getTime()) / 86400000);
+}
+function getCachedLicenseFile(){
+  try{ return JSON.parse(localStorage.getItem(LICENSE_CACHE_KEY)) || null; }
+  catch{ return null; }
+}
+function saveCachedLicenseFile(data){
+  try{ localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify({ fetchedAt:new Date().toISOString(), data })); }
+  catch{}
+}
+async function fetchLicenseFile(){
+  try{
+    const response = await fetch(LICENSES_URL + "?v=" + Date.now(), { cache:"no-store" });
+    if(!response.ok) throw new Error("Lizenzdatei nicht erreichbar");
+    const data = await response.json();
+    saveCachedLicenseFile(data);
+    return { data, online:true };
+  }catch(err){
+    const cached = getCachedLicenseFile();
+    if(cached && cached.data) return { data:cached.data, online:false, cachedAt:cached.fetchedAt };
+    return { data:null, online:false, error:err };
+  }
+}
+function findStudioLicense(licenseFile, studioId){
+  const id = normalizeStudioId(studioId);
+  const studios = Array.isArray(licenseFile?.studios) ? licenseFile.studios : [];
+  return studios.find(s => normalizeStudioId(s.id) === id) || null;
+}
+function evaluateStudioLicense(record, source){
+  if(!record){ return { ok:false, status:"not_found", message:"Diese Studio-ID ist nicht freigeschaltet.", source }; }
+  if(record.active === false || record.plan === "blocked"){
+    return { ok:false, status:"blocked", record, message:"Diese Studio-ID wurde deaktiviert.", source };
+  }
+  if(record.plan === "full"){
+    return { ok:true, status:"full", record, message:"Vollversion aktiv", source };
+  }
+  const left = daysUntil(record.expiresAt);
+  if(left === null){
+    return { ok:false, status:"invalid_date", record, message:"Für diese Testversion fehlt ein gültiges Ablaufdatum.", source };
+  }
+  if(left < 0){
+    return { ok:false, status:"expired", record, daysLeft:left, message:"Testzeitraum abgelaufen.", source };
+  }
+  return { ok:true, status:"trial", record, daysLeft:left, message:`Testversion aktiv · noch ${left} Tag(e)`, source };
+}
+async function refreshStudioLicense(studioId){
+  const id = normalizeStudioId(studioId || state?.studioId || "");
+  if(!id){
+    currentLicenseInfo = { ok:false, status:"missing", message:"Bitte Studio-ID eintragen." };
+    return currentLicenseInfo;
+  }
+  const file = await fetchLicenseFile();
+  const record = findStudioLicense(file.data, id);
+  currentLicenseInfo = evaluateStudioLicense(record, file.online ? "online" : "cache");
+  currentLicenseInfo.studioId = id;
+  updateLicenseBanner();
+  return currentLicenseInfo;
+}
+function licenseLabel(info=currentLicenseInfo){
+  if(!info) return "Lizenz wird geprüft …";
+  const studioId = info.studioId || normalizeStudioId(state?.studioId || "");
+  const name = info.record?.name ? ` · ${info.record.name}` : "";
+  const source = info.source === "cache" ? " · Offline-Cache" : "";
+  if(info.status === "full") return `Studio-ID ${studioId}${name} · Vollversion${source}`;
+  if(info.status === "trial") return `Studio-ID ${studioId}${name} · Testversion bis ${info.record.expiresAt} · noch ${info.daysLeft} Tag(e)${source}`;
+  return `Studio-ID ${studioId || "fehlt"} · ${info.message || "nicht aktiv"}${source}`;
+}
+function buildLicenseBanner(){
+  if(document.getElementById("studioLicenseBanner")) return;
+  const banner = document.createElement("div");
+  banner.id = "studioLicenseBanner";
+  banner.className = "studio-license-banner";
+  banner.innerHTML = `<div id="studioLicenseText"></div><button id="changeStudioIdBtn" type="button">Studio-ID ändern</button>`;
+  document.body.prepend(banner);
+  const btn = document.getElementById("changeStudioIdBtn");
+  if(btn) btn.onclick = changeStudioId;
+}
+function updateLicenseBanner(){
+  buildLicenseBanner();
+  const text = document.getElementById("studioLicenseText");
+  if(text) text.textContent = licenseLabel();
+  const banner = document.getElementById("studioLicenseBanner");
+  if(banner){
+    banner.classList.toggle("license-ok", !!currentLicenseInfo?.ok);
+    banner.classList.toggle("license-bad", !currentLicenseInfo?.ok);
+  }
+}
+async function changeStudioId(){
+  const value = prompt("Studio-ID eingeben:", state?.studioId || "");
+  if(value === null) return;
+  const id = normalizeStudioId(value);
+  if(!id){ alert("Bitte eine gültige Studio-ID eingeben."); return; }
+  const info = await refreshStudioLicense(id);
+  if(!info.ok){ alert(info.message || "Studio-ID ist nicht aktiv."); return; }
+  state.studioId = id;
+  saveState();
+  hideLicenseLock();
+  updateLicenseBanner();
+  renderAll();
+}
+function showLicenseLock(info=currentLicenseInfo){
+  hideLicenseLock();
+  buildLicenseBanner();
+  const lock = document.createElement("div");
+  lock.id = "studioLicenseLock";
+  lock.className = "studio-license-lock";
+  lock.innerHTML = `
+    <div class="studio-license-card">
+      <h1>Studio-ID nicht aktiv</h1>
+      <p>${escapeHtml(info?.message || "Diese App ist für diese Studio-ID aktuell nicht freigeschaltet.")}</p>
+      <p class="license-small">${escapeHtml(licenseLabel(info))}</p>
+      <button id="licenseChangeIdFromLock" type="button">Studio-ID eingeben / ändern</button>
+    </div>`;
+  document.body.appendChild(lock);
+  const btn = document.getElementById("licenseChangeIdFromLock");
+  if(btn) btn.onclick = changeStudioId;
+}
+function hideLicenseLock(){
+  const old = document.getElementById("studioLicenseLock");
+  if(old) old.remove();
+}
+async function ensureAppLicense(){
+  const info = await refreshStudioLicense(state?.studioId || "");
+  updateLicenseBanner();
+  if(state?.configured && !info.ok) showLicenseLock(info);
+  return info.ok;
+}
+
 function uid(){ return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()); }
 function todayISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
 function defaultServices(){ return [
@@ -168,7 +183,7 @@ function defaultServices(){ return [
   {id:uid(), name:"Nail Art", price:15, duration:30}
 ];}
 function defaultState(){ return {
-  version:"2.8", configured:false, studioId:CURRENT_STUDIO_ID, licensedStudioName:CURRENT_STUDIO ? CURRENT_STUDIO.name : "", studioName:CURRENT_STUDIO ? CURRENT_STUDIO.name : "", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
+  version:"3.0", configured:false, studioId:"", studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
   employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[],
   selectedDate:todayISO(), storageMode:"local"
 };}
@@ -182,16 +197,14 @@ function loadState(){
       }
     }
     data = data || defaultState();
-    data.version = 68;
-    data.studioId = CURRENT_STUDIO_ID;
-    data.licensedStudioName = CURRENT_STUDIO ? CURRENT_STUDIO.name : "";
-    if(CURRENT_STUDIO && (!data.studioName || data.studioName === "Mein Nagelstudio" || data.studioName === "Nagelstudio")) data.studioName = CURRENT_STUDIO.name;
+    data.version = 67;
     data.services = data.services && data.services.length ? data.services : defaultServices();
     data.excludedRevenueDays = data.excludedRevenueDays || [];
     data.manualRevenueItems = data.manualRevenueItems || [];
     data.customers = data.customers || [];
     data.appointments = (data.appointments || []).map(a => ({...a, status:a.status || "Gebucht", employeeAny: !!a.employeeAny}));
     data.employees = (data.employees || []).map((e, index) => { const auto = paletteColor(index); return normalizeEmployeeRecord({...e, color:(!e.color || isDefaultEmployeeColor(e.color)) ? auto.accent : e.color, rowColor:e.rowColor || auto.bg}, index); });
+    data.studioId = normalizeStudioId(data.studioId || "");
     data.studioPhone = data.studioPhone || "";
     data.studioAddress = data.studioAddress || "";
     if(typeof data.revenueEnabled !== "boolean") data.revenueEnabled = false;
@@ -513,10 +526,16 @@ function updateDisplayModeHint(){
 
 function escapeHtml(str){ return String(str??"").replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
 
-function boot(){
+async function boot(){
   $("currentDateInput").value = state.selectedDate || todayISO();
   bindEvents();
-  state.configured ? showMain() : showSetup();
+  if(state.configured){
+    await ensureAppLicense();
+    showMain();
+  }else{
+    buildLicenseBanner();
+    showSetup();
+  }
   startCurrentTimeTicker();
   window.addEventListener("resize", () => { if((state.displayDeviceMode || "auto") === "auto"){ applyDeviceView(); renderCalendar(); } });
 }
@@ -524,16 +543,20 @@ function showSetup(){ $("setupScreen").classList.remove("hidden"); $("mainScreen
 function showMain(){ $("setupScreen").classList.add("hidden"); $("mainScreen").classList.remove("hidden"); renderAll(); }
 
 function bindEvents(){
-  $("finishSetupBtn").onclick = () => {
-    if(!requireActiveStudioLicense()) return;
+  $("finishSetupBtn").onclick = async () => {
+    const studioId = normalizeStudioId($("studioIdInput")?.value || "");
+    if(!studioId){ alert("Bitte Studio-ID eintragen."); return; }
+    const license = await refreshStudioLicense(studioId);
+    if(!license.ok){ alert(license.message || "Diese Studio-ID ist nicht aktiv."); return; }
     const names = $("employeesInput").value.split(",").map(s=>s.trim()).filter(Boolean).slice(0,20);
-    state.studioName = $("studioNameInput").value.trim() || "Mein Nagelstudio";
+    state.studioId = studioId;
+    state.studioName = $("studioNameInput").value.trim() || license.record?.name || "Mein Nagelstudio";
     state.studioPhone = $("studioPhoneInput").value.trim();
     state.studioAddress = $("studioAddressInput").value.trim();
     state.openTime = $("openTimeInput").value || "08:00";
     state.closeTime = $("closeTimeInput").value || "20:00";
     state.employees = names.map((name, index)=>{ const auto = paletteColor(index); return {id:uid(), name, active:true, color:auto.accent, rowColor:auto.bg}; });
-    state.configured = true; state.selectedDate = todayISO(); saveState(); showMain();
+    state.configured = true; state.selectedDate = todayISO(); saveState(); hideLicenseLock(); showMain(); updateLicenseBanner();
   };
   $("saveAppointmentBtn").onclick = saveAppointment;
   $("clearFormBtn").onclick = clearForm;
@@ -715,6 +738,10 @@ Object.assign(I18N.en, {
   appointmentBlockTime:"Appointment"
 });
 
+Object.assign(I18N.de, { employeeAny:"Beliebig" });
+Object.assign(I18N.vi, { employeeAny:"Bất kỳ" });
+Object.assign(I18N.en, { employeeAny:"Any" });
+
 function t(key){
   const lang = state.language || "de";
   return (I18N[lang] && I18N[lang][key]) || I18N.de[key] || key;
@@ -751,7 +778,7 @@ function renderAll(){
   if($("reportDate")) $("reportDate").value ||= state.selectedDate;
   $("reportFrom").value ||= state.selectedDate;
   $("reportTo").value ||= state.selectedDate;
-  renderStartTimeOptions(); renderEmployeeSelect(); renderSettingsEmployeeList(); renderWorkTimeList(); renderCustomerDatalist(); renderSettingsCustomerList(); renderServiceDatalist(); renderServiceList(); renderCustomerSearch(); renderCalendar(); applyRevenueVisibility(); renderReport(); updateBackupStatuses(); renderStudioLicenseInfo();
+  renderStartTimeOptions(); renderEmployeeSelect(); renderSettingsEmployeeList(); renderWorkTimeList(); renderCustomerDatalist(); renderSettingsCustomerList(); renderServiceDatalist(); renderServiceList(); renderCustomerSearch(); renderCalendar(); applyRevenueVisibility(); renderReport(); updateBackupStatuses();
 }
 
 
@@ -836,7 +863,6 @@ function cancelEmployeeEdit(){
   $("settingsEmployeeColor").value=paletteColor((state.employees || []).length).accent;
 }
 function saveEmployeeFromSettings(){
-  if(!requireActiveStudioLicense()) return;
   const name=$("settingsEmployeeName").value.trim();
   const color=$("settingsEmployeeColor").value || "#2d1b25";
   if(!name){ alert("Bitte Mitarbeitername eintragen."); return; }
@@ -1247,7 +1273,6 @@ function cancelCustomerEdit(){
   ["settingsCustomerName","settingsCustomerPhone","settingsCustomerEmail","settingsCustomerNote"].forEach(id => $(id).value = "");
 }
 function saveCustomerFromSettings(){
-  if(!requireActiveStudioLicense()) return;
   const name = $("settingsCustomerName").value.trim();
   const phone = $("settingsCustomerPhone").value.trim();
   const email = $("settingsCustomerEmail").value.trim();
@@ -1347,7 +1372,6 @@ function renderServiceList(){
   box.querySelectorAll("[data-del]").forEach(btn=>btn.onclick=()=>{ if(confirm("Leistung wirklich löschen? Bestehende Termine bleiben erhalten.")){ state.services=state.services.filter(s=>s.id!==btn.dataset.del); saveState(); renderServiceList(); renderServiceDatalist(); }});
 }
 function addService(){
-  if(!requireActiveStudioLicense()) return;
   const name=$("newServiceName").value.trim(), price=Number($("newServicePrice").value||0), duration=Number($("newServiceDuration").value||60);
   if(!name){ alert("Bitte Leistungsname eintragen."); return; }
   const existing=state.services.find(s=>s.name.toLowerCase()===name.toLowerCase());
@@ -1460,7 +1484,7 @@ function renderCalendar(){
       const a=todays.find(x=>x.employeeId===emp.id && x.startTime===t);
       if(a){
         const span=Math.max(1,Math.round(Number(a.duration)/30)); skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
-        grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)}</div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}${a.employeeAny ? " · Beliebig" : ""}</div><div class="meta">${escapeHtml(a.startTime)} · ${escapeHtml(a.phone||"")}</div></div></div>`);
+        grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)}</div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}${a.employeeAny ? " · Egal" : ""}</div><div class="meta">${escapeHtml(a.startTime)} · ${escapeHtml(a.phone||"")}</div></div></div>`);
       }else{
         const issue = employeeAvailabilityIssue(emp, state.selectedDate, t, 30);
         if(issue){
@@ -1619,7 +1643,7 @@ function showAppointmentConflict(conflict){
   alert(t("appointmentConflictTitle") + "\n\n" + msg);
 }
 function saveAppointment(){
-  if(!requireActiveStudioLicense()) return;
+  if(currentLicenseInfo && !currentLicenseInfo.ok){ showLicenseLock(currentLicenseInfo); return; }
   const a={ id:editingAppointmentId||uid(), date:state.selectedDate, customerName:$("customerName").value.trim(), phone:combinePhoneFields(), serviceName:$("serviceName").value.trim(), price:Number($("price").value||0), duration:Number($("duration").value||60), employeeId:$("employeeSelect").value, employeeAny:isEmployeeAnyActive(), startTime:$("startTime").value, status:"Gebucht", note:$("note").value.trim() };
   const old = state.appointments.find(x=>x.id===a.id);
   if(old && (old.status==="Erledigt" || old.status==="Nicht erschienen")) a.status=old.status;
@@ -1638,7 +1662,7 @@ function clearForm(){
 }
 function showAppointment(id){
   selectedAppointmentId=id; const a=state.appointments.find(x=>x.id===id); const emp=state.employees.find(e=>e.id===a.employeeId);
-  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName)} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>Mitarbeiter: ${escapeHtml(emp?.name||"")}</p><p>Telefon: ${escapeHtml(a.phone||"-")}</p><p>Status intern: ${escapeHtml(a.status||"Gebucht")}${a.employeeAny ? " · Beliebig" : ""}</p><p>Preis: ${money(a.price)}</p><p>Notiz: ${escapeHtml(a.note||"-")}</p>`;
+  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName)} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>Mitarbeiter: ${escapeHtml(emp?.name||"")}</p><p>Telefon: ${escapeHtml(a.phone||"-")}</p><p>Status intern: ${escapeHtml(a.status||"Gebucht")}${a.employeeAny ? " · Egal" : ""}</p><p>Preis: ${money(a.price)}</p><p>Notiz: ${escapeHtml(a.note||"-")}</p>`;
   $("appointmentDialog").showModal();
 }
 function editSelectedAppointment(){
@@ -1693,7 +1717,7 @@ function renderAppointmentEditForm(a){
         <label>Mitarbeiter
           <select id="editApptEmployee">${employeeOptions}</select>
         </label>
-        <label class="employee-any-edit-label">Beliebig
+        <label class="employee-any-edit-label">Egal
           <input id="editApptEmployeeAny" type="checkbox" ${a.employeeAny ? "checked" : ""}>
           <small>Termin im Tagesplan gelb markieren</small>
         </label>
@@ -1775,7 +1799,7 @@ function noShowSelectedAppointment(){
   a.status="Nicht erschienen";
   saveState(); $("appointmentDialog").close(); renderAll();
 }
-function deleteSelectedAppointment(){ if(!requireActiveStudioLicense()) return; if(selectedAppointmentId && confirm("Termin wirklich löschen?")){ state.appointments=state.appointments.filter(a=>a.id!==selectedAppointmentId); saveState(); $("appointmentDialog").close(); renderAll(); } }
+function deleteSelectedAppointment(){ if(selectedAppointmentId && confirm("Termin wirklich löschen?")){ state.appointments=state.appointments.filter(a=>a.id!==selectedAppointmentId); saveState(); $("appointmentDialog").close(); renderAll(); } }
 
 function renderCustomerSearch(){
   const input=$("customerSearchInput"), box=$("customerSearchResults"); if(!input||!box) return;
@@ -2196,7 +2220,6 @@ function openSettings(){
   $("settingsDialog").showModal();
 }
 function saveSettings(){
-  if(!requireActiveStudioLicense()) return;
   state.studioName=$("settingsStudioName").value.trim()||state.studioName;
   state.studioPhone=$("settingsStudioPhone").value.trim();
   state.studioAddress=$("settingsStudioAddress").value.trim();
@@ -2253,12 +2276,12 @@ function buildBackupPayload(type){
       backupType:type || "Normal",
       createdAt:nowStampHuman(),
       createdAtISO:new Date().toISOString(),
-      appVersion:"2.8",
+      appVersion:"3.0",
       note:type === "Bereinigung"
         ? "Backup nach Bereinigung: Alle Termine vor dem heutigen Tag wurden vorher entfernt. Termine von heute und danach bleiben erhalten."
         : "Normales Backup."
     },
-    data:{...state, version:"2.8", studioId:CURRENT_STUDIO_ID, licensedStudioName:CURRENT_STUDIO ? CURRENT_STUDIO.name : ""}
+    data:{...state, version:"3.0"}
   };
 }
 function setLocalBackupStatus(filename){
@@ -2490,7 +2513,7 @@ function showAppointment(id){
   selectedAppointmentId=id;
   const a=state.appointments.find(x=>x.id===id); if(!a) return;
   const emp=state.employees.find(e=>e.id===a.employeeId);
-  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName || t("serviceFallback"))} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>${t("employeeLabel")}: ${escapeHtml(emp?.name||"")}</p><p>${t("phoneLabel")}: ${escapeHtml(a.phone||"-")}</p><p>${t("internalStatus")}: ${escapeHtml(a.status||"Gebucht")}${a.employeeAny ? " · Beliebig" : ""}</p><p>${t("priceLabel")}: ${money(a.price)}</p><p>${t("noteLabel")}: ${escapeHtml(a.note||"-")}</p>`;
+  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName || t("serviceFallback"))} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>${t("employeeLabel")}: ${escapeHtml(emp?.name||"")}</p><p>${t("phoneLabel")}: ${escapeHtml(a.phone||"-")}</p><p>${t("internalStatus")}: ${escapeHtml(a.status||"Gebucht")}${a.employeeAny ? " · Egal" : ""}</p><p>${t("priceLabel")}: ${money(a.price)}</p><p>${t("noteLabel")}: ${escapeHtml(a.note||"-")}</p>`;
   $("appointmentDialog").showModal();
 }
 if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js")); }

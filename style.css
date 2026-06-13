@@ -1921,7 +1921,7 @@ body.app-device-ipad .appointment{
 }
 
 
-/* Version 99: "Beliebig" inaktiv nur hellgelber Rand, aktiv gelb */
+/* Version 99: "Egal" inaktiv nur hellgelber Rand, aktiv gelb */
 .employee-select-any-row{display:flex;gap:8px;align-items:center}
 .employee-select-any-row select{flex:1;min-width:0}
 .employee-any-btn{background:transparent;color:#8a6d00;border:2px solid #ffe8a3;font-weight:800;min-width:72px;box-shadow:none}
@@ -1991,18 +1991,66 @@ body.app-device-ipad .appointment{
   .worktime-section-head small{text-align:left;}
 }
 
-.studio-license-info{
-  margin:12px 0;
-  padding:12px;
-  border:1px solid rgba(217,79,147,.25);
-  border-radius:14px;
-  background:rgba(255,240,247,.65);
+/* Studio-ID Lizenzbanner */
+.studio-license-banner{
+  position: sticky;
+  top: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  font-size: 13px;
+  background: #fff7df;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+  color: #2d1b25;
 }
-.studio-license-info code{
-  display:inline-block;
-  max-width:100%;
-  overflow-wrap:anywhere;
-  padding:4px 6px;
-  border-radius:8px;
-  background:rgba(255,255,255,.8);
+.studio-license-banner.license-ok{ background: #effaf4; }
+.studio-license-banner.license-bad{ background: #fff0ee; }
+.studio-license-banner button{
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: #2d1b25;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.studio-license-lock{
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(45,27,37,.72);
+  backdrop-filter: blur(6px);
+}
+.studio-license-card{
+  width: min(520px, 100%);
+  padding: 28px;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(0,0,0,.25);
+  text-align: center;
+}
+.studio-license-card h1{ margin-top: 0; }
+.studio-license-card button{
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 18px;
+  background: #2d1b25;
+  color: #fff;
+  cursor: pointer;
+}
+.license-small,
+.field-hint{
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: .75;
+}
+@media(max-width: 640px){
+  .studio-license-banner{ align-items: flex-start; flex-direction: column; }
 }

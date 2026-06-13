@@ -16,6 +16,10 @@
       <img class="setup-logo" src="logo-192.png" alt="Logo">
       <h1 data-i18n="initialSetup">Ersteinrichtung</h1>
       <p data-i18n="setupHint">Die App läuft lokal auf diesem Gerät. Cloud-Backup nutzt aktuell Export oder Teilen-Menü.</p>
+      <label><span>Studio-ID</span>
+        <input id="studioIdInput" placeholder="z. B. STUDIO-001" autocomplete="off">
+        <small class="field-hint">Diese ID bekommst du vom Anbieter. Sie steuert Testversion, Vollversion und Ablaufdatum.</small>
+      </label>
       <label><span data-i18n="studioName">Studio-Name</span>
         <input id="studioNameInput" placeholder="z. B. Beauty Nails">
       </label>
@@ -128,7 +132,7 @@
             <label><span data-i18n="appointmentWithEmployee">Termin bei Mitarbeiter</span>
               <div class="employee-select-any-row">
                 <select id="employeeSelect"></select>
-                <button id="employeeAnyBtn" type="button" class="employee-any-btn" aria-pressed="false">Beliebig</button>
+                <button id="employeeAnyBtn" type="button" class="employee-any-btn" aria-pressed="false" data-i18n="employeeAny">Beliebig</button>
               </div>
             </label>
 
@@ -394,8 +398,7 @@
       <div class="settings-grid system-info-grid">
         <div class="settings-section wide-section">
           <h3 data-i18n="systemInfo">System Info</h3>
-          <p class="hint"><strong>Version:</strong> 2.8</p>
-          <div id="studioLicenseInfo" class="studio-license-info"></div>
+          <p class="hint"><strong>Version:</strong> 2.88</p>
           <p class="hint"><strong>Hersteller / Entwickler:</strong> Liam Trinh</p>
           <p class="hint"><strong>Copyright:</strong> <button id="hiddenRevenueOpenBtn" type="button" class="hidden-revenue-trigger" title="">Copyright ©</button> 2026 Liam Trinh 鄭慶廉</p>
         </div>
