@@ -2,10 +2,10 @@
   "updatedAt": "2026-06-13",
   "studios": [
     {
-      "id": "STUDIO-001",
-      "name": "Beauty Nails Teststudio",
+      "id": "123456",
+      "name": "Beauty World",
       "plan": "trial",
-      "expiresAt": "2026-07-13",
+      "expiresAt": "2026-07-31",
       "active": true
     },
     {
@@ -17,7 +17,7 @@
     },
     {
       "id": "310366",
-      "name": "Vollversion Beispielstudio",
+      "name": "DEMO Studio",
       "plan": "full",
       "expiresAt": null,
       "active": true
