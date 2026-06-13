@@ -576,7 +576,7 @@ const I18N = {
     close:"Schließen", saveStudio:"Studio speichern", saveEmployee:"Mitarbeiter speichern", saveCustomer:"Kunde speichern",
     saveService:"Leistung speichern", exportBackup:"Backup exportieren", today:"Heute", studioName:"Studio-Name",
     studioPhone:"Telefonnummer vom Studio", studioAddress:"Adresse vom Studio", name:"Name", customerName:"Kundenname",
-    email:"E-Mail", serviceName:"Name der Leistung", selectPeriod:"Zeitraum auswählen", selectDate:"Datum auswählen"
+    email:"E-Mail", serviceName:"Name der Leistung", selectPeriod:"Zeitraum auswählen", selectDate:"Datum auswählen", employeeAny:"Beliebig"
   },
   vi: {
     language:"Ngôn ngữ", employee:"Nhân viên", edit:"Sửa", delete:"Xóa", activate:"Kích hoạt", deactivate:"Tắt", cancelEdit:"Hủy sửa", importBackup:"Nhập sao lưu", deleteAppointmentsPeriod:"Xóa vĩnh viễn lịch hẹn trong khoảng đã chọn", cleanupArchive:"Dọn dẹp & sao lưu", cleanupArchiveHint:"Xóa vĩnh viễn lịch hẹn đã hoàn thành và các ngày cũ, sau đó tự tạo bản sao lưu.", cleanupPastAndBackup:"Xóa lịch hẹn cũ + tạo sao lưu", dashboardCleanupBackup:"Sao lưu", cloudBackup:"Sao lưu Cloud", cloudBackupHint:"Chuẩn bị sao lưu Cloud tùy chọn cho sau này. Hiện tại ứng dụng vẫn tạo file sao lưu cục bộ.", cloudProvider:"Nhà cung cấp Cloud", enableCloudBackup:"Bật sao lưu Cloud", settingsStudio:"Tiệm", newAppointment:"Lịch hẹn mới", appointmentWithEmployee:"Nhân viên",
@@ -587,7 +587,7 @@ const I18N = {
     close:"Đóng", saveStudio:"Lưu tiệm", saveEmployee:"Lưu nhân viên", saveCustomer:"Lưu khách hàng",
     saveService:"Lưu dịch vụ", exportBackup:"Xuất sao lưu", today:"Hôm nay", studioName:"Tên tiệm",
     studioPhone:"Số điện thoại tiệm", studioAddress:"Địa chỉ tiệm", name:"Tên", customerName:"Tên khách hàng",
-    email:"E-Mail", serviceName:"Tên dịch vụ", selectPeriod:"Chọn khoảng thời gian", selectDate:"Chọn ngày"
+    email:"E-Mail", serviceName:"Tên dịch vụ", selectPeriod:"Chọn khoảng thời gian", selectDate:"Chọn ngày", employeeAny:"Bất kỳ"
   },
   en: {
     language:"Language", employee:"Employee", edit:"Edit", delete:"Delete", activate:"Activate", deactivate:"Deactivate", cancelEdit:"Cancel edit", importBackup:"Import backup", deleteAppointmentsPeriod:"Permanently delete appointments in selected period", cleanupArchive:"Cleanup & backup", cleanupArchiveHint:"Permanently deletes completed appointments and past days, then automatically creates a backup.", cleanupPastAndBackup:"Delete past appointments + create backup", dashboardCleanupBackup:"Backup", cloudBackup:"Cloud backup", cloudBackupHint:"Prepare optional cloud backup for later. Currently the app still creates local backup files.", cloudProvider:"Cloud provider", enableCloudBackup:"Enable cloud backup", settingsStudio:"Studio", newAppointment:"New appointment", appointmentWithEmployee:"Appointment with employee",
@@ -598,7 +598,7 @@ const I18N = {
     close:"Close", saveStudio:"Save studio", saveEmployee:"Save employee", saveCustomer:"Save customer",
     saveService:"Save service", exportBackup:"Export backup", today:"Today", studioName:"Studio name",
     studioPhone:"Studio phone", studioAddress:"Studio address", name:"Name", customerName:"Customer name",
-    email:"Email", serviceName:"Service name", selectPeriod:"Select period", selectDate:"Select date"
+    email:"Email", serviceName:"Service name", selectPeriod:"Select period", selectDate:"Select date", employeeAny:"Any"
   }
 };
 Object.assign(I18N.de, {
@@ -1410,7 +1410,7 @@ function renderCalendar(){
       const a=todays.find(x=>x.employeeId===emp.id && x.startTime===t);
       if(a){
         const span=Math.max(1,Math.round(Number(a.duration)/30)); skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
-        grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)}</div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}${a.employeeAny ? " · Egal" : ""}</div><div class="meta">${escapeHtml(a.startTime)} · ${escapeHtml(a.phone||"")}</div></div></div>`);
+        grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)}</div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}${a.employeeAny ? " · " + t("employeeAny") : ""}</div><div class="meta">${escapeHtml(a.startTime)} · ${escapeHtml(a.phone||"")}</div></div></div>`);
       }else{
         const issue = employeeAvailabilityIssue(emp, state.selectedDate, t, 30);
         if(issue){
@@ -1588,7 +1588,7 @@ function clearForm(){
 }
 function showAppointment(id){
   selectedAppointmentId=id; const a=state.appointments.find(x=>x.id===id); const emp=state.employees.find(e=>e.id===a.employeeId);
-  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName)} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>Mitarbeiter: ${escapeHtml(emp?.name||"")}</p><p>Telefon: ${escapeHtml(a.phone||"-")}</p><p>Status intern: ${escapeHtml(a.status||"Gebucht")}${a.employeeAny ? " · Egal" : ""}</p><p>Preis: ${money(a.price)}</p><p>Notiz: ${escapeHtml(a.note||"-")}</p>`;
+  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName)} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>Mitarbeiter: ${escapeHtml(emp?.name||"")}</p><p>Telefon: ${escapeHtml(a.phone||"-")}</p><p>Status intern: ${escapeHtml(a.status||"Gebucht")}${a.employeeAny ? " · " + t("employeeAny") : ""}</p><p>Preis: ${money(a.price)}</p><p>Notiz: ${escapeHtml(a.note||"-")}</p>`;
   $("appointmentDialog").showModal();
 }
 function editSelectedAppointment(){
@@ -1643,7 +1643,7 @@ function renderAppointmentEditForm(a){
         <label>Mitarbeiter
           <select id="editApptEmployee">${employeeOptions}</select>
         </label>
-        <label class="employee-any-edit-label">Egal
+        <label class="employee-any-edit-label">${t("employeeAny")}
           <input id="editApptEmployeeAny" type="checkbox" ${a.employeeAny ? "checked" : ""}>
           <small>Termin im Tagesplan gelb markieren</small>
         </label>
@@ -2440,7 +2440,7 @@ function showAppointment(id){
   selectedAppointmentId=id;
   const a=state.appointments.find(x=>x.id===id); if(!a) return;
   const emp=state.employees.find(e=>e.id===a.employeeId);
-  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName || t("serviceFallback"))} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>${t("employeeLabel")}: ${escapeHtml(emp?.name||"")}</p><p>${t("phoneLabel")}: ${escapeHtml(a.phone||"-")}</p><p>${t("internalStatus")}: ${escapeHtml(a.status||"Gebucht")}${a.employeeAny ? " · Egal" : ""}</p><p>${t("priceLabel")}: ${money(a.price)}</p><p>${t("noteLabel")}: ${escapeHtml(a.note||"-")}</p>`;
+  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName || t("serviceFallback"))} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>${t("employeeLabel")}: ${escapeHtml(emp?.name||"")}</p><p>${t("phoneLabel")}: ${escapeHtml(a.phone||"-")}</p><p>${t("internalStatus")}: ${escapeHtml(a.status||"Gebucht")}${a.employeeAny ? " · " + t("employeeAny") : ""}</p><p>${t("priceLabel")}: ${money(a.price)}</p><p>${t("noteLabel")}: ${escapeHtml(a.note||"-")}</p>`;
   $("appointmentDialog").showModal();
 }
 if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js")); }

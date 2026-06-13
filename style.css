@@ -1921,7 +1921,7 @@ body.app-device-ipad .appointment{
 }
 
 
-/* Version 99: "Egal" inaktiv nur hellgelber Rand, aktiv gelb */
+/* Version 99: "Beliebig" inaktiv nur hellgelber Rand, aktiv gelb */
 .employee-select-any-row{display:flex;gap:8px;align-items:center}
 .employee-select-any-row select{flex:1;min-width:0}
 .employee-any-btn{background:transparent;color:#8a6d00;border:2px solid #ffe8a3;font-weight:800;min-width:72px;box-shadow:none}
