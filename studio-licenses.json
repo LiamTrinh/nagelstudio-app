@@ -2,6 +2,13 @@
   "updatedAt": "2026-06-13",
   "studios": [
     {
+      "id": "310366",
+      "name": "Teststudio Tam",
+      "plan": "full",
+      "expiresAt": null,
+      "active": true
+    },
+    {
       "id": "123456",
       "name": "Beauty World",
       "plan": "trial",
@@ -9,15 +16,8 @@
       "active": true
     },
     {
-      "id": "STUDIO-002",
-      "name": "Lotus Nails Demo",
-      "plan": "trial",
-      "expiresAt": "2026-07-31",
-      "active": true
-    },
-    {
-      "id": "310366",
-      "name": "DEMO Studio",
+      "id": "STUDIO-FULL-001",
+      "name": "Vollversion Beispielstudio",
       "plan": "full",
       "expiresAt": null,
       "active": true
