@@ -16,14 +16,14 @@
       "active": true
     },
     {
-      "id": "STUDIO-FULL-001",
+      "id": "999",
       "name": "Vollversion Beispielstudio",
-      "plan": "full",
-      "expiresAt": null,
+      "plan": "trial",
+      "expiresAt": "2026-05-30",
       "active": true
     },
     {
-      "id": "STUDIO-BLOCKED",
+      "id": "123",
       "name": "Gesperrtes Beispielstudio",
       "plan": "blocked",
       "expiresAt": null,
