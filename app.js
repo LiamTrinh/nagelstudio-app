@@ -7,25 +7,28 @@ const $ = id => document.getElementById(id);
 // https://DEINNAME.github.io/tt-nagelstudio/?studio=freund-test
 // Neue Studios kannst du hier ergänzen oder verlängern.
 const STUDIOS = {
-  "vollversion": {
-    name: "Vollversion",
+  "freund-test": {
+    name: "Freund Teststudio",
+    type: "trial",
+    validUntil: "2026-07-12",
+    maxDevices: 2,
+    allowedDeviceIds: [
+      // Hier Geräte-ID eintragen, z. B. "DEV-ABC123XYZ"
+    ]
+  },
+  "maria-nails": {
+    name: "Maria Nails",
+    type: "trial",
+    validUntil: "2026-07-12",
+    maxDevices: 2,
+    allowedDeviceIds: []
+  },
+  "anna-beauty": {
+    name: "Anna Beauty",
     type: "full",
-    validUntil: null
-  },
-  "kawaii-nails": {
-    name: "Kawaii Nails",
-    type: "trial",
-    validUntil: "2026-07-31"
-  },
-  "beauty-world": {
-    name: "Beauty World",
-    type: "trial",
-    validUntil: "2026-07-31"
-  },
-  "test-nails": {
-    name: "Test Nails",
-    type: "trial",
-    validUntil: "2026-06-12"
+    validUntil: null,
+    maxDevices: 2,
+    allowedDeviceIds: []
   }
 };
 
@@ -35,24 +38,49 @@ function normalizeStudioId(value){
 function getStudioIdFromUrl(){
   const params = new URLSearchParams(window.location.search);
   const fromUrl = normalizeStudioId(params.get("studio"));
-  if(fromUrl){
-    localStorage.setItem("nail_studio_last_studio_id", fromUrl);
-    return fromUrl;
-  }
-  const saved = normalizeStudioId(localStorage.getItem("nail_studio_last_studio_id"));
-  if(saved){
-    try{
-      const url = new URL(window.location.href);
-      url.searchParams.set("studio", saved);
-      window.history.replaceState(null, "", url.toString());
-    }catch(err){}
-  }
-  return saved;
+  if(fromUrl){ localStorage.setItem("nail_studio_last_studio_id", fromUrl); return fromUrl; }
+  return normalizeStudioId(localStorage.getItem("nail_studio_last_studio_id"));
 }
 const CURRENT_STUDIO_ID = getStudioIdFromUrl();
 const CURRENT_STUDIO = CURRENT_STUDIO_ID ? (STUDIOS[CURRENT_STUDIO_ID] || null) : null;
 function studioKeySuffix(){ return CURRENT_STUDIO_ID || "ohne-studio"; }
 function studioStorageKey(baseKey){ return `${baseKey}_${studioKeySuffix()}`; }
+
+// Geräte-Aktivierung
+// Diese Geräte-ID wird einmal pro Browser/Gerät erzeugt und lokal gespeichert.
+// Für echte Kontrolle trägst du diese Geräte-ID beim passenden Studio unter allowedDeviceIds ein.
+const DEVICE_ID_KEY = "nail_studio_device_id";
+function createDeviceId(){
+  const randomPart = (crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()).replace(/[^a-zA-Z0-9]/g, "").slice(0, 12).toUpperCase();
+  return `DEV-${randomPart}`;
+}
+function getDeviceId(){
+  let id = localStorage.getItem(DEVICE_ID_KEY);
+  if(!id){
+    id = createDeviceId();
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
+const CURRENT_DEVICE_ID = getDeviceId();
+function getDeviceActivationStatus(){
+  if(!CURRENT_STUDIO){
+    return {status:"invalid", active:false, deviceId:CURRENT_DEVICE_ID, message:"Keine gültige Studio-ID für Geräteprüfung."};
+  }
+  const allowed = Array.isArray(CURRENT_STUDIO.allowedDeviceIds) ? CURRENT_STUDIO.allowedDeviceIds : [];
+  const max = Number(CURRENT_STUDIO.maxDevices || allowed.length || 1);
+  if(allowed.includes(CURRENT_DEVICE_ID)){
+    return {status:"active", active:true, deviceId:CURRENT_DEVICE_ID, maxDevices:max, usedDevices:allowed.length, message:"Dieses Gerät ist für dieses Studio aktiviert."};
+  }
+  if(allowed.length >= max){
+    return {status:"blocked", active:false, deviceId:CURRENT_DEVICE_ID, maxDevices:max, usedDevices:allowed.length, message:"Dieses Gerät ist nicht aktiviert. Die maximale Geräteanzahl ist bereits erreicht."};
+  }
+  return {status:"waiting", active:false, deviceId:CURRENT_DEVICE_ID, maxDevices:max, usedDevices:allowed.length, message:"Dieses Gerät ist noch nicht aktiviert. Geräte-ID an den Entwickler senden und in app.js beim Studio eintragen."};
+}
+function isCurrentDeviceActive(){
+  return getDeviceActivationStatus().active;
+}
+
 const KEY = studioStorageKey(BASE_KEY);
 const OLD_KEYS = [
   ...BASE_OLD_KEYS.map(studioStorageKey),
@@ -88,22 +116,33 @@ function isStudioLicenseActive(){
 }
 function requireActiveStudioLicense(){
   const s = getStudioLicenseStatus();
-  if(isStudioLicenseActive()) return true;
-  alert("Studio-Lizenz nicht aktiv\n\n" + s.message);
-  return false;
+  if(!isStudioLicenseActive()){
+    alert("Studio-Lizenz nicht aktiv\n\n" + s.message);
+    return false;
+  }
+  const d = getDeviceActivationStatus();
+  if(!d.active){
+    alert("Gerät nicht aktiviert\n\n" + d.message + "\n\nGeräte-ID: " + d.deviceId);
+    return false;
+  }
+  return true;
 }
 function renderStudioLicenseInfo(){
   const box = $("studioLicenseInfo");
   if(!box) return;
   const s = getStudioLicenseStatus();
+  const d = getDeviceActivationStatus();
   const statusText = s.status === "full" ? "Vollversion" : s.status === "trial" ? "Testversion" : s.status === "expired" ? "Abgelaufen" : "Nicht aktiv";
+  const deviceText = d.active ? "Aktiviert" : d.status === "blocked" ? "Blockiert" : "Wartet auf Freigabe";
   const link = `${location.origin}${location.pathname}?studio=${encodeURIComponent(s.studioId || "freund-test")}`;
   box.innerHTML = `
     <p class="hint"><strong>Studio-ID:</strong> ${escapeHtml(s.studioId || "nicht gesetzt")}</p>
     <p class="hint"><strong>Studio:</strong> ${escapeHtml(s.studioName || "-")}</p>
     <p class="hint"><strong>Lizenz:</strong> ${escapeHtml(statusText)}${s.validUntil ? ` · gültig bis ${escapeHtml(s.validUntil)}` : ""}</p>
+    <p class="hint"><strong>Geräte-ID:</strong><br><code>${escapeHtml(d.deviceId)}</code></p>
+    <p class="hint"><strong>Geräte-Aktivierung:</strong> ${escapeHtml(deviceText)}${d.maxDevices ? ` · ${escapeHtml(String(d.usedDevices || 0))}/${escapeHtml(String(d.maxDevices))} Geräte eingetragen` : ""}</p>
     <p class="hint"><strong>Direkter Studio-Link:</strong><br><code>${escapeHtml(link)}</code></p>
-    <p class="hint">${escapeHtml(s.message)}</p>
+    <p class="hint">${escapeHtml(s.message)} ${escapeHtml(d.message || "")}</p>
   `;
 }
 
@@ -129,7 +168,7 @@ function defaultServices(){ return [
   {id:uid(), name:"Nail Art", price:15, duration:30}
 ];}
 function defaultState(){ return {
-  version:"4.02", configured:false, studioId:CURRENT_STUDIO_ID, licensedStudioName:CURRENT_STUDIO ? CURRENT_STUDIO.name : "", studioName:CURRENT_STUDIO ? CURRENT_STUDIO.name : "", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
+  version:"2.8", configured:false, studioId:CURRENT_STUDIO_ID, licensedStudioName:CURRENT_STUDIO ? CURRENT_STUDIO.name : "", studioName:CURRENT_STUDIO ? CURRENT_STUDIO.name : "", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
   employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[],
   selectedDate:todayISO(), storageMode:"local"
 };}
@@ -587,7 +626,7 @@ const I18N = {
     close:"Schließen", saveStudio:"Studio speichern", saveEmployee:"Mitarbeiter speichern", saveCustomer:"Kunde speichern",
     saveService:"Leistung speichern", exportBackup:"Backup exportieren", today:"Heute", studioName:"Studio-Name",
     studioPhone:"Telefonnummer vom Studio", studioAddress:"Adresse vom Studio", name:"Name", customerName:"Kundenname",
-    email:"E-Mail", serviceName:"Name der Leistung", selectPeriod:"Zeitraum auswählen", selectDate:"Datum auswählen", employeeAny:"Beliebig"
+    email:"E-Mail", serviceName:"Name der Leistung", selectPeriod:"Zeitraum auswählen", selectDate:"Datum auswählen"
   },
   vi: {
     language:"Ngôn ngữ", employee:"Nhân viên", edit:"Sửa", delete:"Xóa", activate:"Kích hoạt", deactivate:"Tắt", cancelEdit:"Hủy sửa", importBackup:"Nhập sao lưu", deleteAppointmentsPeriod:"Xóa vĩnh viễn lịch hẹn trong khoảng đã chọn", cleanupArchive:"Dọn dẹp & sao lưu", cleanupArchiveHint:"Xóa vĩnh viễn lịch hẹn đã hoàn thành và các ngày cũ, sau đó tự tạo bản sao lưu.", cleanupPastAndBackup:"Xóa lịch hẹn cũ + tạo sao lưu", dashboardCleanupBackup:"Sao lưu", cloudBackup:"Sao lưu Cloud", cloudBackupHint:"Chuẩn bị sao lưu Cloud tùy chọn cho sau này. Hiện tại ứng dụng vẫn tạo file sao lưu cục bộ.", cloudProvider:"Nhà cung cấp Cloud", enableCloudBackup:"Bật sao lưu Cloud", settingsStudio:"Tiệm", newAppointment:"Lịch hẹn mới", appointmentWithEmployee:"Nhân viên",
@@ -598,7 +637,7 @@ const I18N = {
     close:"Đóng", saveStudio:"Lưu tiệm", saveEmployee:"Lưu nhân viên", saveCustomer:"Lưu khách hàng",
     saveService:"Lưu dịch vụ", exportBackup:"Xuất sao lưu", today:"Hôm nay", studioName:"Tên tiệm",
     studioPhone:"Số điện thoại tiệm", studioAddress:"Địa chỉ tiệm", name:"Tên", customerName:"Tên khách hàng",
-    email:"E-Mail", serviceName:"Tên dịch vụ", selectPeriod:"Chọn khoảng thời gian", selectDate:"Chọn ngày", employeeAny:"Bất kỳ"
+    email:"E-Mail", serviceName:"Tên dịch vụ", selectPeriod:"Chọn khoảng thời gian", selectDate:"Chọn ngày"
   },
   en: {
     language:"Language", employee:"Employee", edit:"Edit", delete:"Delete", activate:"Activate", deactivate:"Deactivate", cancelEdit:"Cancel edit", importBackup:"Import backup", deleteAppointmentsPeriod:"Permanently delete appointments in selected period", cleanupArchive:"Cleanup & backup", cleanupArchiveHint:"Permanently deletes completed appointments and past days, then automatically creates a backup.", cleanupPastAndBackup:"Delete past appointments + create backup", dashboardCleanupBackup:"Backup", cloudBackup:"Cloud backup", cloudBackupHint:"Prepare optional cloud backup for later. Currently the app still creates local backup files.", cloudProvider:"Cloud provider", enableCloudBackup:"Enable cloud backup", settingsStudio:"Studio", newAppointment:"New appointment", appointmentWithEmployee:"Appointment with employee",
@@ -609,7 +648,7 @@ const I18N = {
     close:"Close", saveStudio:"Save studio", saveEmployee:"Save employee", saveCustomer:"Save customer",
     saveService:"Save service", exportBackup:"Export backup", today:"Today", studioName:"Studio name",
     studioPhone:"Studio phone", studioAddress:"Studio address", name:"Name", customerName:"Customer name",
-    email:"Email", serviceName:"Service name", selectPeriod:"Select period", selectDate:"Select date", employeeAny:"Any"
+    email:"Email", serviceName:"Service name", selectPeriod:"Select period", selectDate:"Select date"
   }
 };
 Object.assign(I18N.de, {
@@ -1421,7 +1460,7 @@ function renderCalendar(){
       const a=todays.find(x=>x.employeeId===emp.id && x.startTime===t);
       if(a){
         const span=Math.max(1,Math.round(Number(a.duration)/30)); skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
-        grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)}</div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}${a.employeeAny ? " · " + t("employeeAny") : ""}</div><div class="meta">${escapeHtml(a.startTime)} · ${escapeHtml(a.phone||"")}</div></div></div>`);
+        grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)}</div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}${a.employeeAny ? " · Beliebig" : ""}</div><div class="meta">${escapeHtml(a.startTime)} · ${escapeHtml(a.phone||"")}</div></div></div>`);
       }else{
         const issue = employeeAvailabilityIssue(emp, state.selectedDate, t, 30);
         if(issue){
@@ -1599,7 +1638,7 @@ function clearForm(){
 }
 function showAppointment(id){
   selectedAppointmentId=id; const a=state.appointments.find(x=>x.id===id); const emp=state.employees.find(e=>e.id===a.employeeId);
-  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName)} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>Mitarbeiter: ${escapeHtml(emp?.name||"")}</p><p>Telefon: ${escapeHtml(a.phone||"-")}</p><p>Status intern: ${escapeHtml(a.status||"Gebucht")}${a.employeeAny ? " · " + t("employeeAny") : ""}</p><p>Preis: ${money(a.price)}</p><p>Notiz: ${escapeHtml(a.note||"-")}</p>`;
+  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName)} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>Mitarbeiter: ${escapeHtml(emp?.name||"")}</p><p>Telefon: ${escapeHtml(a.phone||"-")}</p><p>Status intern: ${escapeHtml(a.status||"Gebucht")}${a.employeeAny ? " · Beliebig" : ""}</p><p>Preis: ${money(a.price)}</p><p>Notiz: ${escapeHtml(a.note||"-")}</p>`;
   $("appointmentDialog").showModal();
 }
 function editSelectedAppointment(){
@@ -1654,7 +1693,7 @@ function renderAppointmentEditForm(a){
         <label>Mitarbeiter
           <select id="editApptEmployee">${employeeOptions}</select>
         </label>
-        <label class="employee-any-edit-label">${t("employeeAny")}
+        <label class="employee-any-edit-label">Beliebig
           <input id="editApptEmployeeAny" type="checkbox" ${a.employeeAny ? "checked" : ""}>
           <small>Termin im Tagesplan gelb markieren</small>
         </label>
@@ -2214,12 +2253,12 @@ function buildBackupPayload(type){
       backupType:type || "Normal",
       createdAt:nowStampHuman(),
       createdAtISO:new Date().toISOString(),
-      appVersion:"4.02",
+      appVersion:"2.8",
       note:type === "Bereinigung"
         ? "Backup nach Bereinigung: Alle Termine vor dem heutigen Tag wurden vorher entfernt. Termine von heute und danach bleiben erhalten."
         : "Normales Backup."
     },
-    data:{...state, version:"4.02", studioId:CURRENT_STUDIO_ID, licensedStudioName:CURRENT_STUDIO ? CURRENT_STUDIO.name : ""}
+    data:{...state, version:"2.8", studioId:CURRENT_STUDIO_ID, licensedStudioName:CURRENT_STUDIO ? CURRENT_STUDIO.name : ""}
   };
 }
 function setLocalBackupStatus(filename){
@@ -2451,7 +2490,7 @@ function showAppointment(id){
   selectedAppointmentId=id;
   const a=state.appointments.find(x=>x.id===id); if(!a) return;
   const emp=state.employees.find(e=>e.id===a.employeeId);
-  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName || t("serviceFallback"))} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>${t("employeeLabel")}: ${escapeHtml(emp?.name||"")}</p><p>${t("phoneLabel")}: ${escapeHtml(a.phone||"-")}</p><p>${t("internalStatus")}: ${escapeHtml(a.status||"Gebucht")}${a.employeeAny ? " · " + t("employeeAny") : ""}</p><p>${t("priceLabel")}: ${money(a.price)}</p><p>${t("noteLabel")}: ${escapeHtml(a.note||"-")}</p>`;
+  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName || t("serviceFallback"))} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>${t("employeeLabel")}: ${escapeHtml(emp?.name||"")}</p><p>${t("phoneLabel")}: ${escapeHtml(a.phone||"-")}</p><p>${t("internalStatus")}: ${escapeHtml(a.status||"Gebucht")}${a.employeeAny ? " · Beliebig" : ""}</p><p>${t("priceLabel")}: ${money(a.price)}</p><p>${t("noteLabel")}: ${escapeHtml(a.note||"-")}</p>`;
   $("appointmentDialog").showModal();
 }
 if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js")); }
