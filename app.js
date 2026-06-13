@@ -35,8 +35,19 @@ function normalizeStudioId(value){
 function getStudioIdFromUrl(){
   const params = new URLSearchParams(window.location.search);
   const fromUrl = normalizeStudioId(params.get("studio"));
-  if(fromUrl){ localStorage.setItem("nail_studio_last_studio_id", fromUrl); return fromUrl; }
-  return normalizeStudioId(localStorage.getItem("nail_studio_last_studio_id"));
+  if(fromUrl){
+    localStorage.setItem("nail_studio_last_studio_id", fromUrl);
+    return fromUrl;
+  }
+  const saved = normalizeStudioId(localStorage.getItem("nail_studio_last_studio_id"));
+  if(saved){
+    try{
+      const url = new URL(window.location.href);
+      url.searchParams.set("studio", saved);
+      window.history.replaceState(null, "", url.toString());
+    }catch(err){}
+  }
+  return saved;
 }
 const CURRENT_STUDIO_ID = getStudioIdFromUrl();
 const CURRENT_STUDIO = CURRENT_STUDIO_ID ? (STUDIOS[CURRENT_STUDIO_ID] || null) : null;

@@ -4,8 +4,51 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7d7e6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Terminplaner">
   <title>Nagelstudio Terminplaner</title>
-  <link rel="manifest" href="manifest.json">
+  <script>
+    (function(){
+      function normalizeStudioId(value){
+        return String(value || "").trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+      }
+      try{
+        var params = new URLSearchParams(window.location.search);
+        var studioId = normalizeStudioId(params.get("studio") || localStorage.getItem("nail_studio_last_studio_id") || "");
+        if(studioId) localStorage.setItem("nail_studio_last_studio_id", studioId);
+
+        var startUrl = new URL("index.html", window.location.href);
+        if(studioId) startUrl.searchParams.set("studio", studioId);
+
+        var manifest = {
+          name: "Nagelstudio Terminplaner",
+          short_name: "Terminplaner",
+          start_url: startUrl.href,
+          scope: new URL("./", window.location.href).href,
+          display: "standalone",
+          background_color: "#fff7fb",
+          theme_color: "#f7d7e6",
+          orientation: "landscape",
+          icons: [
+            { src: new URL("logo-192.png", window.location.href).href, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+            { src: new URL("logo-512.png", window.location.href).href, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+          ]
+        };
+
+        var blob = new Blob([JSON.stringify(manifest)], {type: "application/manifest+json"});
+        var link = document.createElement("link");
+        link.rel = "manifest";
+        link.href = URL.createObjectURL(blob);
+        document.head.appendChild(link);
+      }catch(err){
+        var fallback = document.createElement("link");
+        fallback.rel = "manifest";
+        fallback.href = "manifest.json";
+        document.head.appendChild(fallback);
+      }
+    })();
+  </script>
   <link rel="apple-touch-icon" href="logo-192.png">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -394,7 +437,7 @@
       <div class="settings-grid system-info-grid">
         <div class="settings-section wide-section">
           <h3 data-i18n="systemInfo">System Info</h3>
-          <p class="hint"><strong>Version:</strong> 2.8</p>
+          <p class="hint"><strong>Version:</strong> 4.02</p>
           <div id="studioLicenseInfo" class="studio-license-info"></div>
           <p class="hint"><strong>Hersteller / Entwickler:</strong> Liam Trinh</p>
           <p class="hint"><strong>Copyright:</strong> <button id="hiddenRevenueOpenBtn" type="button" class="hidden-revenue-trigger" title="">Copyright ©</button> 2026 Liam Trinh 鄭慶廉</p>
