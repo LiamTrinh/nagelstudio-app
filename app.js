@@ -118,7 +118,7 @@ function buildLicenseBanner(){
   banner.id = "studioLicenseBanner";
   banner.className = "studio-license-banner";
   banner.innerHTML = `<div id="studioLicenseText"></div><button id="changeStudioIdBtn" type="button">Studio-ID ändern</button>`;
-  document.body.prepend(banner);
+  document.body.appendChild(banner);
   const btn = document.getElementById("changeStudioIdBtn");
   if(btn) btn.onclick = changeStudioId;
 }
