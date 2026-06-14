@@ -1,8 +1,8 @@
 {
   "studios": [
     {
-      "id": "STUDIO-MARIA-FILIALE-1",
-      "name": "Maria Nails - Filiale 1",
+      "id": "123456BW",
+      "name": "Beauty World",
       "plan": "trial",
       "expiresAt": "2026-08-01",
       "active": true,
@@ -12,7 +12,7 @@
       ]
     },
     {
-      "id": "310366",
+      "id": "31030606",
       "name": "Tam Nagelstudio",
       "plan": "full",
       "expiresAt": null,
