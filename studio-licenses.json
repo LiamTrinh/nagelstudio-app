@@ -2,7 +2,14 @@
   "studios": [
     {
       "id": "123456BW",
-      "name": "Maria Nails - Filiale 1",
+      "name": "Beauty World",
+      "plan": "trial",
+      "expiresAt": "2026-07-31",
+      "active": true
+    },
+    {
+      "id": "123456Kawaii",
+      "name": "Kawaii Nails",
       "plan": "trial",
       "expiresAt": "2026-08-01",
       "active": true
