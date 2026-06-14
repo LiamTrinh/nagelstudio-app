@@ -2781,6 +2781,10 @@ function markEmployeeDailyRevenueActionAUsed(id){
   record.originalServicePrice = originalAmount;
   record.actionAPrice = transferAmount;
   record.price = Math.max(0, originalAmount - transferAmount);
+  record.status = "Erledigt";
+  if(appointment){
+    appointment.status = "Erledigt";
+  }
   record.actionADone = true;
   record.actionADoneAt = new Date().toISOString();
   record.updatedAt = new Date().toISOString();
