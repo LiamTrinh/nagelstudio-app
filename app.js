@@ -1,6 +1,221 @@
-const KEY = "nail_studio_pwa_v61";
-const OLD_KEYS = ["nail_studio_pwa_v60", "nail_studio_pwa_v59", "nail_studio_pwa_v58", "nail_studio_pwa_v57", "nail_studio_pwa_v56", "nail_studio_pwa_v55", "nail_studio_pwa_v54", "nail_studio_pwa_v53", "nail_studio_pwa_v52", "nail_studio_pwa_v51", "nail_studio_pwa_v50", "nail_studio_pwa_v49", "nail_studio_pwa_v48", "nail_studio_pwa_v47", "nail_studio_pwa_v46", "nail_studio_pwa_v45", "nail_studio_pwa_v44", "nail_studio_pwa_v43", "nail_studio_pwa_v42", "nail_studio_pwa_v41", "nail_studio_pwa_v40", "nail_studio_pwa_v39", "nail_studio_pwa_v38", "nail_studio_pwa_v37", "nail_studio_pwa_v36", "nail_studio_pwa_v35", "nail_studio_pwa_v34", "nail_studio_pwa_v33", "nail_studio_pwa_v32", "nail_studio_pwa_v31", "nail_studio_pwa_v30", "nail_studio_pwa_v29", "nail_studio_pwa_v28", "nail_studio_pwa_v27", "nail_studio_pwa_v26", "nail_studio_pwa_v25", "nail_studio_pwa_v24", "nail_studio_pwa_v23", "nail_studio_pwa_v22", "nail_studio_pwa_v21", "nail_studio_pwa_v20", "nail_studio_pwa_v19", "nail_studio_pwa_v18", "nail_studio_pwa_v17", "nail_studio_pwa_v16", "nail_studio_pwa_v15", "nail_studio_pwa_v14", "nail_studio_pwa_v13", "nail_studio_pwa_v12", "nail_studio_pwa_v11", "nail_studio_pwa_v10", "nail_studio_pwa_v9", "nail_studio_pwa_v8", "nail_studio_pwa_v7", "nail_studio_pwa_v6", "nail_studio_pwa_v5", "nail_studio_pwa_v4", "nail_studio_pwa_v3", "nail_studio_pwa_v2", "nail_studio_pwa_v1"];
+const KEY = "nail_studio_pwa_v63";
+const OLD_KEYS = ["nail_studio_pwa_v62", "nail_studio_pwa_v61", "nail_studio_pwa_v60", "nail_studio_pwa_v59", "nail_studio_pwa_v58", "nail_studio_pwa_v57", "nail_studio_pwa_v56", "nail_studio_pwa_v55", "nail_studio_pwa_v54", "nail_studio_pwa_v53", "nail_studio_pwa_v52", "nail_studio_pwa_v51", "nail_studio_pwa_v50", "nail_studio_pwa_v49", "nail_studio_pwa_v48", "nail_studio_pwa_v47", "nail_studio_pwa_v46", "nail_studio_pwa_v45", "nail_studio_pwa_v44", "nail_studio_pwa_v43", "nail_studio_pwa_v42", "nail_studio_pwa_v41", "nail_studio_pwa_v40", "nail_studio_pwa_v39", "nail_studio_pwa_v38", "nail_studio_pwa_v37", "nail_studio_pwa_v36", "nail_studio_pwa_v35", "nail_studio_pwa_v34", "nail_studio_pwa_v33", "nail_studio_pwa_v32", "nail_studio_pwa_v31", "nail_studio_pwa_v30", "nail_studio_pwa_v29", "nail_studio_pwa_v28", "nail_studio_pwa_v27", "nail_studio_pwa_v26", "nail_studio_pwa_v25", "nail_studio_pwa_v24", "nail_studio_pwa_v23", "nail_studio_pwa_v22", "nail_studio_pwa_v21", "nail_studio_pwa_v20", "nail_studio_pwa_v19", "nail_studio_pwa_v18", "nail_studio_pwa_v17", "nail_studio_pwa_v16", "nail_studio_pwa_v15", "nail_studio_pwa_v14", "nail_studio_pwa_v13", "nail_studio_pwa_v12", "nail_studio_pwa_v11", "nail_studio_pwa_v10", "nail_studio_pwa_v9", "nail_studio_pwa_v8", "nail_studio_pwa_v7", "nail_studio_pwa_v6", "nail_studio_pwa_v5", "nail_studio_pwa_v4", "nail_studio_pwa_v3", "nail_studio_pwa_v2", "nail_studio_pwa_v1"];
 const $ = id => document.getElementById(id);
+
+
+
+// -----------------------------------------------------------------------------
+// Studio-ID / Lizenzprüfung für GitHub Pages
+// -----------------------------------------------------------------------------
+// Hinweis: Diese Prüfung läuft bewusst vollständig clientseitig. Sie schützt nicht
+// vor Manipulation, ist aber für eine benutzerfreundliche Testphase ohne Backend
+// ausreichend und hält die bestehenden lokalen App-Daten unverändert.
+const LICENSE_STUDIO_ID_KEY = "nail_studio_license_studio_id";
+const LICENSE_FILE = "studio-licenses.json";
+let currentLicense = null;
+let currentLicenseResult = {valid:false, reason:"Lizenz wurde noch nicht geprüft."};
+let licenseReadyContinuation = null;
+
+function normalizeStudioId(id){
+  return String(id || "").trim().toUpperCase();
+}
+
+function getStoredStudioId(){
+  return normalizeStudioId(localStorage.getItem(LICENSE_STUDIO_ID_KEY));
+}
+
+function setStoredStudioId(id){
+  const clean = normalizeStudioId(id);
+  if(clean) localStorage.setItem(LICENSE_STUDIO_ID_KEY, clean);
+  else localStorage.removeItem(LICENSE_STUDIO_ID_KEY);
+  return clean;
+}
+
+function planLabel(plan){
+  if(plan === "trial") return "Testversion";
+  if(plan === "full") return "Vollversion";
+  if(plan === "blocked") return "Gesperrt";
+  return plan || "Unbekannt";
+}
+
+function formatLicenseDate(dateString){
+  if(!dateString) return "-";
+  const parts = String(dateString).split("-");
+  if(parts.length !== 3) return dateString;
+  return `${parts[2]}.${parts[1]}.${parts[0]}`;
+}
+
+async function loadLicenseFile(){
+  if(location.protocol === "file:"){
+    throw new Error("Bitte die App über GitHub Pages oder einen lokalen Server starten, nicht direkt per Doppelklick.");
+  }
+  let response;
+  try{
+    response = await fetch(LICENSE_FILE, {cache:"no-store"});
+  }catch(err){
+    throw new Error("studio-licenses.json konnte nicht geladen werden. Bitte Internetverbindung, GitHub Pages und Dateinamen prüfen.");
+  }
+  if(!response.ok){
+    throw new Error(`studio-licenses.json wurde nicht gefunden oder ist nicht erreichbar. HTTP-Status: ${response.status}`);
+  }
+  try{
+    const data = await response.json();
+    if(!data || !Array.isArray(data.studios)){
+      throw new Error("Die Datei muss ein Objekt mit dem Feld \"studios\" enthalten.");
+    }
+    return data;
+  }catch(err){
+    throw new Error("studio-licenses.json enthält ungültiges JSON oder hat nicht die erwartete Struktur.");
+  }
+}
+
+function validateStudioLicense(data, studioId){
+  if(!studioId){
+    return {valid:false, reason:"Bitte geben Sie eine Studio-ID ein.", studio:null};
+  }
+
+  const studio = data.studios.find(item => normalizeStudioId(item.id) === studioId);
+  if(!studio){
+    return {valid:false, reason:"Diese Studio-ID wurde in studio-licenses.json nicht gefunden.", studio:null};
+  }
+
+  const plan = String(studio.plan || "").toLowerCase();
+  if(studio.active !== true){
+    return {valid:false, reason:"Diese Lizenz ist deaktiviert.", studio};
+  }
+  if(plan === "blocked"){
+    return {valid:false, reason:"Diese Lizenz ist gesperrt.", studio};
+  }
+  if(!["trial", "full"].includes(plan)){
+    return {valid:false, reason:"Der Lizenzplan ist ungültig. Erlaubt sind trial oder full.", studio};
+  }
+
+
+  if(plan === "trial"){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(studio.expiresAt || "")){
+      return {valid:false, reason:"Für die Testversion fehlt ein gültiges Ablaufdatum.", studio};
+    }
+    if(todayISO() > studio.expiresAt){
+      return {valid:false, reason:`Die Testversion ist am ${formatLicenseDate(studio.expiresAt)} abgelaufen.`, studio};
+    }
+  }
+
+  return {valid:true, reason:"Lizenz gültig.", studio};
+}
+
+async function checkLicense(studioId){
+  const cleanStudioId = normalizeStudioId(studioId || getStoredStudioId());
+  try{
+    const data = await loadLicenseFile();
+    const result = validateStudioLicense(data, cleanStudioId);
+    currentLicense = result.valid ? result.studio : null;
+    currentLicenseResult = {...result, studioId:cleanStudioId};
+    if(result.valid) setStoredStudioId(cleanStudioId);
+    return currentLicenseResult;
+  }catch(err){
+    currentLicense = null;
+    currentLicenseResult = {valid:false, reason:err.message || "Lizenz konnte nicht geprüft werden.", studioId:cleanStudioId};
+    return currentLicenseResult;
+  }
+}
+
+function hideLicenseScreen(){
+  $("licenseScreen") && $("licenseScreen").classList.add("hidden");
+}
+
+function showLicenseScreen(result, mode="blocked"){
+  const screen = $("licenseScreen");
+  if(!screen) return;
+  const studioId = normalizeStudioId(result?.studioId || getStoredStudioId());
+  $("setupScreen") && $("setupScreen").classList.add("hidden");
+  $("mainScreen") && $("mainScreen").classList.add("hidden");
+  screen.classList.remove("hidden");
+  if($('licenseStudioIdInput')) $('licenseStudioIdInput').value = studioId;
+  if($('licenseTitle')) $('licenseTitle').textContent = mode === "first" ? "Studio-ID eingeben" : "App gesperrt";
+  if($('licenseMessage')) $('licenseMessage').textContent = mode === "first" ? "Bitte geben Sie beim ersten Start Ihre Studio-ID ein." : "Die Lizenz konnte nicht gültig geprüft werden.";
+  const box = $("licenseStatusBox");
+  if(box){
+    box.classList.remove("hidden", "license-ok", "license-error");
+    box.classList.add(result?.valid ? "license-ok" : "license-error");
+    const shownStudioId = studioId || "Keine Studio-ID gespeichert";
+    box.innerHTML = `<div><strong>Grund:</strong> ${escapeHtml(result?.reason || "Bitte Studio-ID prüfen.")}</div><div><strong>Studio-ID:</strong> ${escapeHtml(shownStudioId)}</div>`;
+  }
+}
+
+function continueAfterValidLicense(){
+  hideLicenseScreen();
+  updateLicenseInfoBox();
+  state.configured ? showMain() : showSetup();
+}
+
+async function verifyLicenseAndContinue(){
+  const stored = getStoredStudioId();
+  if(!stored){
+    currentLicenseResult = {valid:false, reason:"Bitte geben Sie eine Studio-ID ein.", studioId:""};
+    showLicenseScreen(currentLicenseResult, "first");
+    return false;
+  }
+  const result = await checkLicense(stored);
+  if(result.valid){
+    continueAfterValidLicense();
+    return true;
+  }
+  showLicenseScreen(result, "blocked");
+  return false;
+}
+
+async function submitLicenseFromScreen(){
+  const input = normalizeStudioId($("licenseStudioIdInput")?.value || "");
+  setStoredStudioId(input);
+  const result = await checkLicense(input);
+  if(result.valid){
+    continueAfterValidLicense();
+  }else{
+    showLicenseScreen(result, input ? "blocked" : "first");
+  }
+}
+
+async function changeStudioId(){
+  const current = getStoredStudioId();
+  const next = prompt("Neue Studio-ID eingeben:", current || "");
+  if(next === null) return;
+  setStoredStudioId(next);
+  await verifyLicenseAndContinue();
+}
+
+function bindLicenseEvents(){
+  $("licenseCheckBtn") && ($("licenseCheckBtn").onclick = submitLicenseFromScreen);
+  $("licenseChangeStudioBtn") && ($("licenseChangeStudioBtn").onclick = () => {
+    setStoredStudioId("");
+    currentLicenseResult = {valid:false, reason:"Bitte geben Sie eine neue Studio-ID ein.", studioId:""};
+    showLicenseScreen(currentLicenseResult, "first");
+    $("licenseStudioIdInput") && $("licenseStudioIdInput").focus();
+  });
+  $("licenseStudioIdInput") && ($("licenseStudioIdInput").onkeydown = e => {
+    if(e.key === "Enter") submitLicenseFromScreen();
+  });
+  $("settingsChangeStudioIdBtn") && ($("settingsChangeStudioIdBtn").onclick = changeStudioId);
+  $("settingsRecheckLicenseBtn") && ($("settingsRecheckLicenseBtn").onclick = verifyLicenseAndContinue);
+}
+
+function updateLicenseInfoBox(){
+  const box = $("licenseInfoBox");
+  if(!box) return;
+  const result = currentLicenseResult || {};
+  const studio = currentLicense || result.studio;
+  const studioId = result.studioId || getStoredStudioId() || "-";
+  if(result.valid && studio){
+    const plan = String(studio.plan || "").toLowerCase();
+    box.innerHTML = [
+      `<div><strong>Studio:</strong> ${escapeHtml(studio.name || "-")}</div>`,
+      `<div><strong>Studio-ID:</strong> ${escapeHtml(studioId)}</div>`,
+      `<div><strong>Plan:</strong> ${escapeHtml(planLabel(plan))}</div>`,
+      plan === "trial" ? `<div><strong>Ablaufdatum:</strong> ${escapeHtml(formatLicenseDate(studio.expiresAt))}</div>` : ""
+    ].filter(Boolean).join("");
+  }else{
+    box.innerHTML = `<div><strong>Status:</strong> Gesperrt oder nicht geprüft</div><div><strong>Grund:</strong> ${escapeHtml(result.reason || "-")}</div><div><strong>Studio-ID:</strong> ${escapeHtml(studioId)}</div>`;
+  }
+}
 
 let state;
 let editingAppointmentId = null;
@@ -14,165 +229,6 @@ let suppressAppointmentClick = false;
 let editingEmployeeId = null;
 let editingCustomerId = null;
 
-
-// ------------------------------------------------------------
-// STUDIO-ID / LIZENZ-STEUERUNG FÜR MEHRERE TESTSTUDIOS
-// ------------------------------------------------------------
-// Diese Variante lässt alle Funktionen frei, solange die Studio-ID
-// in studio-licenses.json aktiv ist. Du kannst dort pro Studio einstellen:
-// - plan: "trial" oder "full"
-// - expiresAt: Ablaufdatum für Testversion, z. B. "2026-07-31"
-// - active: true/false
-// Hinweis: Auf GitHub Pages ist das clientseitig und nicht manipulationssicher.
-// Für echte bezahlte Abos später Backend + Login + Zahlungsprüfung nutzen.
-const LICENSES_URL = "studio-licenses.json";
-const LICENSE_CACHE_KEY = "nail_studio_license_cache_v2";
-let currentLicenseInfo = null;
-
-function normalizeStudioId(value){
-  return String(value || "").trim().toUpperCase().replace(/\s+/g, "-").replace(/[^A-Z0-9_-]/g, "");
-}
-function todayDateOnly(){
-  const d = new Date();
-  d.setHours(0,0,0,0);
-  return d;
-}
-function parseDateOnly(value){
-  if(!value) return null;
-  const d = new Date(String(value) + "T00:00:00");
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-function daysUntil(value){
-  const d = parseDateOnly(value);
-  if(!d) return null;
-  return Math.ceil((d.getTime() - todayDateOnly().getTime()) / 86400000);
-}
-function getCachedLicenseFile(){
-  try{ return JSON.parse(localStorage.getItem(LICENSE_CACHE_KEY)) || null; }
-  catch{ return null; }
-}
-function saveCachedLicenseFile(data){
-  try{ localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify({ fetchedAt:new Date().toISOString(), data })); }
-  catch{}
-}
-async function fetchLicenseFile(){
-  try{
-    const response = await fetch(LICENSES_URL + "?v=" + Date.now(), { cache:"no-store" });
-    if(!response.ok) throw new Error("Lizenzdatei nicht erreichbar");
-    const data = await response.json();
-    saveCachedLicenseFile(data);
-    return { data, online:true };
-  }catch(err){
-    const cached = getCachedLicenseFile();
-    if(cached && cached.data) return { data:cached.data, online:false, cachedAt:cached.fetchedAt };
-    return { data:null, online:false, error:err };
-  }
-}
-function findStudioLicense(licenseFile, studioId){
-  const id = normalizeStudioId(studioId);
-  const studios = Array.isArray(licenseFile?.studios) ? licenseFile.studios : [];
-  return studios.find(s => normalizeStudioId(s.id) === id) || null;
-}
-function evaluateStudioLicense(record, source){
-  if(!record){ return { ok:false, status:"not_found", message:"Diese Studio-ID ist nicht freigeschaltet.", source }; }
-  if(record.active === false || record.plan === "blocked"){
-    return { ok:false, status:"blocked", record, message:"Diese Studio-ID wurde deaktiviert.", source };
-  }
-  if(record.plan === "full"){
-    return { ok:true, status:"full", record, message:"Vollversion aktiv", source };
-  }
-  const left = daysUntil(record.expiresAt);
-  if(left === null){
-    return { ok:false, status:"invalid_date", record, message:"Für diese Testversion fehlt ein gültiges Ablaufdatum.", source };
-  }
-  if(left < 0){
-    return { ok:false, status:"expired", record, daysLeft:left, message:"Testzeitraum abgelaufen.", source };
-  }
-  return { ok:true, status:"trial", record, daysLeft:left, message:`Testversion aktiv · noch ${left} Tag(e)`, source };
-}
-async function refreshStudioLicense(studioId){
-  const id = normalizeStudioId(studioId || state?.studioId || "");
-  if(!id){
-    currentLicenseInfo = { ok:false, status:"missing", message:"Bitte Studio-ID eintragen." };
-    return currentLicenseInfo;
-  }
-  const file = await fetchLicenseFile();
-  const record = findStudioLicense(file.data, id);
-  currentLicenseInfo = evaluateStudioLicense(record, file.online ? "online" : "cache");
-  currentLicenseInfo.studioId = id;
-  updateLicenseBanner();
-  return currentLicenseInfo;
-}
-function licenseLabel(info=currentLicenseInfo){
-  if(!info) return "Lizenz wird geprüft …";
-  const studioId = info.studioId || normalizeStudioId(state?.studioId || "");
-  const name = info.record?.name ? ` · ${info.record.name}` : "";
-  const source = info.source === "cache" ? " · Offline-Cache" : "";
-  if(info.status === "full") return `Studio-ID ${studioId}${name} · Vollversion${source}`;
-  if(info.status === "trial") return `Studio-ID ${studioId}${name} · Testversion bis ${info.record.expiresAt} · noch ${info.daysLeft} Tag(e)${source}`;
-  return `Studio-ID ${studioId || "fehlt"} · ${info.message || "nicht aktiv"}${source}`;
-}
-function buildLicenseBanner(){
-  if(document.getElementById("studioLicenseBanner")) return;
-  const banner = document.createElement("div");
-  banner.id = "studioLicenseBanner";
-  banner.className = "studio-license-banner";
-  banner.innerHTML = `<div id="studioLicenseText"></div><button id="changeStudioIdBtn" type="button">Studio-ID ändern</button>`;
-  document.body.appendChild(banner);
-  const btn = document.getElementById("changeStudioIdBtn");
-  if(btn) btn.onclick = changeStudioId;
-}
-function updateLicenseBanner(){
-  buildLicenseBanner();
-  const text = document.getElementById("studioLicenseText");
-  if(text) text.textContent = licenseLabel();
-  const banner = document.getElementById("studioLicenseBanner");
-  if(banner){
-    banner.classList.toggle("license-ok", !!currentLicenseInfo?.ok);
-    banner.classList.toggle("license-bad", !currentLicenseInfo?.ok);
-  }
-}
-async function changeStudioId(){
-  const value = prompt("Studio-ID eingeben:", state?.studioId || "");
-  if(value === null) return;
-  const id = normalizeStudioId(value);
-  if(!id){ alert("Bitte eine gültige Studio-ID eingeben."); return; }
-  const info = await refreshStudioLicense(id);
-  if(!info.ok){ alert(info.message || "Studio-ID ist nicht aktiv."); return; }
-  state.studioId = id;
-  saveState();
-  hideLicenseLock();
-  updateLicenseBanner();
-  renderAll();
-}
-function showLicenseLock(info=currentLicenseInfo){
-  hideLicenseLock();
-  buildLicenseBanner();
-  const lock = document.createElement("div");
-  lock.id = "studioLicenseLock";
-  lock.className = "studio-license-lock";
-  lock.innerHTML = `
-    <div class="studio-license-card">
-      <h1>Studio-ID nicht aktiv</h1>
-      <p>${escapeHtml(info?.message || "Diese App ist für diese Studio-ID aktuell nicht freigeschaltet.")}</p>
-      <p class="license-small">${escapeHtml(licenseLabel(info))}</p>
-      <button id="licenseChangeIdFromLock" type="button">Studio-ID eingeben / ändern</button>
-    </div>`;
-  document.body.appendChild(lock);
-  const btn = document.getElementById("licenseChangeIdFromLock");
-  if(btn) btn.onclick = changeStudioId;
-}
-function hideLicenseLock(){
-  const old = document.getElementById("studioLicenseLock");
-  if(old) old.remove();
-}
-async function ensureAppLicense(){
-  const info = await refreshStudioLicense(state?.studioId || "");
-  updateLicenseBanner();
-  if(state?.configured && !info.ok) showLicenseLock(info);
-  return info.ok;
-}
-
 function uid(){ return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()); }
 function todayISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
 function defaultServices(){ return [
@@ -183,9 +239,9 @@ function defaultServices(){ return [
   {id:uid(), name:"Nail Art", price:15, duration:30}
 ];}
 function defaultState(){ return {
-  version:"3.0", configured:false, studioId:"", studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
-  employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[],
-  selectedDate:todayISO(), storageMode:"local"
+	  version:"3.0", configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
+  employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[], employeeDailyRevenueRecords:[], revenue2Entries:[], revenue2DeletedAppointmentIds:[], revenue2CashEntries:[], revenue2CashDeletedAppointmentIds:[], cashWithdrawals:[], cashDeposits:[], journalRevenueCorrections:{}, journalRevenueDeletedDays:[],
+  selectedDate:todayISO(), journalDate:todayISO(), storageMode:"local"
 };}
 function loadState(){
   try{
@@ -197,20 +253,30 @@ function loadState(){
       }
     }
     data = data || defaultState();
-    data.version = 67;
+    data.version = 69;
     data.services = data.services && data.services.length ? data.services : defaultServices();
     data.excludedRevenueDays = data.excludedRevenueDays || [];
     data.manualRevenueItems = data.manualRevenueItems || [];
+    data.employeeDailyRevenueRecords = data.employeeDailyRevenueRecords || [];
+    data.revenue2Entries = data.revenue2Entries || [];
+    data.revenue2DeletedAppointmentIds = data.revenue2DeletedAppointmentIds || [];
+    data.revenue2CashEntries = data.revenue2CashEntries || [];
+    data.revenue2CashDeletedAppointmentIds = data.revenue2CashDeletedAppointmentIds || [];
+    data.cashWithdrawals = data.cashWithdrawals || [];
+    data.cashDeposits = data.cashDeposits || [];
+    data.journalRevenueCorrections = data.journalRevenueCorrections || {};
+    data.journalRevenueDeletedDays = data.journalRevenueDeletedDays || [];
+    data.journalDate = data.journalDate || data.selectedDate || todayISO();
     data.customers = data.customers || [];
     data.appointments = (data.appointments || []).map(a => ({...a, status:a.status || "Gebucht", employeeAny: !!a.employeeAny}));
     data.employees = (data.employees || []).map((e, index) => { const auto = paletteColor(index); return normalizeEmployeeRecord({...e, color:(!e.color || isDefaultEmployeeColor(e.color)) ? auto.accent : e.color, rowColor:e.rowColor || auto.bg}, index); });
-    data.studioId = normalizeStudioId(data.studioId || "");
     data.studioPhone = data.studioPhone || "";
     data.studioAddress = data.studioAddress || "";
     if(typeof data.revenueEnabled !== "boolean") data.revenueEnabled = false;
     data.language = data.language || "de";
     data.displayDeviceMode = normalizeDisplayDeviceMode(data.displayDeviceMode || "auto");
     data.scheduleZoom = normalizeScheduleZoom(data.scheduleZoom || "normal");
+    data.reportPrintFormat = normalizeReportPrintFormat(data.reportPrintFormat || "a4");
     data.cloudBackupEnabled = !!data.cloudBackupEnabled;
     data.cloudBackupProvider = normalizeCloudProvider(data.cloudBackupProvider || "onedrive");
     data.cloudBackupAfterCleanup = !!data.cloudBackupAfterCleanup;
@@ -227,6 +293,22 @@ function formatDateShort(dateString){
   if(!dateString || !dateString.includes("-")) return dateString || "";
   const [yyyy, mm, dd] = dateString.split("-");
   return `${dd}/${mm}/${String(yyyy).slice(-2)}`;
+}
+
+function getJournalDate(){
+  return state.journalDate || state.selectedDate || todayISO();
+}
+function setJournalDate(day, persist=true){
+  state.journalDate = day || todayISO();
+  if($("journalDateInput")) $("journalDateInput").value = state.journalDate;
+  if(persist) saveState();
+}
+function refreshCashJournalViews(){
+  renderCashTab();
+  renderEmployeeDailyRevenue();
+  renderPeriodRevenue("week");
+  renderPeriodRevenue("month");
+  renderRevenue2();
 }
 
 function money(n){ return Number(n||0).toLocaleString("de-DE",{style:"currency",currency:"EUR"}); }
@@ -487,6 +569,14 @@ function normalizeDisplayDeviceMode(mode){
 function normalizeScheduleZoom(zoom){
   return ["small","normal","large"].includes(zoom) ? zoom : "normal";
 }
+function normalizeReportPrintFormat(format){
+  return ["a4","thermal80","thermal58"].includes(format) ? format : "a4";
+}
+function saveReportPrintFormatFromSelect(){
+  if(!$("reportPrintFormat")) return;
+  state.reportPrintFormat = normalizeReportPrintFormat($("reportPrintFormat").value);
+  saveState();
+}
 function getEffectiveDeviceMode(){
   const selected = normalizeDisplayDeviceMode(state.displayDeviceMode || "auto");
   if(selected !== "auto") return selected;
@@ -519,44 +609,461 @@ function updateDisplayModeHint(){
   const setting = normalizeDisplayDeviceMode(state.displayDeviceMode || "auto");
   const mode = document.body?.dataset?.deviceMode || getEffectiveDeviceMode();
   const zoom = normalizeScheduleZoom(state.scheduleZoom || "normal");
-  const names = {auto:"Automatisch", iphone:"iPhone", ipad:"iPad", pc:"PC / Windows"};
+  const names = {auto:t("deviceAuto"), iphone:"iPhone", ipad:"iPad", pc:"PC / Windows"};
   const zoomNames = {small:"Kompakt", normal:"Normal", large:"Groß"};
-  el.textContent = `Aktiv: ${setting === "auto" ? "Automatisch → " + names[mode] : names[mode]} · Tagesplan: ${zoomNames[zoom]}`;
+  el.textContent = `${t("activeLabel")}: ${setting === "auto" ? t("deviceAuto") + " → " + names[mode] : names[mode]} · ${t("scheduleLabel")}: ${zoomNames[zoom]}`;
 }
 
 function escapeHtml(str){ return String(str??"").replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+function reportFileDate(day = todayISO()){ return String(day || todayISO()).replace(/[^0-9-]/g,""); }
+function reportNumber(n){ return Number(n || 0).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function reportTitleBase(){
+  const name = (state.studioName || "Nagelstudio").trim();
+  return name || "Nagelstudio";
+}
+function reportGeneratedAt(){
+  return new Date().toLocaleString("de-DE",{dateStyle:"medium",timeStyle:"short"});
+}
+function reportTable(columns, rows){
+  if(!rows.length) return `<p class="empty">${t("noEntries")}</p>`;
+  return `<table><thead><tr>${columns.map(c=>`<th>${escapeHtml(c)}</th>`).join("")}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map(cell=>`<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+function reportSummary(items){
+  if(!items || !items.length) return "";
+  return `<div class="summary-grid">${items.map(item=>`
+    <div class="summary-item">
+      <span>${escapeHtml(item.label)}</span>
+      <strong>${escapeHtml(item.value)}</strong>
+    </div>`).join("")}</div>`;
+}
+function reportSection(title, content){
+  return `<section class="report-section"><h2>${escapeHtml(title)}</h2>${content}</section>`;
+}
+function closeDialogBeforeReport(id){
+  const dialog = $(id);
+  if(dialog && dialog.open){
+    try{ dialog.close(); }catch(err){ console.warn("Dialog konnte vor dem Druck nicht geschlossen werden", err); }
+  }
+}
+function prepareMainWindowForReport(){
+  closeDialogBeforeReport("cashJournalDialog");
+  closeDialogBeforeReport("hiddenRevenueDialog");
+}
+function accountingReportStyles(format = "a4"){
+  const printFormat = normalizeReportPrintFormat(format);
+  const thermal = printFormat === "thermal80" || printFormat === "thermal58";
+  const pageSize = printFormat === "thermal58" ? "58mm 297mm" : printFormat === "thermal80" ? "80mm 297mm" : "A4";
+  const screenWidth = printFormat === "thermal58" ? "58mm" : printFormat === "thermal80" ? "80mm" : "1120px";
+  const pageMargin = thermal ? "3mm" : "14mm";
+  return `
+    :root{color-scheme:light;}
+    *{box-sizing:border-box;}
+    body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;background:#f6f6f6;}
+    .toolbar{position:sticky;top:0;z-index:10;display:flex;gap:10px;justify-content:flex-end;align-items:center;padding:12px 18px;background:#fff;border-bottom:1px solid #ddd;}
+    .toolbar span{margin-right:auto;color:#555;font-weight:700;}
+    button{border:0;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer;background:#d94f93;color:#fff;}
+    button.secondary{background:#eee;color:#222;}
+    main{max-width:${screenWidth};margin:22px auto;padding:${thermal ? "8px 6px" : "28px"};background:#fff;border:1px solid #ddd;box-shadow:0 8px 30px rgba(0,0,0,.08);}
+    header{display:flex;justify-content:space-between;gap:18px;border-bottom:3px solid #111;padding-bottom:18px;margin-bottom:20px;}
+    h1{font-size:30px;margin:0 0 6px;}
+    .meta{text-align:right;color:#444;font-size:13px;line-height:1.5;}
+    .summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0 22px;}
+    .summary-item{border:1px solid #ccc;padding:12px;border-radius:8px;background:#fafafa;}
+    .summary-item span{display:block;color:#555;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;}
+    .summary-item strong{display:block;margin-top:6px;font-size:21px;}
+    .report-section{break-inside:avoid;margin-top:22px;}
+    h2{font-size:18px;margin:0 0 10px;border-bottom:1px solid #ccc;padding-bottom:7px;}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px;}
+    th,td{border:1px solid #ccc;padding:8px 9px;text-align:left;vertical-align:top;}
+    th{background:#f0f0f0;font-weight:900;}
+    td.amount,th.amount{text-align:right;white-space:nowrap;}
+    .empty{color:#666;border:1px dashed #bbb;padding:12px;border-radius:8px;background:#fafafa;}
+    footer{margin-top:26px;color:#555;font-size:12px;border-top:1px solid #ddd;padding-top:10px;}
+    ${thermal ? `
+      body{background:#fff;}
+      .toolbar{font-size:12px;flex-wrap:wrap;justify-content:flex-start;}
+      .toolbar span{flex:1 0 100%;margin-right:0;}
+      main{border:0;box-shadow:none;}
+      header{display:block;border-bottom:1px solid #111;padding-bottom:8px;margin-bottom:8px;}
+      h1{font-size:16px;line-height:1.15;}
+      .meta{text-align:left;font-size:10px;margin-top:6px;}
+      .summary-grid{display:block;margin:8px 0;}
+      .summary-item{border:0;border-top:1px dashed #aaa;border-radius:0;padding:5px 0;background:#fff;}
+      .summary-item span{font-size:9px;letter-spacing:0;text-transform:none;}
+      .summary-item strong{font-size:14px;margin-top:2px;}
+      .report-section{margin-top:10px;break-inside:auto;}
+      h2{font-size:13px;border-bottom:1px dashed #999;padding-bottom:4px;margin-bottom:5px;}
+      table{font-size:10px;table-layout:fixed;}
+      th,td{border:0;border-bottom:1px dashed #ddd;padding:3px 2px;word-break:break-word;}
+      th{background:#fff;font-weight:900;}
+      footer{font-size:9px;margin-top:10px;padding-top:5px;border-top:1px dashed #aaa;}
+    ` : ""}
+    @media print{
+      body{background:#fff;}
+      .toolbar{display:none;}
+      main{box-shadow:none;border:0;margin:0;max-width:none;padding:0;}
+      @page{size:${pageSize};margin:${pageMargin};}
+    }
+  `;
+}
+function openAccountingReport(title, subtitle, summaryItems, sections, fileStem){
+  const printFormat = normalizeReportPrintFormat(state.reportPrintFormat || "a4");
+  const formatLabel = printFormat === "thermal80" ? "Thermodrucker 80 mm" : printFormat === "thermal58" ? "Thermodrucker 58 mm" : "A4 Standardpapier";
+  prepareMainWindowForReport();
+  const body = `
+    <main>
+      <header>
+        <div>
+          <h1>${escapeHtml(title)}</h1>
+          <div>${escapeHtml(subtitle)}</div>
+        </div>
+        <div class="meta">
+          <strong>${escapeHtml(reportTitleBase())}</strong><br>
+          ${state.studioAddress ? `${escapeHtml(state.studioAddress)}<br>` : ""}
+          ${state.studioPhone ? `Telefon: ${escapeHtml(state.studioPhone)}<br>` : ""}
+          Erstellt: ${escapeHtml(reportGeneratedAt())}
+        </div>
+      </header>
+      ${reportSummary(summaryItems)}
+      ${sections.join("")}
+      <footer>Bericht automatisch aus dem Umsatzjournal erstellt.</footer>
+    </main>`;
+  const excelDocument = `<!doctype html><html><head><meta charset="utf-8"><style>table{border-collapse:collapse}th,td{border:1px solid #999;padding:6px}th{background:#eee}.amount{text-align:right}</style></head><body>${body}</body></html>`;
+  const reportDocument = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${accountingReportStyles(printFormat)}</style></head><body>
+    <div class="toolbar">
+      <span>${escapeHtml(formatLabel)} · PDF über den Druckdialog speichern oder an den angeschlossenen Drucker senden.</span>
+      <button onclick="window.print()">Drucken / PDF</button>
+      <button class="secondary" id="excelBtn">Excel herunterladen</button>
+      <button class="secondary" onclick="window.close()">Schließen</button>
+    </div>
+    ${body}
+    <script>
+      const excelHtml = ${JSON.stringify(excelDocument)};
+      const filename = ${JSON.stringify(fileStem + ".xls")};
+      document.getElementById("excelBtn").addEventListener("click", () => {
+        const blob = new Blob(["\\ufeff" + excelHtml], {type:"application/vnd.ms-excel;charset=utf-8"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      });
+      setTimeout(() => window.print(), 450);
+    <\/script>
+  </body></html>`;
+  const win = window.open("", "_blank");
+  if(!win){
+    alert("Der Bericht konnte nicht geöffnet werden. Bitte Pop-up-Fenster für diese App erlauben.");
+    return;
+  }
+  win.document.open();
+  win.document.write(reportDocument);
+  win.document.close();
+}
+function accountingRowsForEntries(records){
+  return records.map(r => [
+    escapeHtml(r.startTime || ""),
+    escapeHtml(r.employeeName || t("withoutEmployee")),
+    escapeHtml(r.customerName || t("customerFallback")),
+    escapeHtml(r.serviceName || t("serviceFallback")),
+    `<span class="amount">${money(r.price || 0)}</span>`
+  ]);
+}
+function revenue2EmployeeTotalRows(records){
+  const groups = {};
+  records.forEach(r => {
+    const key = r.employeeId || r.employeeName || "none";
+    if(!groups[key]) groups[key] = {name:r.employeeName || t("withoutEmployee"), total:0};
+    groups[key].total += revenue2EntryPrice(r);
+  });
+  return Object.values(groups)
+    .sort((a,b)=>a.name.localeCompare(b.name))
+    .map(group => [
+      escapeHtml(group.name),
+      `<span class="amount">${money(group.total)}</span>`
+    ]);
+}
+
+function revenue2EmployeeDetailRows(records){
+  return records.slice()
+    .sort((a,b)=>String(a.employeeName||"").localeCompare(String(b.employeeName||"")) || String(a.customerName||"").localeCompare(String(b.customerName||"")) || String(a.startTime||"").localeCompare(String(b.startTime||"")))
+    .map(r => [
+      escapeHtml(r.employeeName || t("withoutEmployee")),
+      escapeHtml(r.customerName || t("customerFallback")),
+      `<span class="amount">${money(revenue2EntryPrice(r))}</span>`
+    ]);
+}
+
+function employeeSummaryRowsForCashReport(records){
+  const groups = {};
+  records.forEach(r => {
+    const key = r.employeeId || r.employeeName || "none";
+    if(!groups[key]) groups[key] = {name:r.employeeName || t("withoutEmployee"), count:0, total:0};
+    groups[key].count += 1;
+    groups[key].total += Number(r.price || 0);
+  });
+  return Object.values(groups)
+    .sort((a,b)=>a.name.localeCompare(b.name))
+    .map(group => [
+      escapeHtml(group.name),
+      String(group.count),
+      `<span class="amount">${money(group.total)}</span>`
+    ]);
+}
+
+function employeePaidSummaryRowsForEmployeeReport(records){
+  const groups = {};
+  records.filter(r => r.status === "Erledigt").forEach(r => {
+    const key = r.employeeId || r.employeeName || "none";
+    if(!groups[key]) groups[key] = {name:r.employeeName || t("withoutEmployee"), total:0};
+    groups[key].total += Number(r.price || 0);
+  });
+  return Object.values(groups)
+    .sort((a,b)=>a.name.localeCompare(b.name))
+    .map(group => [
+      escapeHtml(group.name),
+      `<span class="amount">${money(group.total)}</span>`
+    ]);
+}
+
+
+function journalPeriodRange(type, base = getJournalDate()){
+  if(type === "month"){
+    return {from:startOfMonthISO(base), to:endOfMonthISO(base), label:reportRangeText(startOfMonthISO(base), endOfMonthISO(base), "month")};
+  }
+  const from = startOfWeekISO(base);
+  const to = addDaysISO(from, 6);
+  return {from, to, label:`${formatDateShort(from)} - ${formatDateShort(to)}`};
+}
+function journalDayDeleted(day){
+  state.journalRevenueDeletedDays = state.journalRevenueDeletedDays || [];
+  return state.journalRevenueDeletedDays.includes(day);
+}
+function journalDayRawTotal(day){
+  ensureEmployeeDailyRevenueRecordsForDay(day);
+  return employeeDailyRevenueRecordsForDay(day)
+    .filter(r => r.status === "Erledigt")
+    .reduce((sum,r)=>sum + Number(r.price || 0), 0);
+}
+function journalDayCustomerCount(day){
+  ensureEmployeeDailyRevenueRecordsForDay(day);
+  return employeeDailyRevenueRecordsForDay(day).filter(r => r.status === "Erledigt").length;
+}
+function journalDayTotal(day){
+  state.journalRevenueCorrections = state.journalRevenueCorrections || {};
+  if(journalDayDeleted(day)) return 0;
+  const corrected = state.journalRevenueCorrections[day];
+  if(corrected !== undefined && corrected !== null && corrected !== "") return Number(corrected || 0);
+  return journalDayRawTotal(day);
+}
+function journalDayHasManualTotal(day){
+  state.journalRevenueCorrections = state.journalRevenueCorrections || {};
+  const corrected = state.journalRevenueCorrections[day];
+  return journalDayDeleted(day) || (corrected !== undefined && corrected !== null && corrected !== "");
+}
+function syncJournalViewsAfterDayChange(day){
+  const activeDay = getJournalDate();
+  if(day === activeDay){
+    renderCashTab();
+  }
+  renderPeriodRevenue("week");
+  renderPeriodRevenue("month");
+}
+function saveJournalDayCorrection(day){
+  const input = document.querySelector(`input[data-journal-day-correction="${CSS.escape(day)}"]`);
+  const value = Number(input?.value || 0);
+  if(!Number.isFinite(value) || value < 0){
+    alert("Bitte einen gültigen Betrag eintragen.");
+    return;
+  }
+  state.journalRevenueCorrections = state.journalRevenueCorrections || {};
+  state.journalRevenueDeletedDays = (state.journalRevenueDeletedDays || []).filter(d => d !== day);
+  state.journalRevenueCorrections[day] = value;
+  saveState();
+  syncJournalViewsAfterDayChange(day);
+}
+function deleteJournalDayFromPeriod(day){
+  if(!confirm(`Umsatz vom ${formatDateShort(day)} aus Wochen-/Monatsumsatz löschen?`)) return;
+  state.journalRevenueDeletedDays = state.journalRevenueDeletedDays || [];
+  if(!state.journalRevenueDeletedDays.includes(day)) state.journalRevenueDeletedDays.push(day);
+  saveState();
+  syncJournalViewsAfterDayChange(day);
+}
+function restoreJournalDayInPeriod(day){
+  state.journalRevenueDeletedDays = (state.journalRevenueDeletedDays || []).filter(d => d !== day);
+  saveState();
+  syncJournalViewsAfterDayChange(day);
+}
+function renderPeriodRevenue(type){
+  const isMonth = type === "month";
+  const list = $(isMonth ? "monthlyRevenueList" : "weeklyRevenueList");
+  if(!list) return;
+  const range = journalPeriodRange(isMonth ? "month" : "week");
+  const days = eachDayISO(range.from, range.to);
+  const rows = days.map(day => {
+    const raw = journalDayRawTotal(day);
+    const corrected = state.journalRevenueCorrections?.[day];
+    const deleted = journalDayDeleted(day);
+    const total = journalDayTotal(day);
+    const count = deleted ? 0 : journalDayCustomerCount(day);
+    return {day, raw, corrected, deleted, total, count};
+  });
+  const activeRows = rows.filter(r => !r.deleted && (r.total > 0 || r.count > 0 || r.corrected !== undefined));
+  const displayRows = activeRows.length ? activeRows : rows;
+  const total = rows.reduce((sum,r)=>sum + r.total, 0);
+  const rangeEl = $(isMonth ? "monthlyRevenueRange" : "weeklyRevenueRange");
+  const daysCountEl = $(isMonth ? "monthlyRevenueDaysCount" : "weeklyRevenueDaysCount");
+  const totalEl = $(isMonth ? "monthlyRevenueTotal" : "weeklyRevenueTotal");
+  if(rangeEl) rangeEl.textContent = range.label;
+  if(daysCountEl) daysCountEl.textContent = String(rows.filter(r => !r.deleted && (r.total > 0 || r.count > 0 || r.corrected !== undefined)).length);
+  if(totalEl) totalEl.textContent = money(total);
+  list.innerHTML = `
+    <div class="period-revenue-table">
+      <div class="period-revenue-row period-revenue-head">
+        <span>Datum</span><span>Einträge</span><span>Gesamt Umsatz</span><span>Korrigieren</span><span>Aktion</span>
+      </div>
+      ${displayRows.map(r => `
+        <div class="period-revenue-row ${r.deleted ? 'period-revenue-deleted' : ''}">
+          <strong>${formatDateShort(r.day)}</strong>
+          <span>${r.deleted ? '-' : String(r.count)}</span>
+          <strong>${r.deleted ? 'Gelöscht' : money(r.total)}</strong>
+          <input type="number" min="0" step="0.01" value="${r.deleted ? 0 : Number(r.total || 0)}" data-journal-day-correction="${escapeHtml(r.day)}" aria-label="Umsatz ${formatDateShort(r.day)} korrigieren">
+          <span class="period-revenue-actions">
+            ${r.deleted
+              ? `<button type="button" class="secondary" data-journal-day-restore="${escapeHtml(r.day)}">Wiederherstellen</button>`
+              : `<button type="button" data-journal-day-save="${escapeHtml(r.day)}">${t("saveWord")}</button><button type="button" class="danger" data-journal-day-delete="${escapeHtml(r.day)}">${t("delete")}</button>`}
+          </span>
+        </div>`).join("")}
+    </div>`;
+  list.querySelectorAll('button[data-journal-day-save]').forEach(btn => btn.onclick = () => saveJournalDayCorrection(btn.dataset.journalDaySave));
+  list.querySelectorAll('button[data-journal-day-delete]').forEach(btn => btn.onclick = () => deleteJournalDayFromPeriod(btn.dataset.journalDayDelete));
+  list.querySelectorAll('button[data-journal-day-restore]').forEach(btn => btn.onclick = () => restoreJournalDayInPeriod(btn.dataset.journalDayRestore));
+  list.querySelectorAll('input[data-journal-day-correction]').forEach(input => {
+    input.onkeydown = e => { if(e.key === 'Enter') saveJournalDayCorrection(input.dataset.journalDayCorrection); };
+  });
+}
+
+
+function periodRevenueReportRows(type){
+  const isMonth = type === "month";
+  const range = journalPeriodRange(isMonth ? "month" : "week");
+  const rows = eachDayISO(range.from, range.to).map(day => {
+    const corrected = state.journalRevenueCorrections?.[day];
+    const deleted = journalDayDeleted(day);
+    const total = journalDayTotal(day);
+    const count = deleted ? 0 : journalDayCustomerCount(day);
+    return {day, corrected, deleted, total, count};
+  });
+  return {range, rows};
+}
+
+function printPeriodRevenueReport(type){
+  const isMonth = type === "month";
+  renderPeriodRevenue(isMonth ? "month" : "week");
+  const {range, rows} = periodRevenueReportRows(isMonth ? "month" : "week");
+  const activeRows = rows.filter(r => !r.deleted && (r.total > 0 || r.count > 0 || r.corrected !== undefined));
+  const total = rows.reduce((sum, r) => sum + Number(r.total || 0), 0);
+  const dayCount = activeRows.length;
+  const tableRows = activeRows.map(r => [
+    escapeHtml(formatDateShort(r.day)),
+    `<span class="amount">${money(r.total)}</span>`
+  ]);
+  openAccountingReport(isMonth ? t("monthlyRevenue") : t("weeklyRevenue"), range.label, [
+    {label: isMonth ? t("month") : t("week"), value: range.label},
+    {label: t("days"), value: String(dayCount)},
+    {label: t("totalRevenue"), value: money(total)}
+  ], [
+    reportSection("Tages-Gesamtsummen", reportTable(["Datum", "Gesamt Umsatz"], tableRows))
+  ], `${isMonth ? "monat_umsatz" : "wochen_umsatz"}_${reportFileDate(range.from)}_${reportFileDate(range.to)}`);
+}
+
+function printAccountingReport(type){
+  const day = getJournalDate();
+  ensureEmployeeDailyRevenueRecordsForDay(day);
+  ensureRevenue2SnapshotsForDay(day);
+  const employeeRecords = employeeDailyRevenueRecordsForDay(day).slice().sort((a,b)=>String(a.employeeName||"").localeCompare(String(b.employeeName||"")) || String(a.startTime||"").localeCompare(String(b.startTime||"")));
+  if(type === "cash"){
+    renderCashTab();
+    const paid = employeeRecords.filter(r => r.status === "Erledigt");
+    const deposits = cashDepositsForDay(day).slice().sort((a,b)=>String(a.createdAt||"").localeCompare(String(b.createdAt||"")));
+    const withdrawals = cashWithdrawalsForDay(day).slice().sort((a,b)=>String(a.createdAt||"").localeCompare(String(b.createdAt||"")));
+    const rawEmployeeTotal = paid.reduce((sum,r)=>sum+Number(r.price||0),0);
+    const employeeTotal = journalDayTotal(day);
+    const manualAdjustment = employeeTotal - rawEmployeeTotal;
+    const depositTotal = deposits.reduce((sum,r)=>sum+Number(r.amount||0),0);
+    const withdrawalTotal = withdrawals.reduce((sum,r)=>sum+Number(r.amount||0),0);
+    const balance = employeeTotal + depositTotal - withdrawalTotal;
+    const employeeRows = employeeSummaryRowsForCashReport(paid);
+    if(journalDayHasManualTotal(day)){
+      employeeRows.push(["Wochen-/Monatsumsatz", journalDayDeleted(day) ? "Tag gelöscht" : "Korrektur", `<span class="amount">${money(manualAdjustment)}</span>`]);
+    }
+    openAccountingReport(t("cashReport"), `${t("date")}: ${formatDateShort(day)}`, [
+      {label:t("totalRevenue"), value:money(employeeTotal)},
+      {label:"Einzahlungen", value:money(depositTotal)},
+      {label:"Entnahmen", value:money(withdrawalTotal)},
+      {label:t("cashBalance"), value:money(balance)}
+    ], [
+      reportSection("Umsatz Mitarbeiter", reportTable(["Mitarbeiter","Anzahl","Summe"], employeeRows)),
+      reportSection("Einzahlungen / Wechselgeld", reportTable(["Bezeichnung","Betrag"], deposits.map(x=>[escapeHtml(x.reason||"Einzahlung"), `<span class="amount">${money(x.amount||0)}</span>`]))),
+      reportSection("Geldentnahmen", reportTable(["Bezeichnung","Betrag"], withdrawals.map(x=>[escapeHtml(x.reason||"Entnahme"), `<span class="amount">${money(x.amount||0)}</span>`])))
+    ], `kassenbericht_${reportFileDate(day)}`);
+    return;
+  }
+  if(type === "employee"){
+    renderEmployeeDailyRevenue();
+    const paidTotal = employeeRecords.filter(r=>r.status==="Erledigt").reduce((sum,r)=>sum+Number(r.price||0),0);
+    const openTotal = employeeRecords.filter(r=>(r.status||"Gebucht")==="Gebucht").reduce((sum,r)=>sum+Number(r.price||0),0);
+    const noShowCount = employeeRecords.filter(r=>r.status==="Nicht erschienen").length;
+    openAccountingReport(t("employeeRevenue"), `${t("date")}: ${formatDateShort(day)}`, [
+      {label:t("sumPaid"), value:money(paidTotal)},
+      {label:t("openAmount"), value:money(openTotal)},
+      {label:"Nicht erschienen", value:String(noShowCount)},
+      {label:"Kunden Gesamt", value:String(employeeRecords.length)}
+    ], [
+      reportSection("Alle Kunden nach Mitarbeiter", reportTable(["Mitarbeiter","Zeit",t("customerFallback"),"Leistung","Status","Betrag"], employeeRecords.map(r=>[
+        escapeHtml(r.employeeName||t("withoutEmployee")),
+        escapeHtml(r.startTime||""),
+        escapeHtml(r.customerName||t("customerFallback")),
+        escapeHtml(r.serviceName||t("serviceFallback")),
+        escapeHtml(employeeDailyRevenueStatusLabel(r.status||"Gebucht")),
+        `<span class="amount">${money(r.price||0)}</span>`
+      ]))),
+      reportSection("Gesamtsumme einzelne Mitarbeiter", reportTable(["Mitarbeiter","Summe Bezahlt"], employeePaidSummaryRowsForEmployeeReport(employeeRecords)))
+    ], `mitarbeiter_umsatz_${reportFileDate(day)}`);
+    return;
+  }
+  renderRevenue2();
+  const employeeEntries = revenue2Sorted(revenue2EntriesForDay(day));
+  openAccountingReport("Einnahme", `Datum: ${formatDateShort(day)}`, [], [
+    reportSection("Einnahme Mitarbeiter", reportTable(["Mitarbeiter","Summe"], revenue2EmployeeTotalRows(employeeEntries))),
+    reportSection("Einzelne Kunden nach Mitarbeiter", reportTable(["Mitarbeiter",t("customerFallback"),"Betrag"], revenue2EmployeeDetailRows(employeeEntries)))
+  ], `einnahme_${reportFileDate(day)}`);
+}
 
 async function boot(){
   $("currentDateInput").value = state.selectedDate || todayISO();
   bindEvents();
-  if(state.configured){
-    await ensureAppLicense();
-    showMain();
-  }else{
-    buildLicenseBanner();
-    showSetup();
-  }
+  bindLicenseEvents();
   startCurrentTimeTicker();
   window.addEventListener("resize", () => { if((state.displayDeviceMode || "auto") === "auto"){ applyDeviceView(); renderCalendar(); } });
+  await verifyLicenseAndContinue();
 }
 function showSetup(){ $("setupScreen").classList.remove("hidden"); $("mainScreen").classList.add("hidden"); }
 function showMain(){ $("setupScreen").classList.add("hidden"); $("mainScreen").classList.remove("hidden"); renderAll(); }
 
 function bindEvents(){
-  $("finishSetupBtn").onclick = async () => {
-    const studioId = normalizeStudioId($("studioIdInput")?.value || "");
-    if(!studioId){ alert("Bitte Studio-ID eintragen."); return; }
-    const license = await refreshStudioLicense(studioId);
-    if(!license.ok){ alert(license.message || "Diese Studio-ID ist nicht aktiv."); return; }
+  $("finishSetupBtn").onclick = () => {
     const names = $("employeesInput").value.split(",").map(s=>s.trim()).filter(Boolean).slice(0,20);
-    state.studioId = studioId;
-    state.studioName = $("studioNameInput").value.trim() || license.record?.name || "Mein Nagelstudio";
+    state.studioName = $("studioNameInput").value.trim() || "Mein Nagelstudio";
     state.studioPhone = $("studioPhoneInput").value.trim();
     state.studioAddress = $("studioAddressInput").value.trim();
     state.openTime = $("openTimeInput").value || "08:00";
     state.closeTime = $("closeTimeInput").value || "20:00";
     state.employees = names.map((name, index)=>{ const auto = paletteColor(index); return {id:uid(), name, active:true, color:auto.accent, rowColor:auto.bg}; });
-    state.configured = true; state.selectedDate = todayISO(); saveState(); hideLicenseLock(); showMain(); updateLicenseBanner();
+    state.configured = true; state.selectedDate = todayISO(); saveState(); showMain();
   };
   $("saveAppointmentBtn").onclick = saveAppointment;
   $("clearFormBtn").onclick = clearForm;
@@ -573,9 +1080,17 @@ function bindEvents(){
   $("nextDayBtn").onclick = () => shiftDay(1);
   $("settingsBtn").onclick = openSettings;
   document.querySelectorAll(".settings-tab").forEach(btn => btn.onclick = () => switchSettingsTab(btn.dataset.settingsTab));
+  document.querySelectorAll(".cash-journal-tab").forEach(btn => btn.onclick = () => switchCashJournalTab(btn.dataset.journalTab));
   const openHiddenRevenue = () => { $("toggleRevenueFeature") && ($("toggleRevenueFeature").checked = !!state.revenueEnabled); if($("revenueEditDate")) $("revenueEditDate").value = state.selectedDate || todayISO(); renderRevenueEditor(); $("hiddenRevenueDialog") && $("hiddenRevenueDialog").showModal(); };
   $("hiddenRevenueOpenBtn") && ($("hiddenRevenueOpenBtn").onclick = openHiddenRevenue);
   $("hiddenRevenueFooterBtn") && ($("hiddenRevenueFooterBtn").onclick = openHiddenRevenue);
+  $("footerRevenue2TabBtn") && ($("footerRevenue2TabBtn").onclick = openRevenue2FromFooter);
+  $("printCashReportBtn") && ($("printCashReportBtn").onclick = () => printAccountingReport("cash"));
+  $("printWeeklyRevenueReportBtn") && ($("printWeeklyRevenueReportBtn").onclick = () => printPeriodRevenueReport("week"));
+  $("printMonthlyRevenueReportBtn") && ($("printMonthlyRevenueReportBtn").onclick = () => printPeriodRevenueReport("month"));
+  $("addCashWithdrawalBtn") && ($("addCashWithdrawalBtn").onclick = addCashWithdrawal);
+  $("addCashDepositBtn") && ($("addCashDepositBtn").onclick = addCashDeposit);
+  $("journalDateInput") && ($("journalDateInput").onchange = () => { setJournalDate($("journalDateInput").value || todayISO()); refreshCashJournalViews(); });
   $("closeHiddenRevenueBtn") && ($("closeHiddenRevenueBtn").onclick = () => $("hiddenRevenueDialog").close());
   $("revenueEditDate") && ($("revenueEditDate").onchange = renderRevenueEditor);
   $("addManualRevenueBtn") && ($("addManualRevenueBtn").onclick = addManualRevenueItem);
@@ -584,10 +1099,11 @@ function bindEvents(){
   $("cloudBackupNowBtn") && ($("cloudBackupNowBtn").onclick = cloudBackupNow);
   $("cloudBackupProvider") && ($("cloudBackupProvider").onchange = saveCloudBackupSettings);
   $("cloudBackupEnabled") && ($("cloudBackupEnabled").onchange = saveCloudBackupSettings);
-  $("dashboardCleanupBackupBtn") && ($("dashboardCleanupBackupBtn").onclick = exportBackup);
+  $("dashboardCashJournalBtn") && ($("dashboardCashJournalBtn").onclick = openCashJournal);
   $("languageSelect") && ($("languageSelect").onchange = () => { state.language = $("languageSelect").value; saveState(); renderAll(); updateCleanupPreview(); applyLanguage(); });
-  $("closeSettingsBtn").onclick = () => $("settingsDialog").close();
-  $("saveSettingsBtn").onclick = saveSettings;
+  $("closeSettingsBtn") && ($("closeSettingsBtn").onclick = closeSettingsWithSave);
+  $("closeCashJournalBtn") && ($("closeCashJournalBtn").onclick = () => $("cashJournalDialog").close());
+  $("saveSettingsBtn") && ($("saveSettingsBtn").onclick = saveSettings);
   $("addServiceBtn").onclick = addService;
   $("saveEmployeeBtn").onclick = saveEmployeeFromSettings;
   $("saveCustomerBtn").onclick = saveCustomerFromSettings;
@@ -603,16 +1119,23 @@ function bindEvents(){
   $("importInput") && ($("importInput").onchange = importBackup);
   $("settingsImportInput") && ($("settingsImportInput").onchange = importBackup);
   $("cleanupPastAndBackupBtn") && ($("cleanupPastAndBackupBtn").onclick = cleanupPastCompletedAndBackup);
+  $("systemCleanBtn") && ($("systemCleanBtn").onclick = systemCleanAllRevenueAndAppointments);
   $("cloudBackupProvider") && ($("cloudBackupProvider").onchange = saveCloudBackupSettings);
   $("cloudBackupEnabled") && ($("cloudBackupEnabled").onchange = saveCloudBackupSettings);
   $("cloudBackupAfterCleanup") && ($("cloudBackupAfterCleanup").onchange = saveCloudBackupSettings);
   $("refreshReportBtn").onclick = renderReport;
+  $("printEmployeeDailyRevenueReportBtn") && ($("printEmployeeDailyRevenueReportBtn").onclick = () => printAccountingReport("employee"));
+  $("printRevenue2ReportBtn") && ($("printRevenue2ReportBtn").onclick = () => printAccountingReport("revenue2"));
   $("reportDate") && ($("reportDate").onchange = () => { state.selectedDate = $("reportDate").value || state.selectedDate; $("currentDateInput").value = state.selectedDate; saveState(); renderReport(); });
   document.querySelectorAll(".report-mode").forEach(btn => btn.onclick = () => setReportMode(btn.dataset.reportMode));
   $("deleteWholeDayBtn").onclick = deleteWholeDayAppointments;
   $("toggleRevenueFeature") && ($("toggleRevenueFeature").onchange = () => { state.revenueEnabled = $("toggleRevenueFeature").checked; saveState(); applyRevenueVisibility(); renderReport(); });
   $("displayDeviceMode") && ($("displayDeviceMode").onchange = () => { state.displayDeviceMode = normalizeDisplayDeviceMode($("displayDeviceMode").value); saveState(); applyDeviceView(); renderCalendar(); });
   $("scheduleZoom") && ($("scheduleZoom").onchange = () => { state.scheduleZoom = normalizeScheduleZoom($("scheduleZoom").value); saveState(); applyDeviceView(); renderCalendar(); });
+  if($("reportPrintFormat")){
+    $("reportPrintFormat").onchange = saveReportPrintFormatFromSelect;
+    $("reportPrintFormat").oninput = saveReportPrintFormatFromSelect;
+  }
   $("deletePeriodType") && ($("deletePeriodType").onchange = updateDeletePeriodPreview);
   $("deleteDayInput") && ($("deleteDayInput").onchange = updateDeletePeriodPreview);
   document.querySelectorAll("[data-tab]").forEach(btn => btn.onclick = () => switchTab(btn.dataset.tab));
@@ -632,6 +1155,44 @@ function switchSettingsTab(id){
   document.querySelectorAll(".settings-tab-panel").forEach(panel=>{
     panel.classList.toggle("active", panel.id === target);
   });
+  const settingsDialog = $("settingsDialog");
+  if(settingsDialog) settingsDialog.classList.toggle("backup-tab-active", target === "settingsBackupTab");
+  if(target === "settingsCashTab") renderCashTab();
+  if(target === "settingsEmployeeDailyRevenueTab") renderEmployeeDailyRevenue();
+  if(target === "settingsWeeklyRevenueTab") renderPeriodRevenue("week");
+  if(target === "settingsMonthlyRevenueTab") renderPeriodRevenue("month");
+  if(target === "settingsRevenue2Tab") renderRevenue2();
+}
+
+function openRevenue2FromFooter(){
+  const cashJournalDialog = $("cashJournalDialog");
+  setJournalDate(getJournalDate(), false);
+  switchCashJournalTab("settingsRevenue2Tab");
+  if(cashJournalDialog && !cashJournalDialog.open) cashJournalDialog.showModal();
+}
+
+function openCashJournal(){
+  setJournalDate(getJournalDate(), false);
+  switchCashJournalTab("settingsCashTab");
+  $("cashJournalDialog") && $("cashJournalDialog").showModal();
+}
+
+function switchCashJournalTab(id){
+  const target = id || "settingsCashTab";
+  const dialog = $("cashJournalDialog");
+  if(!dialog) return;
+  dialog.querySelectorAll(".cash-journal-tab").forEach(btn=>{
+    btn.classList.toggle("active", btn.dataset.journalTab === target);
+  });
+  dialog.querySelectorAll(".settings-tab-panel").forEach(panel=>{
+    panel.classList.toggle("active", panel.id === target);
+  });
+  dialog.classList.toggle("employee-revenue-tab-active", target === "settingsEmployeeDailyRevenueTab");
+  if(target === "settingsCashTab") renderCashTab();
+  if(target === "settingsEmployeeDailyRevenueTab") renderEmployeeDailyRevenue();
+  if(target === "settingsWeeklyRevenueTab") renderPeriodRevenue("week");
+  if(target === "settingsMonthlyRevenueTab") renderPeriodRevenue("month");
+  if(target === "settingsRevenue2Tab") renderRevenue2();
 }
 
 function shiftDay(n){
@@ -675,13 +1236,13 @@ const I18N = {
   }
 };
 Object.assign(I18N.de, {
-  initialSetup:"Ersteinrichtung", setupHint:"Die App läuft lokal auf diesem Gerät. Cloud-Backup nutzt aktuell Export oder Teilen-Menü.", opensAt:"Öffnet um", closesAt:"Schließt um", initialEmployees:"Erste Mitarbeiter, getrennt mit Komma", startApp:"App starten", dailySchedule:"Tagesplan", revenueReport:"Umsatzbericht", from:"Von", to:"Bis", refreshReport:"Bericht aktualisieren", period:"Zeitraum", appointmentsPeriod:"Termine Zeitraum", deletedFromRevenue:"Aus Umsatz gelöscht", daysInReport:"Tage im Bericht", deleteRevenueHint:"Mit „Aus Umsatz löschen“ wird der komplette Tag nicht mehr im Umsatzbericht gezählt. Die Termine bleiben im Kalender erhalten.", deletedRevenueDays:"Gelöschte Tage für Umsatzbericht", employeeHint:"Mitarbeiter hier anlegen, verändern oder deaktivieren.", calendarFontColor:"Schriftfarbe im Kalender", customerHint:"Kunden hier anlegen, bearbeiten oder löschen. Beim Eintippen im Terminformular werden Kundendaten vorgeschlagen.", serviceHint:"Leistungen mit Preisen und Dauer selbst gestalten und speichern.", deleteAppointmentsPermanently:"Termine endgültig löschen", deleteAppointmentsHint:"Achtung: Diese Funktion löscht Termine endgültig. Es gibt keine Wiederherstellung in der App. Vorher am besten ein Backup exportieren.", wholeDay:"Ganzer Tag", wholeWeek:"Ganze Woche", wholeMonth:"Ganzer Monat", appointment:"Termin", markDonePaid:"Als erledigt / bezahlt", markNoShow:"Nicht erschienen", localBackup:"💾 Lokal Backup", localBackupHint:"Exportiert und importiert lokale JSON-Backups. „Bereinigung + Backup“ löscht alle Termine vor heute und erstellt danach ein Backup. Termine von heute und danach bleiben erhalten.", cleanupAndBackup:"Bereinigung + Backup", cloudBackupNow:"Cloud Backup jetzt erstellen", autoAfterCleanup:"Automatisch nach „Bereinigung + Backup“", enableRevenueArea:"Umsatzbereich aktivieren", revenueVisibilityHint:"Wenn deaktiviert, werden Umsatzbericht, Umsatzbutton und Umsatzfunktionen ausgeblendet.", noLocalBackup:"Noch kein lokales Backup erstellt.", lastLocalBackup:"Letztes lokales Backup", noCloudBackup:"Noch kein Cloud Backup erstellt.", lastCloudBackup:"Letztes Cloud Backup", cloudDisabled:"Cloud Backup ist deaktiviert.", cloudStatusHint:"Bei aktivem Cloud Backup wird das Teilen/Speichern-Menü genutzt.", importSuccess:"Backup wurde erfolgreich wiederhergestellt.", importFailed:"Backup konnte nicht gelesen werden. Datei ist ungültig oder beschädigt.", backupManualDownload:"Backup-Datei manuell herunterladen", noCleanupData:"Keine alten Daten zum Bereinigen gefunden.", cleanupConfirm:"Es werden {appointments} vergangene Termine gelöscht. Termine von heute und danach bleiben erhalten. Danach wird automatisch ein Backup erstellt. Fortfahren?", cleanupRunning:"Bereinige und erstelle Backup...", cleanupDone:"Alle vergangenen Termine vor heute wurden gelöscht. Backup-Datei wurde erstellt: {filename}.", serviceFallback:"Leistung", employeeLabel:"Mitarbeiter", phoneLabel:"Telefon", internalStatus:"Status intern", priceLabel:"Preis", noteLabel:"Notiz", noAppointmentsInRange:"Keine Termine im Zeitraum.", noDeletedDays:"Keine Tage gelöscht.", appointmentsWord:"Termine", revenueDeletedPermanently:"Umsatz endgültig gelöscht", notRecoverable:"Nicht wiederherstellbar", revenueWord:"Umsatz", deleteRevenuePermanently:"Umsatz endgültig löschen", noAppointmentsInRange:"Keine Termine im Zeitraum.", noDeletedDays:"Keine Tage gelöscht.", days:"Tage"
+  initialSetup:"Ersteinrichtung", setupHint:"Die App läuft lokal auf diesem Gerät. Cloud-Backup nutzt aktuell Export oder Teilen-Menü.", opensAt:"Öffnet um", closesAt:"Schließt um", initialEmployees:"Erste Mitarbeiter, getrennt mit Komma", startApp:"App starten", dailySchedule:"Tagesplan", revenueReport:"Umsatzbericht", from:"Von", to:"Bis", refreshReport:"Bericht aktualisieren", period:"Zeitraum", appointmentsPeriod:"Termine Zeitraum", deletedFromRevenue:"Aus Umsatz gelöscht", daysInReport:"Tage im Bericht", deleteRevenueHint:"Mit „Aus Umsatz löschen“ wird der komplette Tag nicht mehr im Umsatzbericht gezählt. Die Termine bleiben im Kalender erhalten.", deletedRevenueDays:"Gelöschte Tage für Umsatzbericht", employeeHint:"Mitarbeiter hier anlegen, verändern oder deaktivieren.", calendarFontColor:"Schriftfarbe im Kalender", customerHint:"Kunden hier anlegen, bearbeiten oder löschen. Beim Eintippen im Terminformular werden Kundendaten vorgeschlagen.", serviceHint:"Leistungen mit Preisen und Dauer selbst gestalten und speichern.", deleteAppointmentsPermanently:"Termine endgültig löschen", deleteAppointmentsHint:"Achtung: Diese Funktion löscht Termine endgültig. Es gibt keine Wiederherstellung in der App. Vorher am besten ein Backup exportieren.", wholeDay:"Ganzer Tag", wholeWeek:"Ganze Woche", wholeMonth:"Ganzer Monat", appointment:"Termin", markDonePaid:"Als bezahlt", markNoShow:"Nicht erschienen", localBackup:"💾 Lokal Backup", localBackupHint:"Exportiert und importiert lokale JSON-Backups. „Bereinigung + Backup“ löscht zuerst alle Termine von heute und Vergangenheit sowie Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz. Danach wird ein Backup erstellt. Nur Zukunft-Termine bleiben erhalten.", cleanupAndBackup:"Bereinigung + Backup", cloudBackupNow:"Cloud Backup jetzt erstellen", autoAfterCleanup:"Automatisch nach „Bereinigung + Backup“", enableRevenueArea:"Umsatzbereich aktivieren", revenueVisibilityHint:"Wenn deaktiviert, werden Umsatzbericht, Umsatzbutton und Umsatzfunktionen ausgeblendet.", noLocalBackup:"Noch kein lokales Backup erstellt.", lastLocalBackup:"Letztes lokales Backup", noCloudBackup:"Noch kein Cloud Backup erstellt.", lastCloudBackup:"Letztes Cloud Backup", cloudDisabled:"Cloud Backup ist deaktiviert.", cloudStatusHint:"Bei aktivem Cloud Backup wird das Teilen/Speichern-Menü genutzt.", importSuccess:"Backup wurde erfolgreich wiederhergestellt.", importFailed:"Backup konnte nicht gelesen werden. Datei ist ungültig oder beschädigt.", backupManualDownload:"Backup-Datei manuell herunterladen", noCleanupData:"Keine alten Daten zum Bereinigen gefunden.", cleanupConfirm:"Alle Termine von heute und Vergangenheit sowie alle Umsätze aus Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz werden gelöscht. Danach wird ein Backup erstellt. Nur Zukunft-Termine bleiben erhalten. Fortfahren?", cleanupRunning:"Bereinige und erstelle Backup...", cleanupDone:"Bereinigung abgeschlossen. Nur Zukunft-Termine bleiben erhalten. Backup wurde erstellt: {filename}.", serviceFallback:"Leistung", employeeLabel:"Mitarbeiter", phoneLabel:"Telefon", internalStatus:"Status intern", priceLabel:"Preis", noteLabel:"Notiz", noAppointmentsInRange:"Keine Termine im Zeitraum.", noDeletedDays:"Keine Tage gelöscht.", appointmentsWord:"Termine", revenueDeletedPermanently:"Umsatz endgültig gelöscht", notRecoverable:"Nicht wiederherstellbar", revenueWord:"Umsatz", deleteRevenuePermanently:"Umsatz endgültig löschen", noAppointmentsInRange:"Keine Termine im Zeitraum.", noDeletedDays:"Keine Tage gelöscht.", days:"Tage"
 });
 Object.assign(I18N.vi, {
-  initialSetup:"Thiết lập ban đầu", setupHint:"Ứng dụng lưu dữ liệu cục bộ trên thiết bị này. Sao lưu Cloud hiện dùng xuất file hoặc menu chia sẻ.", opensAt:"Mở cửa lúc", closesAt:"Đóng cửa lúc", initialEmployees:"Nhân viên ban đầu, cách nhau bằng dấu phẩy", startApp:"Bắt đầu ứng dụng", dailySchedule:"Lịch trong ngày", revenueReport:"Báo cáo doanh thu", from:"Từ", to:"Đến", refreshReport:"Cập nhật báo cáo", period:"Khoảng thời gian", appointmentsPeriod:"Lịch hẹn trong khoảng", deletedFromRevenue:"Đã xóa khỏi doanh thu", daysInReport:"Ngày trong báo cáo", deleteRevenueHint:"Khi dùng “Xóa khỏi doanh thu”, cả ngày sẽ không còn được tính trong báo cáo. Lịch hẹn vẫn ở trong lịch.", deletedRevenueDays:"Ngày đã xóa khỏi báo cáo doanh thu", employeeHint:"Tạo, sửa hoặc tắt nhân viên tại đây.", calendarFontColor:"Màu chữ trong lịch", customerHint:"Tạo, sửa hoặc xóa khách hàng. Khi nhập lịch hẹn, dữ liệu khách sẽ được gợi ý.", serviceHint:"Tự tạo dịch vụ với giá và thời lượng.", deleteAppointmentsPermanently:"Xóa lịch hẹn vĩnh viễn", deleteAppointmentsHint:"Chú ý: Chức năng này xóa lịch hẹn vĩnh viễn. Không thể khôi phục trong ứng dụng. Nên xuất sao lưu trước.", wholeDay:"Cả ngày", wholeWeek:"Cả tuần", wholeMonth:"Cả tháng", appointment:"Lịch hẹn", markDonePaid:"Đánh dấu xong / đã trả", localBackup:"💾 Sao lưu cục bộ", localBackupHint:"Xuất và nhập file sao lưu JSON cục bộ. “Dọn dẹp + Sao lưu” xóa dữ liệu cũ trước rồi mới tạo sao lưu.", cleanupAndBackup:"Dọn dẹp + Sao lưu", cloudBackupNow:"Tạo sao lưu Cloud ngay", autoAfterCleanup:"Tự động sau “Dọn dẹp + sao lưu”", enableRevenueArea:"Bật khu vực doanh thu", revenueVisibilityHint:"Khi tắt, báo cáo doanh thu, nút doanh thu và chức năng doanh thu sẽ bị ẩn.", noLocalBackup:"Chưa tạo sao lưu cục bộ.", lastLocalBackup:"Sao lưu cục bộ gần nhất", noCloudBackup:"Chưa tạo sao lưu Cloud.", lastCloudBackup:"Sao lưu Cloud gần nhất", cloudDisabled:"Sao lưu Cloud đang tắt.", cloudStatusHint:"Khi bật Cloud Backup, ứng dụng dùng menu chia sẻ/lưu.", importSuccess:"Đã khôi phục sao lưu thành công.", importFailed:"Không đọc được sao lưu. File không hợp lệ hoặc bị hỏng.", backupManualDownload:"Tải file sao lưu thủ công", noCleanupData:"Không có dữ liệu cũ để dọn dẹp.", cleanupConfirm:"Sẽ xóa {appointments} lịch hẹn cũ và {days} ngày doanh thu cũ. Sau đó sẽ tạo sao lưu dữ liệu đã dọn dẹp. Tiếp tục?", cleanupRunning:"Đang dọn dẹp và tạo sao lưu...", cleanupDone:"Dọn dẹp xong. Đã tạo file sao lưu: {filename}.", serviceFallback:"Dịch vụ", employeeLabel:"Nhân viên", phoneLabel:"Số điện thoại", internalStatus:"Trạng thái nội bộ", priceLabel:"Giá", noteLabel:"Ghi chú", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", appointmentsWord:"lịch hẹn", revenueDeletedPermanently:"Doanh thu đã xóa vĩnh viễn", notRecoverable:"Không thể khôi phục", revenueWord:"Doanh thu", deleteRevenuePermanently:"Xóa doanh thu vĩnh viễn", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", days:"ngày"
+  initialSetup:"Thiết lập ban đầu", setupHint:"Ứng dụng lưu dữ liệu cục bộ trên thiết bị này. Sao lưu Cloud hiện dùng xuất file hoặc menu chia sẻ.", opensAt:"Mở cửa lúc", closesAt:"Đóng cửa lúc", initialEmployees:"Nhân viên ban đầu, cách nhau bằng dấu phẩy", startApp:"Bắt đầu ứng dụng", dailySchedule:"Lịch trong ngày", revenueReport:"Báo cáo doanh thu", from:"Từ", to:"Đến", refreshReport:"Cập nhật báo cáo", period:"Khoảng thời gian", appointmentsPeriod:"Lịch hẹn trong khoảng", deletedFromRevenue:"Đã xóa khỏi doanh thu", daysInReport:"Ngày trong báo cáo", deleteRevenueHint:"Khi dùng “Xóa khỏi doanh thu”, cả ngày sẽ không còn được tính trong báo cáo. Lịch hẹn vẫn ở trong lịch.", deletedRevenueDays:"Ngày đã xóa khỏi báo cáo doanh thu", employeeHint:"Tạo, sửa hoặc tắt nhân viên tại đây.", calendarFontColor:"Màu chữ trong lịch", customerHint:"Tạo, sửa hoặc xóa khách hàng. Khi nhập lịch hẹn, dữ liệu khách sẽ được gợi ý.", serviceHint:"Tự tạo dịch vụ với giá và thời lượng.", deleteAppointmentsPermanently:"Xóa lịch hẹn vĩnh viễn", deleteAppointmentsHint:"Chú ý: Chức năng này xóa lịch hẹn vĩnh viễn. Không thể khôi phục trong ứng dụng. Nên xuất sao lưu trước.", wholeDay:"Cả ngày", wholeWeek:"Cả tuần", wholeMonth:"Cả tháng", appointment:"Lịch hẹn", markDonePaid:"Đánh dấu xong / đã trả", localBackup:"💾 Sao lưu cục bộ", localBackupHint:"Xuất và nhập file sao lưu JSON cục bộ. “Dọn dẹp + Sao lưu” xóa tất cả lịch hẹn hôm nay và quá khứ cùng doanh thu nhân viên, thu nhập, kassa, doanh thu tuần và doanh thu tháng. Sau đó tạo sao lưu. Chỉ lịch hẹn tương lai được giữ lại.", cleanupAndBackup:"Dọn dẹp + Sao lưu", cloudBackupNow:"Tạo sao lưu Cloud ngay", autoAfterCleanup:"Tự động sau “Dọn dẹp + sao lưu”", enableRevenueArea:"Bật khu vực doanh thu", revenueVisibilityHint:"Khi tắt, báo cáo doanh thu, nút doanh thu và chức năng doanh thu sẽ bị ẩn.", noLocalBackup:"Chưa tạo sao lưu cục bộ.", lastLocalBackup:"Sao lưu cục bộ gần nhất", noCloudBackup:"Chưa tạo sao lưu Cloud.", lastCloudBackup:"Sao lưu Cloud gần nhất", cloudDisabled:"Sao lưu Cloud đang tắt.", cloudStatusHint:"Khi bật Cloud Backup, ứng dụng dùng menu chia sẻ/lưu.", importSuccess:"Đã khôi phục sao lưu thành công.", importFailed:"Không đọc được sao lưu. File không hợp lệ hoặc bị hỏng.", backupManualDownload:"Tải file sao lưu thủ công", noCleanupData:"Không có dữ liệu cũ để dọn dẹp.", cleanupConfirm:"Tất cả lịch hẹn hôm nay và quá khứ cùng doanh thu nhân viên, thu nhập, kassa, doanh thu tuần và doanh thu tháng sẽ bị xóa. Sau đó sẽ tạo sao lưu. Chỉ lịch hẹn tương lai được giữ lại. Tiếp tục?", cleanupRunning:"Đang dọn dẹp và tạo sao lưu...", cleanupDone:"Dọn dẹp xong. Chỉ lịch hẹn tương lai được giữ lại. Đã tạo file sao lưu: {filename}.", serviceFallback:"Dịch vụ", employeeLabel:"Nhân viên", phoneLabel:"Số điện thoại", internalStatus:"Trạng thái nội bộ", priceLabel:"Giá", noteLabel:"Ghi chú", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", appointmentsWord:"lịch hẹn", revenueDeletedPermanently:"Doanh thu đã xóa vĩnh viễn", notRecoverable:"Không thể khôi phục", revenueWord:"Doanh thu", deleteRevenuePermanently:"Xóa doanh thu vĩnh viễn", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", days:"ngày"
 });
 Object.assign(I18N.en, {
-  initialSetup:"Initial setup", setupHint:"The app stores data locally on this device. Cloud backup currently uses export or the share menu.", opensAt:"Opens at", closesAt:"Closes at", initialEmployees:"Initial employees, separated by commas", startApp:"Start app", dailySchedule:"Daily schedule", revenueReport:"Revenue report", from:"From", to:"To", refreshReport:"Refresh report", period:"Period", appointmentsPeriod:"Appointments period", deletedFromRevenue:"Deleted from revenue", daysInReport:"Days in report", deleteRevenueHint:"When “Delete from revenue” is used, the whole day is no longer counted in the revenue report. Appointments stay in the calendar.", deletedRevenueDays:"Deleted days for revenue report", employeeHint:"Create, edit or deactivate employees here.", calendarFontColor:"Calendar font color", customerHint:"Create, edit or delete customers here. Customer data is suggested when typing in the appointment form.", serviceHint:"Create services with custom prices and durations.", deleteAppointmentsPermanently:"Permanently delete appointments", deleteAppointmentsHint:"Warning: This permanently deletes appointments. There is no restore function in the app. Export a backup first if needed.", wholeDay:"Whole day", wholeWeek:"Whole week", wholeMonth:"Whole month", appointment:"Appointment", markDonePaid:"Mark done / paid", markNoShow:"No-show", localBackup:"💾 Local Backup", localBackupHint:"Exports and imports local JSON backups. “Cleanup + Backup” deletes all appointments before today and then creates the backup. Today’s and future appointments remain.", cleanupAndBackup:"Cleanup + Backup", cloudBackupNow:"Create cloud backup now", autoAfterCleanup:"Automatically after “Cleanup + Backup”", enableRevenueArea:"Enable revenue area", revenueVisibilityHint:"When disabled, the revenue report, revenue button and revenue functions are hidden.", noLocalBackup:"No local backup created yet.", lastLocalBackup:"Last local backup", noCloudBackup:"No cloud backup created yet.", lastCloudBackup:"Last cloud backup", cloudDisabled:"Cloud backup is disabled.", cloudStatusHint:"When cloud backup is active, the share/save menu is used.", importSuccess:"Backup restored successfully.", importFailed:"Backup could not be read. The file is invalid or damaged.", backupManualDownload:"Download backup file manually", noCleanupData:"No old data found for cleanup.", cleanupConfirm:"{appointments} past appointments will be deleted. Today’s and future appointments will remain. Then a backup will be created. Continue?", cleanupRunning:"Cleaning and creating backup...", cleanupDone:"All appointments before today have been deleted. Backup file created: {filename}.", serviceFallback:"Service", employeeLabel:"Employee", phoneLabel:"Phone", internalStatus:"Internal status", priceLabel:"Price", noteLabel:"Note", noAppointmentsInRange:"No appointments in this period.", noDeletedDays:"No days deleted.", appointmentsWord:"appointments", revenueDeletedPermanently:"Revenue permanently deleted", notRecoverable:"Not recoverable", revenueWord:"Revenue", deleteRevenuePermanently:"Permanently delete revenue", noAppointmentsInRange:"No appointments in this period.", noDeletedDays:"No days deleted.", days:"days"
+  initialSetup:"Initial setup", setupHint:"The app stores data locally on this device. Cloud backup currently uses export or the share menu.", opensAt:"Opens at", closesAt:"Closes at", initialEmployees:"Initial employees, separated by commas", startApp:"Start app", dailySchedule:"Daily schedule", revenueReport:"Revenue report", from:"From", to:"To", refreshReport:"Refresh report", period:"Period", appointmentsPeriod:"Appointments period", deletedFromRevenue:"Deleted from revenue", daysInReport:"Days in report", deleteRevenueHint:"When “Delete from revenue” is used, the whole day is no longer counted in the revenue report. Appointments stay in the calendar.", deletedRevenueDays:"Deleted days for revenue report", employeeHint:"Create, edit or deactivate employees here.", calendarFontColor:"Calendar font color", customerHint:"Create, edit or delete customers here. Customer data is suggested when typing in the appointment form.", serviceHint:"Create services with custom prices and durations.", deleteAppointmentsPermanently:"Permanently delete appointments", deleteAppointmentsHint:"Warning: This permanently deletes appointments. There is no restore function in the app. Export a backup first if needed.", wholeDay:"Whole day", wholeWeek:"Whole week", wholeMonth:"Whole month", appointment:"Appointment", markDonePaid:"Mark done / paid", markNoShow:"No-show", localBackup:"💾 Local Backup", localBackupHint:"Exports and imports local JSON backups. “Cleanup + Backup” deletes all appointments from today and the past plus Employee Revenue, Income, Cash Register, Weekly Revenue and Monthly Revenue. Then it creates the backup. Only future appointments remain.", cleanupAndBackup:"Cleanup + Backup", cloudBackupNow:"Create cloud backup now", autoAfterCleanup:"Automatically after “Cleanup + Backup”", enableRevenueArea:"Enable revenue area", revenueVisibilityHint:"When disabled, the revenue report, revenue button and revenue functions are hidden.", noLocalBackup:"No local backup created yet.", lastLocalBackup:"Last local backup", noCloudBackup:"No cloud backup created yet.", lastCloudBackup:"Last cloud backup", cloudDisabled:"Cloud backup is disabled.", cloudStatusHint:"When cloud backup is active, the share/save menu is used.", importSuccess:"Backup restored successfully.", importFailed:"Backup could not be read. The file is invalid or damaged.", backupManualDownload:"Download backup file manually", noCleanupData:"No old data found for cleanup.", cleanupConfirm:"All appointments from today and the past plus all revenue data from Employee Revenue, Income, Cash Register, Weekly Revenue and Monthly Revenue will be deleted. Then a backup will be created. Only future appointments remain. Continue?", cleanupRunning:"Cleaning and creating backup...", cleanupDone:"Cleanup completed. Only future appointments remain. Backup file created: {filename}.", serviceFallback:"Service", employeeLabel:"Employee", phoneLabel:"Phone", internalStatus:"Internal status", priceLabel:"Price", noteLabel:"Note", noAppointmentsInRange:"No appointments in this period.", noDeletedDays:"No days deleted.", appointmentsWord:"appointments", revenueDeletedPermanently:"Revenue permanently deleted", notRecoverable:"Not recoverable", revenueWord:"Revenue", deleteRevenuePermanently:"Permanently delete revenue", noAppointmentsInRange:"No appointments in this period.", noDeletedDays:"No days deleted.", days:"days"
 });
 Object.assign(I18N.de, {
   displaySettings:"Darstellung / Geräteansicht",
@@ -742,6 +1303,17 @@ Object.assign(I18N.de, { employeeAny:"Beliebig" });
 Object.assign(I18N.vi, { employeeAny:"Bất kỳ" });
 Object.assign(I18N.en, { employeeAny:"Any" });
 
+
+Object.assign(I18N.de, {
+  openRevenue:"Umsatzbericht", cashRegister:"Kasse", day:"Tag", week:"Woche", month:"Monat", date:"Datum", dailyRevenueTotal:"Tageseinnahme / Gesamt", appointments:"Termine", dailyRevenueByEmployee:"Tagesumsatz nach Mitarbeiter", dailyRevenueByEmployeeHint:"Kompakte Übersicht mit Kundenterminen, Leistung und Preis. Der Bericht kann nach Tag, Woche oder Monat angezeigt werden.", workTimeVacation:"Arbeitszeit / Urlaub", workTimeVacationHint:"Alle Mitarbeiter werden hier gelistet. Lege pro Mitarbeiter fest, ob Vollzeit, Aushilfe / Teilzeit, Minijob oder individuell gearbeitet wird. Die freigegebenen Zeiten, Arbeitszeiten nach Wochentagen Montag bis Samstag, Urlaubszeiträume und einzelne Urlaubstage werden im Terminplaner berücksichtigt.", reportPrintFormat:"Bericht Druckformat", reportPrintFormatHint:"Gilt für Kassenbericht, Mitarbeiter Umsatz und Einnahme. Excel-Export bleibt unverändert.", versionLabel:"Version:", developerLabel:"Hersteller / Entwickler:", copyrightLabel:"Copyright:", revenueJournal:"Umsatzjournal", employeeRevenue:"Mitarbeiter Umsatz", weeklyRevenue:"Wochen Umsatz", monthlyRevenue:"Monat Umsatz", selectDay:"Tag auswählen", printReport:"Bericht Drucken", currentCash:"Aktuell in der Kasse", total:"Gesamt", depositChange:"Einzahlen / Wechselgeld", description:"Bezeichnung", amountEuro:"Betrag €", saveDeposit:"Einzahlung speichern", depositsTotal:"Einzahlungen gesamt", cashWithdrawal:"Geld Entnahme aus der Kasse", withdrawalReason:"Wofür wurde Geld entnommen?", saveWithdrawal:"Entnahme speichern", withdrawalsTotal:"Entnahmen gesamt", employeeRevenueHint:"Zeigt alle Termine vom ausgewählten Tag: offen, bezahlt und nicht erschienen. Beträge können direkt hier geändert werden.", openAmount:"Offene Betrag", sumPaid:"Summe Bezahlt", periodRevenueHintWeek:"Zeigt die Gesamtsumme je Tag der ausgewählten Woche. Es werden keine einzelnen Kundeninformationen angezeigt.", totalRevenue:"Gesamt Umsatz", periodRevenueHintMonth:"Zeigt die Gesamtsumme je Tag des ausgewählten Monats. Es werden keine einzelnen Kundeninformationen angezeigt.", income:"Einnahme", entries:"Einträge", employeeIncome:"Einnahme Mitarbeiter", fromCashRegister:"Aus der Kasse", remainingCash:"Noch in der Kasse", editRevenue:"Umsatz bearbeiten", editRevenueHint:"Tag auswählen, Tagesumsatz prüfen und Termine direkt je Mitarbeiter nachbearbeiten.", dailyRevenue:"Tagesumsatz", includeDayRevenue:"Tag wieder zum Umsatz zählen", excludeDayRevenue:"Tag aus Umsatz nehmen", appointmentsByEmployee:"Termine nach Mitarbeiter", addManualRevenueItem:"Manuelle Umsatzposition hinzufügen", amount:"Betrag", manualRevenueTitlePlaceholder:"z. B. Trinkgeld, Verkauf, Korrektur", optional:"Optional", saveManualItem:"Manuelle Position speichern", noEntries:"Keine Einträge vorhanden.", noAppointmentsToday:"Für diesen Tag sind noch keine Termine vorhanden.", customersCount:"Kunden", openStatus:"Offen", paidStatus:"Bezahlt", bookedStatus:"Gebucht", noPaidRevenueToday:"Für diesen Tag sind noch keine Umsätze mit Status „Bezahlt“ vorhanden.", noRevenue2EmployeeEntries:"Noch keine Einträge. Klicke im Reiter „Mitarbeiter Umsatz“ auf den gelben Button „E“.", noRevenue2CashEntries:"Noch keine Einträge. Klicke im Reiter „Mitarbeiter Umsatz“ auf den blauen Button „A“", noPaidCustomers:"Keine bezahlten Kundentermine.", noAppointmentsOnDay:"Keine Termine an diesem Tag.", noManualRevenueItems:"Noch keine manuellen Umsatzpositionen für diesen Tag.", withoutEmployee:"Ohne Mitarbeiter", customerFallback:"Kunde", noShowStatus:"Nicht erschienen", saveWord:"Speichern", statusChangeTitle:"Status ändern", changeAmountTitle:"Betrag ändern", changeIncomeAmountTitle:"Betrag in Einnahme ändern", dayExcludedStatus:"Dieser Tag ist aktuell aus dem Umsatz herausgenommen.", dayIncludedStatus:"Dieser Tag wird aktuell im Umsatz gezählt.", activeLabel:"Aktiv", scheduleLabel:"Tagesplan", cashReport:"Kassenbericht", cashBalance:"Kassenbestand", systemCleanBtn:"System bereinigen", systemCleanHint:"Löscht alle gespeicherten Umsätze und alle Termine im Tagesplan. Kundendatenbank und Leistungsdatenbank bleiben erhalten.", systemCleanConfirm:"System bereinigen? Alle gespeicherten Umsätze und alle Termine im Tagesplan werden endgültig gelöscht – Vergangenheit und Zukunft. Kundendatenbank und Leistungsdatenbank bleiben erhalten.", systemCleanConfirmFinal:"Letzte Bestätigung: Diese Bereinigung kann in der App nicht rückgängig gemacht werden. Jetzt wirklich löschen?", systemCleanDone:"System wurde bereinigt. Alle Umsätze und Termine wurden gelöscht. Kundendatenbank und Leistungsdatenbank sind erhalten geblieben."
+});
+Object.assign(I18N.en, {
+  openRevenue:"Revenue report", cashRegister:"Cash register", day:"Day", week:"Week", month:"Month", date:"Date", dailyRevenueTotal:"Daily revenue / total", appointments:"Appointments", dailyRevenueByEmployee:"Daily revenue by employee", dailyRevenueByEmployeeHint:"Compact overview with customer appointments, service and price. The report can be shown by day, week or month.", workTimeVacation:"Working time / vacation", workTimeVacationHint:"All employees are listed here. Set whether each employee works full-time, part-time/temp, mini-job or individual days. Approved times, weekday working hours Monday to Saturday, vacation periods and single vacation days are considered in the appointment planner.", reportPrintFormat:"Report print format", reportPrintFormatHint:"Applies to cash report, employee revenue and income. Excel export remains unchanged.", versionLabel:"Version:", developerLabel:"Manufacturer / developer:", copyrightLabel:"Copyright:", revenueJournal:"Revenue journal", employeeRevenue:"Employee revenue", weeklyRevenue:"Weekly revenue", monthlyRevenue:"Monthly revenue", selectDay:"Select day", printReport:"Print report", currentCash:"Currently in cash register", total:"Total", depositChange:"Deposit / change", description:"Description", amountEuro:"Amount €", saveDeposit:"Save deposit", depositsTotal:"Deposits total", cashWithdrawal:"Cash withdrawal", withdrawalReason:"What was cash withdrawn for?", saveWithdrawal:"Save withdrawal", withdrawalsTotal:"Withdrawals total", employeeRevenueHint:"Shows all appointments for the selected day: open, paid and no-show. Amounts can be changed directly here.", openAmount:"Open amount", sumPaid:"Sum paid", periodRevenueHintWeek:"Shows the total amount per day of the selected week. No individual customer information is shown.", totalRevenue:"Total revenue", periodRevenueHintMonth:"Shows the total amount per day of the selected month. No individual customer information is shown.", income:"Income", entries:"Entries", employeeIncome:"Employee income", fromCashRegister:"From cash register", remainingCash:"Still in cash register", editRevenue:"Edit revenue", editRevenueHint:"Select a day, check daily revenue and edit appointments directly by employee.", dailyRevenue:"Daily revenue", includeDayRevenue:"Count day in revenue again", excludeDayRevenue:"Exclude day from revenue", appointmentsByEmployee:"Appointments by employee", addManualRevenueItem:"Add manual revenue item", amount:"Amount", manualRevenueTitlePlaceholder:"e.g. tip, sale, correction", optional:"Optional", saveManualItem:"Save manual item", noEntries:"No entries available.", noAppointmentsToday:"No appointments for this day yet.", customersCount:"Customers", openStatus:"Open", paidStatus:"Paid", bookedStatus:"Booked", noPaidRevenueToday:"No revenue with status “Paid” for this day yet.", noRevenue2EmployeeEntries:"No entries yet. Click the yellow “E” button in the Employee revenue tab.", noRevenue2CashEntries:"No entries yet. Click the blue “A” button in the Employee revenue tab.", noPaidCustomers:"No paid customer appointments.", noAppointmentsOnDay:"No appointments on this day.", noManualRevenueItems:"No manual revenue items for this day yet.", withoutEmployee:"Without employee", customerFallback:"Customer", noShowStatus:"No-show", saveWord:"Save", statusChangeTitle:"Change status", changeAmountTitle:"Change amount", changeIncomeAmountTitle:"Change income amount", dayExcludedStatus:"This day is currently excluded from revenue.", dayIncludedStatus:"This day is currently counted in revenue.", activeLabel:"Active", scheduleLabel:"Schedule", cashReport:"Cash report", cashBalance:"Cash balance", systemCleanBtn:"Clean system", systemCleanHint:"Deletes all saved revenue and all appointments in the daily schedule. Customer database and service database remain saved.", systemCleanConfirm:"Clean system? All saved revenue and all appointments in the daily schedule will be permanently deleted – past and future. Customer database and service database remain saved.", systemCleanConfirmFinal:"Final confirmation: This cleanup cannot be undone in the app. Really delete now?", systemCleanDone:"System cleaned. All revenue and appointments were deleted. Customer database and service database were kept."
+});
+Object.assign(I18N.vi, {
+  openRevenue:"Báo cáo doanh thu", cashRegister:"Kassa", day:"Ngày", week:"Tuần", month:"Tháng", date:"Ngày", dailyRevenueTotal:"Doanh thu ngày / tổng", appointments:"Lịch hẹn", dailyRevenueByEmployee:"Doanh thu ngày theo nhân viên", dailyRevenueByEmployeeHint:"Tổng quan gọn với lịch hẹn khách, dịch vụ và giá. Báo cáo có thể xem theo ngày, tuần hoặc tháng.", workTimeVacation:"Giờ làm / nghỉ phép", workTimeVacationHint:"Tất cả nhân viên được liệt kê ở đây. Thiết lập toàn thời gian, phụ/part-time, mini-job hoặc ngày làm riêng. Thời gian được phép, giờ làm theo thứ Hai đến thứ Bảy, kỳ nghỉ và ngày nghỉ lẻ sẽ được tính trong lịch hẹn.", reportPrintFormat:"Định dạng in báo cáo", reportPrintFormatHint:"Áp dụng cho báo cáo kassa, doanh thu nhân viên và thu nhập. Xuất Excel không thay đổi.", versionLabel:"Phiên bản:", developerLabel:"Nhà sản xuất / phát triển:", copyrightLabel:"Bản quyền:", revenueJournal:"Nhật ký doanh thu", employeeRevenue:"Doanh thu nhân viên", weeklyRevenue:"Doanh thu tuần", monthlyRevenue:"Doanh thu tháng", selectDay:"Chọn ngày", printReport:"In báo cáo", currentCash:"Hiện có trong kassa", total:"Tổng", depositChange:"Nạp tiền / tiền lẻ", description:"Mô tả", amountEuro:"Số tiền €", saveDeposit:"Lưu khoản nạp", depositsTotal:"Tổng tiền nạp", cashWithdrawal:"Rút tiền khỏi kassa", withdrawalReason:"Rút tiền để làm gì?", saveWithdrawal:"Lưu khoản rút", withdrawalsTotal:"Tổng tiền rút", employeeRevenueHint:"Hiển thị tất cả lịch hẹn của ngày đã chọn: mở, đã trả và không đến. Có thể sửa số tiền trực tiếp tại đây.", openAmount:"Số tiền còn mở", sumPaid:"Tổng đã trả", periodRevenueHintWeek:"Hiển thị tổng tiền từng ngày trong tuần đã chọn. Không hiển thị thông tin khách riêng lẻ.", totalRevenue:"Tổng doanh thu", periodRevenueHintMonth:"Hiển thị tổng tiền từng ngày trong tháng đã chọn. Không hiển thị thông tin khách riêng lẻ.", income:"Thu nhập", entries:"Mục", employeeIncome:"Thu nhập nhân viên", fromCashRegister:"Từ kassa", remainingCash:"Còn trong kassa", editRevenue:"Sửa doanh thu", editRevenueHint:"Chọn ngày, kiểm tra doanh thu ngày và sửa lịch hẹn trực tiếp theo nhân viên.", dailyRevenue:"Doanh thu ngày", includeDayRevenue:"Tính lại ngày vào doanh thu", excludeDayRevenue:"Loại ngày khỏi doanh thu", appointmentsByEmployee:"Lịch hẹn theo nhân viên", addManualRevenueItem:"Thêm mục doanh thu thủ công", amount:"Số tiền", manualRevenueTitlePlaceholder:"ví dụ: tiền tip, bán hàng, chỉnh sửa", optional:"Tùy chọn", saveManualItem:"Lưu mục thủ công", noEntries:"Chưa có mục nào.", noAppointmentsToday:"Chưa có lịch hẹn cho ngày này.", customersCount:"Khách", openStatus:"Mở", paidStatus:"Đã trả", bookedStatus:"Đã đặt", noPaidRevenueToday:"Chưa có doanh thu trạng thái “Đã trả” cho ngày này.", noRevenue2EmployeeEntries:"Chưa có mục nào. Nhấn nút “E” màu vàng trong tab Doanh thu nhân viên.", noRevenue2CashEntries:"Chưa có mục nào. Nhấn nút “A” màu xanh trong tab Doanh thu nhân viên.", noPaidCustomers:"Không có lịch hẹn khách đã trả.", noAppointmentsOnDay:"Không có lịch hẹn trong ngày này.", noManualRevenueItems:"Chưa có mục doanh thu thủ công cho ngày này.", withoutEmployee:"Không có nhân viên", customerFallback:"Khách", noShowStatus:"Không đến", saveWord:"Lưu", statusChangeTitle:"Đổi trạng thái", changeAmountTitle:"Đổi số tiền", changeIncomeAmountTitle:"Đổi số tiền thu nhập", dayExcludedStatus:"Ngày này hiện đã bị loại khỏi doanh thu.", dayIncludedStatus:"Ngày này hiện được tính vào doanh thu.", activeLabel:"Đang bật", scheduleLabel:"Lịch ngày", cashReport:"Báo cáo kassa", cashBalance:"Số dư kassa", systemCleanBtn:"Dọn dẹp hệ thống", systemCleanHint:"Xóa toàn bộ doanh thu đã lưu và toàn bộ lịch hẹn trong lịch ngày. Cơ sở dữ liệu khách hàng và dịch vụ vẫn được giữ lại.", systemCleanConfirm:"Dọn dẹp hệ thống? Toàn bộ doanh thu đã lưu và toàn bộ lịch hẹn trong lịch ngày sẽ bị xóa vĩnh viễn – quá khứ và tương lai. Cơ sở dữ liệu khách hàng và dịch vụ vẫn được giữ lại.", systemCleanConfirmFinal:"Xác nhận lần cuối: Việc dọn dẹp này không thể hoàn tác trong ứng dụng. Thực sự xóa ngay bây giờ?", systemCleanDone:"Hệ thống đã được dọn dẹp. Toàn bộ doanh thu và lịch hẹn đã bị xóa. Cơ sở dữ liệu khách hàng và dịch vụ vẫn được giữ lại."
+});
+
 function t(key){
   const lang = state.language || "de";
   return (I18N[lang] && I18N[lang][key]) || I18N.de[key] || key;
@@ -753,6 +1325,18 @@ function applyLanguage(){
     if(I18N[state.language || "de"]?.[key] || I18N.de[key]){
       el.textContent = t(key);
     }
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+    const key = el.getAttribute("data-i18n-placeholder");
+    if(I18N[state.language || "de"]?.[key] || I18N.de[key]) el.placeholder = t(key);
+  });
+  document.querySelectorAll("[data-i18n-title]").forEach(el => {
+    const key = el.getAttribute("data-i18n-title");
+    if(I18N[state.language || "de"]?.[key] || I18N.de[key]) el.title = t(key);
+  });
+  document.querySelectorAll("[data-i18n-aria-label]").forEach(el => {
+    const key = el.getAttribute("data-i18n-aria-label");
+    if(I18N[state.language || "de"]?.[key] || I18N.de[key]) el.setAttribute("aria-label", t(key));
   });
   const placeholders = [
     ["customerSearchInput", state.language==="vi" ? "Tìm tên hoặc số điện thoại" : state.language==="en" ? "Search name or phone number" : "Name oder Telefonnummer suchen"],
@@ -778,7 +1362,7 @@ function renderAll(){
   if($("reportDate")) $("reportDate").value ||= state.selectedDate;
   $("reportFrom").value ||= state.selectedDate;
   $("reportTo").value ||= state.selectedDate;
-  renderStartTimeOptions(); renderEmployeeSelect(); renderSettingsEmployeeList(); renderWorkTimeList(); renderCustomerDatalist(); renderSettingsCustomerList(); renderServiceDatalist(); renderServiceList(); renderCustomerSearch(); renderCalendar(); applyRevenueVisibility(); renderReport(); updateBackupStatuses();
+  renderStartTimeOptions(); renderEmployeeSelect(); renderSettingsEmployeeList(); renderWorkTimeList(); renderCustomerDatalist(); renderSettingsCustomerList(); renderServiceDatalist(); renderServiceList(); renderCustomerSearch(); renderCalendar(); applyRevenueVisibility(); renderReport(); renderEmployeeDailyRevenue(); renderCashTab(); updateBackupStatuses(); updateLicenseInfoBox();
 }
 
 
@@ -1643,7 +2227,6 @@ function showAppointmentConflict(conflict){
   alert(t("appointmentConflictTitle") + "\n\n" + msg);
 }
 function saveAppointment(){
-  if(currentLicenseInfo && !currentLicenseInfo.ok){ showLicenseLock(currentLicenseInfo); return; }
   const a={ id:editingAppointmentId||uid(), date:state.selectedDate, customerName:$("customerName").value.trim(), phone:combinePhoneFields(), serviceName:$("serviceName").value.trim(), price:Number($("price").value||0), duration:Number($("duration").value||60), employeeId:$("employeeSelect").value, employeeAny:isEmployeeAnyActive(), startTime:$("startTime").value, status:"Gebucht", note:$("note").value.trim() };
   const old = state.appointments.find(x=>x.id===a.id);
   if(old && (old.status==="Erledigt" || old.status==="Nicht erschienen")) a.status=old.status;
@@ -1662,7 +2245,7 @@ function clearForm(){
 }
 function showAppointment(id){
   selectedAppointmentId=id; const a=state.appointments.find(x=>x.id===id); const emp=state.employees.find(e=>e.id===a.employeeId);
-  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName)} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>Mitarbeiter: ${escapeHtml(emp?.name||"")}</p><p>Telefon: ${escapeHtml(a.phone||"-")}</p><p>Status intern: ${escapeHtml(a.status||"Gebucht")}${a.employeeAny ? " · Egal" : ""}</p><p>Preis: ${money(a.price)}</p><p>Notiz: ${escapeHtml(a.note||"-")}</p>`;
+  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName)} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>Mitarbeiter: ${escapeHtml(emp?.name||"")}</p><p>Telefon: ${escapeHtml(a.phone||"-")}</p><p>Status intern: ${escapeHtml(employeeDailyRevenueStatusLabel(a.status||"Gebucht"))}</p><p>Preis: ${money(a.price)}</p><p>Notiz: ${escapeHtml(a.note||"-")}</p>`;
   $("appointmentDialog").showModal();
 }
 function editSelectedAppointment(){
@@ -1717,7 +2300,7 @@ function renderAppointmentEditForm(a){
         <label>Mitarbeiter
           <select id="editApptEmployee">${employeeOptions}</select>
         </label>
-        <label class="employee-any-edit-label">Egal
+        <label class="employee-any-edit-label">Beliebig
           <input id="editApptEmployeeAny" type="checkbox" ${a.employeeAny ? "checked" : ""}>
           <small>Termin im Tagesplan gelb markieren</small>
         </label>
@@ -1899,6 +2482,692 @@ function reportRangeText(from,to,mode){
   return `${mm}/${yyyy}`;
 }
 
+
+function employeeDailyRevenueStatusLabel(status){
+  if(status === "Erledigt") return "Bezahlt";
+  if(status === "Nicht erschienen") return "Nicht erschienen";
+  return "Offen";
+}
+function employeeDailyRevenueStatusClass(status){
+  if(status === "Erledigt") return "employee-daily-revenue-status-done";
+  if(status === "Nicht erschienen") return "employee-daily-revenue-status-noshow";
+  return "employee-daily-revenue-status-open";
+}
+
+
+
+function employeeRevenueVisual(employeeId, fallbackName){
+  const employees = state.employees || [];
+  const emp = employees.find(e => e.id === employeeId) || employees.find(e => (e.name || "") === (fallbackName || ""));
+  if(!emp){
+    return {name: fallbackName || t("withoutEmployee"), color: "#8a6f7f", rowColor: "#f7f2f5", badge: ""};
+  }
+  const idx = Math.max(0, employees.indexOf(emp));
+  const pal = paletteColor(idx);
+  return {
+    name: emp.name || fallbackName || t("withoutEmployee"),
+    color: emp.color || pal.accent,
+    rowColor: emp.rowColor || pal.bg,
+    badge: employmentTypeLabel(emp.workSettings?.employmentType)
+  };
+}
+function employeeRevenueCardStyle(employeeId, fallbackName){
+  const visual = employeeRevenueVisual(employeeId, fallbackName);
+  return `--employee-row-bg:${escapeHtml(visual.rowColor)};--employee-accent:${escapeHtml(visual.color)}`;
+}
+function employeeRevenueNameHtml(employeeId, fallbackName){
+  const visual = employeeRevenueVisual(employeeId, fallbackName);
+  return `<div class="employee-revenue-name" style="--employee-row-bg:${escapeHtml(visual.rowColor)};--employee-accent:${escapeHtml(visual.color)}"><span class="employee-color-dot"></span><div><strong style="color:${escapeHtml(visual.color)}">${escapeHtml(visual.name)}</strong>${visual.badge ? `<br><small>${escapeHtml(visual.badge)}</small>` : ""}</div></div>`;
+}
+
+function employeeDailyRevenueRecordFromAppointment(a){
+  const emp = (state.employees || []).find(e => e.id === a.employeeId);
+  return {
+    id: uid(),
+    appointmentId: a.id,
+    date: a.date,
+    employeeId: a.employeeId || "none",
+    employeeName: emp?.name || t("withoutEmployee"),
+    startTime: a.startTime || "",
+    customerName: a.customerName || t("customerFallback"),
+    serviceName: a.serviceName || t("serviceFallback"),
+    status: a.status || "Gebucht",
+    price: Number(a.price || 0),
+    originalServicePrice: Number(a.price || 0),
+    createdAt: new Date().toISOString(),
+    source: "mitarbeiter-umsatz"
+  };
+}
+function ensureEmployeeDailyRevenueRecordsForDay(day){
+  state.employeeDailyRevenueRecords = state.employeeDailyRevenueRecords || [];
+  const apps = (state.appointments || []).filter(a => a.date === day);
+  const appIds = new Set(apps.map(a => a.id));
+  let changed = false;
+
+  // Mitarbeiter Umsatz soll den Tagesplan beim Status identisch spiegeln:
+  // Offen/Gebucht, Bezahlt und Nicht erschienen werden immer aus dem aktuellen Termin übernommen.
+  // Manuell geänderte Beträge in Mitarbeiter Umsatz bleiben dabei erhalten.
+  apps.forEach(a => {
+    const emp = (state.employees || []).find(e => e.id === a.employeeId);
+    const record = state.employeeDailyRevenueRecords.find(r => r.appointmentId === a.id);
+    if(!record){
+      state.employeeDailyRevenueRecords.push(employeeDailyRevenueRecordFromAppointment(a));
+      changed = true;
+      return;
+    }
+
+    const next = {
+      date: a.date,
+      employeeId: a.employeeId || "none",
+      employeeName: emp?.name || t("withoutEmployee"),
+      startTime: a.startTime || "",
+      customerName: a.customerName || t("customerFallback"),
+      serviceName: a.serviceName || t("serviceFallback"),
+      status: a.status || "Gebucht"
+    };
+    Object.entries(next).forEach(([key, value]) => {
+      if(record[key] !== value){
+        record[key] = value;
+        changed = true;
+      }
+    });
+    // Den ursprünglichen Leistungsbetrag separat merken, damit Teilbeträge über den A-Button
+    // vom Originalpreis abgezogen werden können, ohne Stammdaten oder Termin-Verknüpfungen zu ändern.
+    if(record.originalServicePrice === undefined || record.originalServicePrice === null){
+      record.originalServicePrice = Number(a.price || record.price || 0);
+      changed = true;
+    }
+  });
+
+  // Wenn ein Termin im Tagesplan gelöscht wurde, soll er auch aus Mitarbeiter Umsatz verschwinden.
+  // Bereits einmalig nach Umsatz 2 übertragene Einträge bleiben dort separat gespeichert.
+  const before = state.employeeDailyRevenueRecords.length;
+  state.employeeDailyRevenueRecords = state.employeeDailyRevenueRecords.filter(r => r.date !== day || appIds.has(r.appointmentId));
+  if(state.employeeDailyRevenueRecords.length !== before) changed = true;
+
+  if(changed) saveState();
+}
+function employeeDailyRevenueRecordsForDay(day){
+  state.employeeDailyRevenueRecords = state.employeeDailyRevenueRecords || [];
+  return state.employeeDailyRevenueRecords.filter(r => r.date === day);
+}
+function employeeDailyRevenueRecordByAppointmentId(id){
+  return (state.employeeDailyRevenueRecords || []).find(r => r.appointmentId === id);
+}
+function renderEmployeeDailyRevenue(){
+  const list = $("employeeDailyRevenueList");
+  if(!list) return;
+  const day = getJournalDate();
+  ensureEmployeeDailyRevenueRecordsForDay(day);
+  const records = employeeDailyRevenueRecordsForDay(day).sort((a,b) => {
+    return String(a.employeeName || t("withoutEmployee")).localeCompare(String(b.employeeName || t("withoutEmployee"))) || String(a.startTime || "").localeCompare(String(b.startTime || ""));
+  });
+  const groups = {};
+  records.forEach(r => {
+    const key = r.employeeId || "none";
+    if(!groups[key]) groups[key] = {id: key, name: r.employeeName || t("withoutEmployee"), items: [], total: 0};
+    groups[key].items.push(r);
+    groups[key].total += Number(r.price || 0);
+  });
+  const paidTotal = records
+    .filter(r => r.status === "Erledigt")
+    .reduce((sum,r)=>sum + Number(r.price || 0), 0);
+  const openTotal = records
+    .filter(r => (r.status || "Gebucht") === "Gebucht")
+    .reduce((sum,r)=>sum + Number(r.price || 0), 0);
+  if($("employeeDailyRevenueDate")) $("employeeDailyRevenueDate").textContent = formatDateShort(day);
+  if($("employeeDailyRevenuePaidTotal")) $("employeeDailyRevenuePaidTotal").textContent = money(paidTotal);
+  if($("employeeDailyRevenueOpenTotal")) $("employeeDailyRevenueOpenTotal").textContent = money(openTotal);
+  const groupList = Object.values(groups).sort((a,b)=>a.name.localeCompare(b.name));
+  if(!groupList.length){
+    list.innerHTML = `<p class="hint">${t("noAppointmentsToday")}</p>`;
+    renderRevenue2();
+    renderCashTab();
+    return;
+  }
+  list.innerHTML = groupList.map(group => `
+    <section class="employee-daily-revenue-card" style="${employeeRevenueCardStyle(group.id, group.name)}">
+      <div class="employee-daily-revenue-head">
+        ${employeeRevenueNameHtml(group.id, group.name)}
+        <span>${group.items.length} ${t("customersCount")}</span>
+        <b>${money(group.total)}</b>
+      </div>
+      <div class="employee-daily-revenue-rows">
+        ${group.items.map(r => `
+          <div class="employee-daily-revenue-row">
+            <span class="employee-daily-revenue-time">${escapeHtml(r.startTime || "")}</span>
+            <span class="employee-daily-revenue-customer">${escapeHtml(r.customerName || t("customerFallback"))}</span>
+            <span class="employee-daily-revenue-service">${escapeHtml(r.serviceName || t("serviceFallback"))}</span>
+            <select class="employee-daily-revenue-status employee-daily-revenue-status-select ${employeeDailyRevenueStatusClass(r.status || "Gebucht")}" data-employee-daily-status="${escapeHtml(r.appointmentId)}" title="${t("statusChangeTitle")}">
+              <option value="Gebucht" ${(r.status || "Gebucht") === "Gebucht" ? "selected" : ""}>${t("openStatus")}</option>
+              <option value="Erledigt" ${(r.status || "Gebucht") === "Erledigt" ? "selected" : ""}>${t("paidStatus")}</option>
+              <option value="Nicht erschienen" ${(r.status || "Gebucht") === "Nicht erschienen" ? "selected" : ""}>${t("noShowStatus")}</option>
+            </select>
+            <input class="employee-daily-revenue-price" type="number" min="0" step="0.01" value="${Number(r.price || 0)}" data-employee-daily-price="${escapeHtml(r.appointmentId)}" title="${t("changeAmountTitle")}">
+            <button type="button" class="employee-daily-revenue-save" data-employee-daily-save="${escapeHtml(r.appointmentId)}">${t("saveWord")}</button>
+            <button type="button" class="employee-daily-revenue-delete danger" data-employee-daily-delete="${escapeHtml(r.appointmentId)}" ${(r.status || "Gebucht") === "Erledigt" ? 'disabled title="Bezahlte Kunden können nicht gelöscht werden"' : ''}>${t("delete")}</button>
+            <div class="employee-daily-revenue-mini-actions">
+              <button type="button" class="employee-daily-revenue-mini-btn employee-daily-revenue-done-open ${r.revenue2Done ? 'employee-daily-revenue-done-active' : ''}" data-employee-daily-done="${escapeHtml(r.appointmentId)}" title="Nur dieser E-Button übernimmt den Termin einmalig in Einnahme" ${r.revenue2Done ? 'disabled' : ''}>${r.revenue2Done ? '' : 'E'}</button>
+              <button type="button" class="employee-daily-revenue-mini-btn employee-daily-revenue-a-open ${r.actionADone ? 'employee-daily-revenue-a-active' : ''}" data-employee-daily-action-a="${escapeHtml(r.appointmentId)}" title="Diesen Umsatz nach Aus der Kasse übernehmen" ${r.actionADone ? 'disabled' : ''}>${r.actionADone ? '' : 'A'}</button>
+            </div>
+          </div>`).join("")}
+      </div>
+    </section>`).join("");
+  list.querySelectorAll('button[data-employee-daily-save]').forEach(btn => {
+    btn.onclick = () => saveEmployeeDailyRevenuePrice(btn.dataset.employeeDailySave);
+  });
+  list.querySelectorAll('button[data-employee-daily-delete]').forEach(btn => {
+    btn.onclick = () => deleteEmployeeDailyRevenueAppointment(btn.dataset.employeeDailyDelete);
+  });
+  list.querySelectorAll('button[data-employee-daily-done]').forEach(btn => {
+    btn.onclick = () => markEmployeeDailyRevenueDoneForRevenue2(btn.dataset.employeeDailyDone);
+  });
+  list.querySelectorAll('button[data-employee-daily-action-a]').forEach(btn => {
+    btn.onclick = () => markEmployeeDailyRevenueActionAUsed(btn.dataset.employeeDailyActionA);
+  });
+  list.querySelectorAll('select[data-employee-daily-status]').forEach(select => {
+    select.onchange = () => changeEmployeeDailyRevenueStatus(select.dataset.employeeDailyStatus, select.value);
+  });
+  list.querySelectorAll('input[data-employee-daily-price]').forEach(input => {
+    input.onkeydown = e => {
+      if(e.key === 'Enter') saveEmployeeDailyRevenuePrice(input.dataset.employeeDailyPrice);
+    };
+  });
+  renderRevenue2();
+}
+
+function markEmployeeDailyRevenueActionAUsed(id){
+  ensureEmployeeDailyRevenueRecordsForDay(getJournalDate());
+  state.revenue2CashEntries = state.revenue2CashEntries || [];
+  const record = employeeDailyRevenueRecordByAppointmentId(id);
+  if(!record || record.actionADone === true) return;
+
+  // Beim A-Button wird der aktuell im Feld stehende Betrag übertragen.
+  // Danach bleibt im Mitarbeiter-Umsatz-Feld automatisch der Rest vom ursprünglichen Leistungsbetrag stehen.
+  const input = document.querySelector(`input[data-employee-daily-price="${CSS.escape(id)}"]`);
+  const transferAmount = Number(input?.value ?? record.price ?? 0);
+  if(!Number.isFinite(transferAmount) || transferAmount < 0){
+    alert("Bitte einen gültigen Betrag eintragen.");
+    return;
+  }
+
+  const appointment = (state.appointments || []).find(a => a.id === id);
+  const originalAmount = Number(record.originalServicePrice ?? appointment?.price ?? record.price ?? 0);
+  if(transferAmount > originalAmount){
+    alert("Der übertragene Betrag darf nicht höher sein als der gespeicherte Leistungsbetrag.");
+    return;
+  }
+
+  const cashRecord = {...record, price: transferAmount};
+  if(!revenue2CashEntryByAppointmentId(id)){
+    state.revenue2CashEntries.push(revenue2CashEntryFromRecord(cashRecord));
+  }
+
+  record.originalServicePrice = originalAmount;
+  record.actionAPrice = transferAmount;
+  record.price = Math.max(0, originalAmount - transferAmount);
+  record.actionADone = true;
+  record.actionADoneAt = new Date().toISOString();
+  record.updatedAt = new Date().toISOString();
+  saveState();
+  renderEmployeeDailyRevenue();
+  renderRevenue2();
+  renderCashTab();
+  renderPeriodRevenue("week");
+  renderPeriodRevenue("month");
+}
+
+function changeEmployeeDailyRevenueStatus(id, status){
+  ensureEmployeeDailyRevenueRecordsForDay(getJournalDate());
+  const allowed = ["Gebucht", "Erledigt", "Nicht erschienen"];
+  const nextStatus = allowed.includes(status) ? status : "Gebucht";
+  const record = employeeDailyRevenueRecordByAppointmentId(id);
+  const appointment = (state.appointments || []).find(a => a.id === id);
+  if(!record && !appointment) return;
+
+  // Nur die Status-Auswahl im Reiter „Mitarbeiter Umsatz“ synchronisiert den Status mit dem Tagesplan.
+  // Der grüne Button „Erledigt“ daneben bleibt unverändert und dient weiterhin nur der Übertragung nach „Einnahme“.
+  if(record){
+    record.status = nextStatus;
+    record.updatedAt = new Date().toISOString();
+  }
+  if(appointment){
+    appointment.status = nextStatus;
+  }
+  saveState();
+  renderAll();
+  renderEmployeeDailyRevenue();
+  renderCashTab();
+  renderPeriodRevenue("week");
+  renderPeriodRevenue("month");
+}
+
+function saveEmployeeDailyRevenuePrice(id){
+  ensureEmployeeDailyRevenueRecordsForDay(getJournalDate());
+  const record = employeeDailyRevenueRecordByAppointmentId(id);
+  if(!record) return;
+  const input = document.querySelector(`input[data-employee-daily-price="${CSS.escape(id)}"]`);
+  const price = Number(input?.value || 0);
+  if(!Number.isFinite(price) || price < 0){
+    alert("Bitte einen gültigen Betrag eintragen.");
+    return;
+  }
+  record.price = price;
+  // Wenn der Betrag im „Mitarbeiter Umsatz“ bewusst gespeichert wird, gilt er ab jetzt
+  // als neue Leistungsbetrag-Basis für die Restbetrag-Berechnung des A-Buttons.
+  // Das verändert keine Kundendaten, Leistungsdaten oder Tagesplan-Verknüpfungen.
+  if(record.actionADone !== true){
+    record.originalServicePrice = price;
+    record.manualServicePriceSavedAt = new Date().toISOString();
+  }
+  record.updatedAt = new Date().toISOString();
+  saveState();
+  renderEmployeeDailyRevenue();
+  renderRevenue2();
+  renderCashTab();
+  renderPeriodRevenue("week");
+  renderPeriodRevenue("month");
+}
+
+function deleteEmployeeDailyRevenueAppointment(id){
+  ensureEmployeeDailyRevenueRecordsForDay(getJournalDate());
+  const record = employeeDailyRevenueRecordByAppointmentId(id);
+  const appointment = (state.appointments || []).find(a => a.id === id);
+  if(!record && !appointment) return;
+  const currentStatus = record?.status || appointment?.status || "Gebucht";
+  if(currentStatus === "Erledigt"){
+    alert("Bezahlte Kunden können im Mitarbeiter Umsatz nicht gelöscht werden.");
+    renderEmployeeDailyRevenue();
+    return;
+  }
+  const name = record?.customerName || appointment?.customerName || "diesen Termin";
+  if(!confirm("Termin wirklich löschen ?")) return;
+
+  // Löschen in „Mitarbeiter Umsatz“ entfernt den Termin aus der Tagesplan-Datenbasis
+  // und aus der Mitarbeiter-Umsatz-Liste. Umsatz-2-Einträge werden bewusst NICHT gelöscht.
+  state.appointments = (state.appointments || []).filter(a => a.id !== id);
+  state.employeeDailyRevenueRecords = (state.employeeDailyRevenueRecords || []).filter(r => r.appointmentId !== id);
+
+  if(selectedAppointmentId === id){
+    selectedAppointmentId = null;
+    if($("appointmentDialog")?.open) $("appointmentDialog").close();
+  }
+
+  saveState();
+  renderAll();
+  renderEmployeeDailyRevenue();
+  renderRevenue2();
+  renderCashTab();
+  renderPeriodRevenue("week");
+  renderPeriodRevenue("month");
+}
+
+
+function cashWithdrawalsForDay(day){
+  state.cashWithdrawals = state.cashWithdrawals || [];
+  return state.cashWithdrawals.filter(item => item.date === day);
+}
+
+function cashDepositsForDay(day){
+  state.cashDeposits = state.cashDeposits || [];
+  return state.cashDeposits.filter(item => item.date === day);
+}
+
+function renderCashTab(){
+  const revenueList = $("cashEmployeeRevenueList");
+  const depositList = $("cashDepositList");
+  const withdrawalList = $("cashWithdrawalList");
+  if(!revenueList && !depositList && !withdrawalList) return;
+  const day = getJournalDate();
+  ensureEmployeeDailyRevenueRecordsForDay(day);
+  const records = employeeDailyRevenueRecordsForDay(day).filter(r => r.status === "Erledigt").slice().sort((a,b)=>{
+    return String(a.employeeName || t("withoutEmployee")).localeCompare(String(b.employeeName || t("withoutEmployee"))) || String(a.startTime || "").localeCompare(String(b.startTime || ""));
+  });
+  const groups = {};
+  records.forEach(r => {
+    const key = r.employeeId || r.employeeName || "none";
+    if(!groups[key]) groups[key] = {id:key, name:r.employeeName || t("withoutEmployee"), count:0, total:0};
+    groups[key].count += 1;
+    groups[key].total += Number(r.price || 0);
+  });
+  const rawTotal = records.reduce((sum,r)=>sum + Number(r.price || 0), 0);
+  const total = journalDayTotal(day);
+  const hasManualTotal = journalDayHasManualTotal(day);
+  const adjustment = total - rawTotal;
+  if($("cashDate")) $("cashDate").textContent = formatDateShort(day);
+  if($("cashEmployeeRevenueTotal")) $("cashEmployeeRevenueTotal").textContent = money(total);
+  if(revenueList){
+    const groupList = Object.values(groups).sort((a,b)=>a.name.localeCompare(b.name));
+    const rowsHtml = groupList.length ? groupList.map(group => `
+      <div class="cash-employee-row" style="${employeeRevenueCardStyle(group.id, group.name)}">
+        ${employeeRevenueNameHtml(group.id, group.name)}
+        <span>${group.count} bezahlt</span>
+        <strong>${money(group.total)}</strong>
+      </div>`).join("") : `<p class="hint">${t("noPaidRevenueToday")}</p>`;
+    const manualHtml = hasManualTotal ? `
+      <div class="cash-employee-row cash-journal-sync-row">
+        <span>Wochen-/Monatsumsatz</span>
+        <span>${journalDayDeleted(day) ? "Tag gelöscht" : "Korrektur"}</span>
+        <strong>${money(adjustment)}</strong>
+      </div>` : "";
+    revenueList.innerHTML = rowsHtml + manualHtml;
+  }
+
+  const deposits = cashDepositsForDay(day).slice().sort((a,b)=>String(a.createdAt || "").localeCompare(String(b.createdAt || "")));
+  const depositTotal = deposits.reduce((sum,item)=>sum + Number(item.amount || 0), 0);
+  if($("cashDepositTotal")) $("cashDepositTotal").textContent = money(depositTotal);
+  if(depositList){
+    depositList.innerHTML = deposits.length ? deposits.map(item => `
+      <div class="cash-withdrawal-row cash-deposit-row">
+        <span>${escapeHtml(item.reason || "Einzahlung")}</span>
+        <strong>${money(item.amount || 0)}</strong>
+        <button type="button" class="cash-withdrawal-delete danger" data-cash-deposit-delete="${escapeHtml(item.id)}">${t("delete")}</button>
+      </div>`).join("") : '<p class="hint">Noch keine Einzahlung eingetragen.</p>';
+    depositList.querySelectorAll('button[data-cash-deposit-delete]').forEach(btn => {
+      btn.onclick = () => deleteCashDeposit(btn.dataset.cashDepositDelete);
+    });
+  }
+
+  const withdrawals = cashWithdrawalsForDay(day).slice().sort((a,b)=>String(a.createdAt || "").localeCompare(String(b.createdAt || "")));
+  const withdrawalTotal = withdrawals.reduce((sum,item)=>sum + Number(item.amount || 0), 0);
+  const currentBalance = total + depositTotal - withdrawalTotal;
+  if($("cashWithdrawalTotal")) $("cashWithdrawalTotal").textContent = money(withdrawalTotal);
+  if($("cashCurrentBalance")) $("cashCurrentBalance").textContent = money(currentBalance);
+  if(withdrawalList){
+    withdrawalList.innerHTML = withdrawals.length ? withdrawals.map(item => `
+      <div class="cash-withdrawal-row">
+        <span>${escapeHtml(item.reason || "Entnahme")}</span>
+        <strong>${money(item.amount || 0)}</strong>
+        <button type="button" class="cash-withdrawal-delete danger" data-cash-withdrawal-delete="${escapeHtml(item.id)}">${t("delete")}</button>
+      </div>`).join("") : '<p class="hint">Noch keine Geldentnahme eingetragen.</p>';
+    withdrawalList.querySelectorAll('button[data-cash-withdrawal-delete]').forEach(btn => {
+      btn.onclick = () => deleteCashWithdrawal(btn.dataset.cashWithdrawalDelete);
+    });
+  }
+}
+
+function addCashWithdrawal(){
+  const reasonInput = $("cashWithdrawalReason");
+  const amountInput = $("cashWithdrawalAmount");
+  const reason = (reasonInput?.value || "").trim();
+  const amount = Number(amountInput?.value || 0);
+  if(!reason){ alert("Bitte eintragen, wofür Geld entnommen wurde."); return; }
+  if(!Number.isFinite(amount) || amount <= 0){ alert("Bitte einen gültigen Betrag eintragen."); return; }
+  state.cashWithdrawals = state.cashWithdrawals || [];
+  state.cashWithdrawals.push({ id: uid(), date: getJournalDate(), reason, amount, createdAt: new Date().toISOString() });
+  saveState();
+  if(reasonInput) reasonInput.value = "";
+  if(amountInput) amountInput.value = "";
+  renderCashTab();
+}
+
+function addCashDeposit(){
+  const reasonInput = $("cashDepositReason");
+  const amountInput = $("cashDepositAmount");
+  const reason = (reasonInput?.value || "").trim();
+  const amount = Number(amountInput?.value || 0);
+  if(!reason){ alert("Bitte eine Bezeichnung für die Einzahlung eintragen."); return; }
+  if(!Number.isFinite(amount) || amount <= 0){ alert("Bitte einen gültigen Betrag eintragen."); return; }
+  state.cashDeposits = state.cashDeposits || [];
+  state.cashDeposits.push({ id: uid(), date: getJournalDate(), reason, amount, createdAt: new Date().toISOString() });
+  saveState();
+  if(reasonInput) reasonInput.value = "";
+  if(amountInput) amountInput.value = "";
+  renderCashTab();
+}
+
+function deleteCashDeposit(id){
+  state.cashDeposits = state.cashDeposits || [];
+  const item = state.cashDeposits.find(x => x.id === id);
+  if(!item) return;
+  if(!confirm(`Einzahlung „${item.reason || "Einzahlung"}“ wirklich löschen?`)) return;
+  state.cashDeposits = state.cashDeposits.filter(x => x.id !== id);
+  saveState();
+  renderCashTab();
+}
+
+function deleteCashWithdrawal(id){
+  state.cashWithdrawals = state.cashWithdrawals || [];
+  const item = state.cashWithdrawals.find(x => x.id === id);
+  if(!item) return;
+  if(!confirm(`Geldentnahme „${item.reason || "Entnahme"}“ wirklich löschen?`)) return;
+  state.cashWithdrawals = state.cashWithdrawals.filter(x => x.id !== id);
+  saveState();
+  renderCashTab();
+}
+
+function revenue2EntryFromRecord(record){
+  return {
+    id: uid(),
+    appointmentId: record.appointmentId,
+    date: record.date,
+    employeeId: record.employeeId || "none",
+    employeeName: record.employeeName || t("withoutEmployee"),
+    startTime: record.startTime || "",
+    customerName: record.customerName || t("customerFallback"),
+    serviceName: record.serviceName || t("serviceFallback"),
+    price: Number(record.price || 0),
+    createdAt: new Date().toISOString(),
+    source: "mitarbeiter-umsatz-erledigt-button"
+  };
+}
+function revenue2CashEntryFromRecord(record){
+  return {
+    id: uid(),
+    appointmentId: record.appointmentId,
+    date: record.date,
+    employeeId: record.employeeId || "none",
+    employeeName: record.employeeName || t("withoutEmployee"),
+    startTime: record.startTime || "",
+    customerName: record.customerName || t("customerFallback"),
+    serviceName: record.serviceName || t("serviceFallback"),
+    price: Number(record.price || 0),
+    createdAt: new Date().toISOString(),
+    source: "mitarbeiter-umsatz-a-button"
+  };
+}
+function revenue2EntriesForDay(day){
+  state.revenue2Entries = state.revenue2Entries || [];
+  return state.revenue2Entries.filter(entry => entry.date === day);
+}
+function revenue2CashEntriesForDay(day){
+  state.revenue2CashEntries = state.revenue2CashEntries || [];
+  return state.revenue2CashEntries.filter(entry => entry.date === day);
+}
+function revenue2EntryByAppointmentId(id){
+  return (state.revenue2Entries || []).find(entry => entry.appointmentId === id);
+}
+function revenue2CashEntryByAppointmentId(id){
+  return (state.revenue2CashEntries || []).find(entry => entry.appointmentId === id);
+}
+function markEmployeeDailyRevenueDoneForRevenue2(id){
+  ensureEmployeeDailyRevenueRecordsForDay(getJournalDate());
+  state.revenue2Entries = state.revenue2Entries || [];
+  const record = employeeDailyRevenueRecordByAppointmentId(id);
+  if(!record) return;
+  // Wichtig: Nur dieser Button im Reiter „Mitarbeiter Umsatz“ überträgt den Betrag einmalig nach „Umsatz 2“.
+  // Der Termin-Status in „Mitarbeiter Umsatz“ bleibt unverändert.
+  // Nach der ersten Übertragung ist der Button gesperrt; spätere Änderungen/Löschungen im Mitarbeiter Umsatz wirken nicht auf Umsatz 2.
+  if(record.revenue2Done === true) return;
+  if(!revenue2EntryByAppointmentId(id)){
+    state.revenue2Entries.push(revenue2EntryFromRecord(record));
+  }
+  record.revenue2Done = true;
+  record.revenue2DoneAt = new Date().toISOString();
+  saveState();
+  renderEmployeeDailyRevenue();
+  renderRevenue2();
+}
+
+function revenue2EntryPrice(entry){
+  return Number(entry.price || 0);
+}
+
+function revenue2EntryByKindAndAppointmentId(id, kind){
+  return kind === "cash" ? revenue2CashEntryByAppointmentId(id) : revenue2EntryByAppointmentId(id);
+}
+
+function saveRevenue2Price(id, kind = "employee"){
+  const entry = revenue2EntryByKindAndAppointmentId(id, kind);
+  if(!entry) return;
+  const input = document.querySelector(`input[data-revenue2-price="${CSS.escape(id)}"][data-revenue2-kind="${CSS.escape(kind)}"]`);
+  const price = Number(input?.value || 0);
+  if(!Number.isFinite(price) || price < 0){
+    alert("Bitte einen gültigen Betrag eintragen.");
+    return;
+  }
+  entry.price = price;
+  entry.updatedAt = new Date().toISOString();
+  saveState();
+  renderRevenue2();
+}
+
+function deleteRevenue2Entry(id, kind = "employee"){
+  state.revenue2Entries = state.revenue2Entries || [];
+  state.revenue2DeletedAppointmentIds = state.revenue2DeletedAppointmentIds || [];
+  state.revenue2CashEntries = state.revenue2CashEntries || [];
+  state.revenue2CashDeletedAppointmentIds = state.revenue2CashDeletedAppointmentIds || [];
+  const entry = revenue2EntryByKindAndAppointmentId(id, kind);
+  if(!entry) return;
+  const name = entry.customerName || "diesen Eintrag";
+  if(!confirm(`Eintrag von ${name} wirklich aus Einnahme löschen?`)) return;
+
+  if(kind === "cash"){
+    state.revenue2CashEntries = state.revenue2CashEntries.filter(x => x.appointmentId !== id);
+    if(!state.revenue2CashDeletedAppointmentIds.includes(id)){
+      state.revenue2CashDeletedAppointmentIds.push(id);
+    }
+  } else {
+    state.revenue2Entries = state.revenue2Entries.filter(x => x.appointmentId !== id);
+    if(!state.revenue2DeletedAppointmentIds.includes(id)){
+      state.revenue2DeletedAppointmentIds.push(id);
+    }
+  }
+
+  // Mitarbeiter Umsatz bleibt vollständig unverändert. Bereits gedrückte E- und A-Buttons bleiben gesperrt/grau.
+  saveState();
+  renderRevenue2();
+}
+
+
+function ensureRevenue2SnapshotsForDay(day){
+  state.revenue2Entries = state.revenue2Entries || [];
+  state.revenue2CashEntries = state.revenue2CashEntries || [];
+  state.revenue2DeletedAppointmentIds = state.revenue2DeletedAppointmentIds || [];
+  state.revenue2CashDeletedAppointmentIds = state.revenue2CashDeletedAppointmentIds || [];
+  let changed = false;
+  (state.employeeDailyRevenueRecords || []).forEach(record => {
+    if(record.date === day && record.revenue2Done === true && !(state.revenue2DeletedAppointmentIds || []).includes(record.appointmentId) && !revenue2EntryByAppointmentId(record.appointmentId)){
+      state.revenue2Entries.push({
+        id: uid(),
+        appointmentId: record.appointmentId,
+        date: record.date,
+        employeeId: record.employeeId || "none",
+        employeeName: record.employeeName || t("withoutEmployee"),
+        startTime: record.startTime || "",
+        customerName: record.customerName || t("customerFallback"),
+        serviceName: record.serviceName || t("serviceFallback"),
+        price: Number(record.revenue2Price !== undefined && record.revenue2Price !== null ? record.revenue2Price : record.price || 0),
+        createdAt: record.revenue2DoneAt || new Date().toISOString(),
+        source: "mitarbeiter-umsatz-erledigt-button"
+      });
+      changed = true;
+    }
+    if(record.date === day && record.actionADone === true && !(state.revenue2CashDeletedAppointmentIds || []).includes(record.appointmentId) && !revenue2CashEntryByAppointmentId(record.appointmentId)){
+      state.revenue2CashEntries.push({
+        id: uid(),
+        appointmentId: record.appointmentId,
+        date: record.date,
+        employeeId: record.employeeId || "none",
+        employeeName: record.employeeName || t("withoutEmployee"),
+        startTime: record.startTime || "",
+        customerName: record.customerName || t("customerFallback"),
+        serviceName: record.serviceName || t("serviceFallback"),
+        price: Number(record.actionAPrice !== undefined && record.actionAPrice !== null ? record.actionAPrice : record.price || 0),
+        createdAt: record.actionADoneAt || new Date().toISOString(),
+        source: "mitarbeiter-umsatz-a-button"
+      });
+      changed = true;
+    }
+  });
+  if(changed) saveState();
+}
+
+function revenue2Sorted(records){
+  return records.slice().sort((a,b)=>{
+    return String(a.employeeName || t("withoutEmployee")).localeCompare(String(b.employeeName || t("withoutEmployee"))) || String(a.startTime || "").localeCompare(String(b.startTime || ""));
+  });
+}
+
+function renderRevenue2Box(list, records, kind, emptyText){
+  if(!list) return;
+  const groups = {};
+  records.forEach(r => {
+    const key = r.employeeId || r.employeeName || "none";
+    if(!groups[key]) groups[key] = {id: key, name:r.employeeName || t("withoutEmployee"), items:[], total:0};
+    groups[key].items.push(r);
+    groups[key].total += revenue2EntryPrice(r);
+  });
+  const groupList = Object.values(groups).sort((a,b)=>a.name.localeCompare(b.name));
+  if(!groupList.length){
+    list.innerHTML = `<p class="hint">${emptyText}</p>`;
+    return;
+  }
+  list.innerHTML = groupList.map(group => `
+    <section class="revenue2-card" style="${employeeRevenueCardStyle(group.id, group.name)}">
+      <div class="revenue2-head">
+        ${employeeRevenueNameHtml(group.id, group.name)}
+        <span>${group.items.length} ${t("customersCount")}</span>
+        <b>${money(group.total)}</b>
+      </div>
+      <div class="revenue2-rows">
+        ${group.items.map(r=>`
+          <div class="revenue2-row">
+            <span>${escapeHtml(r.startTime || "")}</span>
+            <span><strong>${escapeHtml(r.customerName || t("customerFallback"))}</strong></span>
+            <span>${escapeHtml(r.serviceName || t("serviceFallback"))}</span>
+            <input class="revenue2-price" type="number" min="0" step="0.01" value="${revenue2EntryPrice(r)}" data-revenue2-price="${escapeHtml(r.appointmentId)}" data-revenue2-kind="${escapeHtml(kind)}" title="${t("changeIncomeAmountTitle")}">
+            <button type="button" class="revenue2-save" data-revenue2-save="${escapeHtml(r.appointmentId)}" data-revenue2-kind="${escapeHtml(kind)}">${t("saveWord")}</button>
+            <button type="button" class="revenue2-delete danger" data-revenue2-delete="${escapeHtml(r.appointmentId)}" data-revenue2-kind="${escapeHtml(kind)}">${t("delete")}</button>
+          </div>`).join("")}
+      </div>
+    </section>`).join("");
+}
+
+function renderRevenue2(){
+  const employeeList = $("revenue2EmployeeList");
+  const cashList = $("revenue2CashList");
+  if(!employeeList || !cashList) return;
+  const day = getJournalDate();
+  ensureRevenue2SnapshotsForDay(day);
+  const records = revenue2Sorted(revenue2EntriesForDay(day));
+  const cashRecords = revenue2Sorted(revenue2CashEntriesForDay(day));
+  const savedRevenue2Total = records.reduce((sum,r)=>sum + revenue2EntryPrice(r), 0);
+  const cashRevenueTotal = cashRecords.reduce((sum,r)=>sum + revenue2EntryPrice(r), 0);
+  const remainingCashTotal = savedRevenue2Total - cashRevenueTotal;
+  if($("revenue2Date")) $("revenue2Date").textContent = formatDateShort(day);
+  if($("revenue2SavedTotal")) $("revenue2SavedTotal").textContent = money(savedRevenue2Total);
+  if($("revenue2EmployeeTotal")) $("revenue2EmployeeTotal").textContent = money(cashRevenueTotal);
+  if($("revenue2Total")) $("revenue2Total").textContent = money(remainingCashTotal);
+  if($("revenue2CalculationLine")) $("revenue2CalculationLine").textContent = `${t("employeeIncome")}: ${money(savedRevenue2Total)} - ${t("fromCashRegister")}: ${money(cashRevenueTotal)} = ${t("remainingCash")}: ${money(remainingCashTotal)}`;
+  if($("revenue2Count")) $("revenue2Count").textContent = String(records.length + cashRecords.length);
+  if($("revenue2EmployeePanelTotal")) $("revenue2EmployeePanelTotal").textContent = money(savedRevenue2Total);
+  if($("revenue2CashPanelTotal")) $("revenue2CashPanelTotal").textContent = money(cashRevenueTotal);
+  renderRevenue2Box(employeeList, records, "employee", t("noRevenue2EmployeeEntries"));
+  renderRevenue2Box(cashList, cashRecords, "cash", t("noRevenue2CashEntries"));
+  document.querySelectorAll('button[data-revenue2-save]').forEach(btn => {
+    btn.onclick = () => saveRevenue2Price(btn.dataset.revenue2Save, btn.dataset.revenue2Kind || "employee");
+  });
+  document.querySelectorAll('button[data-revenue2-delete]').forEach(btn => {
+    btn.onclick = () => deleteRevenue2Entry(btn.dataset.revenue2Delete, btn.dataset.revenue2Kind || "employee");
+  });
+  document.querySelectorAll('input[data-revenue2-price]').forEach(input => {
+    input.onkeydown = e => {
+      if(e.key === 'Enter') saveRevenue2Price(input.dataset.revenue2Price, input.dataset.revenue2Kind || "employee");
+    };
+  });
+}
+
 function renderReport(){
   if(!state.revenueEnabled || !$("reportFrom")) return;
   if($("reportDate") && !$("reportDate").value) $("reportDate").value = state.selectedDate || todayISO();
@@ -1945,7 +3214,7 @@ function renderReport(){
     dayApps.forEach(a => {
       const emp = state.employees.find(e=>e.id===a.employeeId);
       const empId = a.employeeId || "unknown";
-      if(!groups[empId]) groups[empId] = {name: emp?.name || "Ohne Mitarbeiter", items: [], total:0};
+      if(!groups[empId]) groups[empId] = {name: emp?.name || t("withoutEmployee"), items: [], total:0};
       groups[empId].items.push(a);
       groups[empId].total += Number(a.price || 0);
     });
@@ -1956,12 +3225,12 @@ function renderReport(){
           ${group.items.sort((a,b)=>String(a.startTime||"").localeCompare(String(b.startTime||""))).map(a => `
             <div class="report-customer-row">
               <span class="report-customer-time">${escapeHtml(a.startTime || "")}</span>
-              <span class="report-customer-name">${escapeHtml(a.customerName || "Kunde")}</span>
+              <span class="report-customer-name">${escapeHtml(a.customerName || t("customerFallback"))}</span>
               <span class="report-customer-service">${escapeHtml(a.serviceName || t("serviceFallback"))}</span>
               <strong>${money(excluded ? 0 : a.price)}</strong>
             </div>`).join("")}
         </div>
-      </div>`).join("") : `<small>Keine bezahlten Kundentermine.</small>`;
+      </div>`).join("") : `<small>${t("noPaidCustomers")}</small>`;
     const manualHtml = dayManual.length && !excluded ? `
       <div class="report-employee-block manual-report-block">
         <div class="report-employee-title"><span>Manuelle Positionen</span><strong>${money(dayManualRevenue)}</strong></div>
@@ -2015,14 +3284,14 @@ function renderRevenueEditor(){
   const excluded = (state.excludedRevenueDays || []).includes(day);
   if($('revenueEditTotal')) $('revenueEditTotal').value = money(revenueDayTotal(day));
   if($('revenueEditDayStatus')) $('revenueEditDayStatus').textContent = excluded
-    ? 'Dieser Tag ist aktuell aus dem Umsatz herausgenommen.'
-    : 'Dieser Tag wird aktuell im Umsatz gezählt.';
+    ? t("dayExcludedStatus")
+    : t("dayIncludedStatus");
   if($('revenueIncludeDayBtn')) $('revenueIncludeDayBtn').disabled = !excluded;
   if($('revenueExcludeDayBtn')) $('revenueExcludeDayBtn').disabled = excluded;
 
   const apps = (state.appointments || []).filter(a=>a.date===day).sort((a,b)=>{
-    const empA = (state.employees || []).find(e=>e.id===a.employeeId)?.name || 'Ohne Mitarbeiter';
-    const empB = (state.employees || []).find(e=>e.id===b.employeeId)?.name || 'Ohne Mitarbeiter';
+    const empA = (state.employees || []).find(e=>e.id===a.employeeId)?.name || t("withoutEmployee");
+    const empB = (state.employees || []).find(e=>e.id===b.employeeId)?.name || t("withoutEmployee");
     return empA.localeCompare(empB) || (a.startTime||'').localeCompare(b.startTime||'');
   });
   if($('revenueEditAppointments')){
@@ -2030,32 +3299,32 @@ function renderRevenueEditor(){
       const grouped = apps.reduce((acc,a)=>{
         const emp = (state.employees || []).find(e=>e.id===a.employeeId);
         const key = emp?.id || 'none';
-        if(!acc[key]) acc[key] = {name: emp?.name || 'Ohne Mitarbeiter', items: []};
+        if(!acc[key]) acc[key] = {name: emp?.name || t("withoutEmployee"), items: []};
         acc[key].items.push(a);
         return acc;
       },{});
       $('revenueEditAppointments').innerHTML = Object.values(grouped).map(group=>`
         <section class="revenue-employee-group">
-          <div class="revenue-employee-header">${escapeHtml(group.name)} <span>${group.items.length} Termin${group.items.length===1?'':'e'}</span></div>
+          <div class="revenue-employee-header">${escapeHtml(group.name)} <span>${group.items.length} ${t("appointments")}</span></div>
           ${group.items.map(a=>`<div class="daily-item revenue-edit-item compact-revenue-item">
             <div class="revenue-appointment-info">
               <strong>${escapeHtml(a.startTime || '')} · ${escapeHtml(a.customerName || '')}</strong>
               <small>${escapeHtml(a.serviceName || 'Leistung')} · ${escapeHtml(a.durationMinutes || a.duration || '')} Min · Status: ${escapeHtml(a.status || 'Gebucht')}</small>
             </div>
             <div class="revenue-edit-controls">
-              <input type="number" step="0.01" value="${Number(a.price||0)}" data-revenue-price="${a.id}" title="Preis">
+              <input type="number" step="0.01" value="${Number(a.price||0)}" data-revenue-price="${a.id}" title="${t("priceLabel")}">
               <select data-revenue-status="${a.id}" title="Status">
                 <option value="Gebucht" ${a.status==='Gebucht'?'selected':''}>Gebucht</option>
-                <option value="Erledigt" ${a.status==='Erledigt'?'selected':''}>Erledigt</option>
-                <option value="Nicht erschienen" ${a.status==='Nicht erschienen'?'selected':''}>Nicht erschienen</option>
+                <option value="Erledigt" ${a.status==='Erledigt'?'selected':''}>${t("paidStatus")}</option>
+                <option value="Nicht erschienen" ${a.status==='Nicht erschienen'?'selected':''}>${t("noShowStatus")}</option>
               </select>
-              <button type="button" data-revenue-save="${a.id}">Speichern</button>
-              <button type="button" class="danger" data-revenue-delete="${a.id}">Löschen</button>
+              <button type="button" data-revenue-save="${a.id}">${t("saveWord")}</button>
+              <button type="button" class="danger" data-revenue-delete="${a.id}">${t("delete")}</button>
             </div>
           </div>`).join('')}
         </section>`).join('');
     }else{
-      $('revenueEditAppointments').innerHTML = '<small>Keine Termine an diesem Tag.</small>';
+      $('revenueEditAppointments').innerHTML = `<small>${t("noAppointmentsOnDay")}</small>`;
     }
     $('revenueEditAppointments').querySelectorAll('button[data-revenue-save]').forEach(btn=>{
       btn.onclick = () => saveRevenueAppointmentEdit(btn.dataset.revenueSave);
@@ -2069,8 +3338,8 @@ function renderRevenueEditor(){
   if($('manualRevenueList')){
     $('manualRevenueList').innerHTML = items.length ? items.map(x=>`<div class="daily-item">
       <div><strong>${escapeHtml(x.title || 'Manuelle Position')}</strong><br><small>${money(Number(x.amount||0))}${x.note ? ' · ' + escapeHtml(x.note) : ''}</small></div>
-      <button type="button" class="danger" data-manual-revenue-delete="${x.id}">Löschen</button>
-    </div>`).join('') : '<small>Noch keine manuellen Umsatzpositionen für diesen Tag.</small>';
+      <button type="button" class="danger" data-manual-revenue-delete="${x.id}">${t("delete")}</button>
+    </div>`).join('') : `<small>${t("noManualRevenueItems")}</small>`;
     $('manualRevenueList').querySelectorAll('button[data-manual-revenue-delete]').forEach(btn=>{
       btn.onclick = () => deleteManualRevenueItem(btn.dataset.manualRevenueDelete);
     });
@@ -2197,6 +3466,7 @@ function openSettings(){
   $("languageSelect") && ($("languageSelect").value=state.language || "de");
   $("displayDeviceMode") && ($("displayDeviceMode").value = normalizeDisplayDeviceMode(state.displayDeviceMode || "auto"));
   $("scheduleZoom") && ($("scheduleZoom").value = normalizeScheduleZoom(state.scheduleZoom || "normal"));
+  $("reportPrintFormat") && ($("reportPrintFormat").value = normalizeReportPrintFormat(state.reportPrintFormat || "a4"));
   updateDisplayModeHint();
   $("settingsStudioName").value=state.studioName;
   $("cloudBackupProvider") && ($("cloudBackupProvider").value = state.cloudBackupProvider || "share");
@@ -2214,41 +3484,47 @@ function openSettings(){
   $("settingsOpen").value=state.openTime;
   $("settingsClose").value=state.closeTime;
   renderSettingsEmployeeList();
+  renderCashTab();
   renderWorkTimeList();
   renderSettingsCustomerList();
   renderServiceList();
   $("settingsDialog").showModal();
 }
-function saveSettings(){
+function closeSettingsWithSave(){
+  saveSettings(true);
+  $("settingsDialog") && $("settingsDialog").close();
+}
+function saveSettings(silent=false){
   state.studioName=$("settingsStudioName").value.trim()||state.studioName;
   state.studioPhone=$("settingsStudioPhone").value.trim();
   state.studioAddress=$("settingsStudioAddress").value.trim();
   state.revenueEnabled = $("toggleRevenueFeature") ? $("toggleRevenueFeature").checked : state.revenueEnabled;
   state.displayDeviceMode = $("displayDeviceMode") ? normalizeDisplayDeviceMode($("displayDeviceMode").value) : normalizeDisplayDeviceMode(state.displayDeviceMode || "auto");
   state.scheduleZoom = $("scheduleZoom") ? normalizeScheduleZoom($("scheduleZoom").value) : normalizeScheduleZoom(state.scheduleZoom || "normal");
+  state.reportPrintFormat = $("reportPrintFormat") ? normalizeReportPrintFormat($("reportPrintFormat").value) : normalizeReportPrintFormat(state.reportPrintFormat || "a4");
   state.openTime=$("settingsOpen").value||state.openTime;
   state.closeTime=$("settingsClose").value||state.closeTime;
   saveState(); applyDeviceView(); renderAll(); applyRevenueVisibility();
-  alert("Studio-Einstellungen gespeichert.");
+  if(!silent) alert("Studio-Einstellungen gespeichert.");
 }
 
 
 function getPastCompletedCleanupCandidates(){
   const today = todayISO();
-  // Löscht bewusst alle Termine vor heute – unabhängig davon, ob sie bearbeitet,
-  // bezahlt, erledigt oder als nicht erschienen markiert wurden. Termine von heute
-  // und alle zukünftigen Termine bleiben erhalten.
-  return (state.appointments || []).filter(a => a && a.date < today);
+  // Bereinigung + Backup löscht alle Termine von heute und Vergangenheit –
+  // unabhängig vom Status: offen/gebucht, bezahlt oder nicht erschienen.
+  // Nur Termine in der Zukunft bleiben erhalten.
+  return (state.appointments || []).filter(a => a && a.date <= today);
 }
 
 function updateCleanupPreview(){
   const el = $("cleanupPreview");
   if(!el) return;
   el.textContent = state.language === "vi"
-    ? "Tất cả lịch hẹn trong quá khứ sẽ bị xóa và một bản sao lưu sẽ được tạo. Lịch hẹn hôm nay và sau hôm nay không bị xóa."
+    ? "Tất cả lịch hẹn hôm nay và quá khứ cùng toàn bộ doanh thu trong Nhật ký doanh thu, Doanh thu nhân viên, Thu nhập, Kassa, Doanh thu tuần và Doanh thu tháng sẽ bị xóa. Sau đó bản sao lưu sẽ được tạo. Chỉ lịch hẹn tương lai được giữ lại."
     : state.language === "en"
-      ? "All past appointments will be deleted and a backup will be created. Today’s and future appointments will not be deleted."
-      : "Alle vergangene Termin werden gelöscht und ein Backup erstellt";
+      ? "All appointments from today and the past plus all revenue data from Employee Revenue, Income, Cash Register, Weekly Revenue and Monthly Revenue will be deleted. Then a backup will be created. Only future appointments remain."
+      : "Alle Termine von heute und Vergangenheit sowie alle Umsätze aus Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz werden gelöscht. Danach wird ein Backup erstellt. Nur Zukunft-Termine bleiben erhalten.";
 }
 
 function nowStampForFilename(){
@@ -2276,9 +3552,9 @@ function buildBackupPayload(type){
       backupType:type || "Normal",
       createdAt:nowStampHuman(),
       createdAtISO:new Date().toISOString(),
-      appVersion:"3.0",
+      appVersion:"3.16",
       note:type === "Bereinigung"
-        ? "Backup nach Bereinigung: Alle Termine vor dem heutigen Tag wurden vorher entfernt. Termine von heute und danach bleiben erhalten."
+        ? "Backup nach Bereinigung: Alle Termine von heute und Vergangenheit sowie alle Umsatzdaten aus Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz wurden vorher endgültig entfernt. Nur Zukunft-Termine bleiben erhalten."
         : "Normales Backup."
     },
     data:{...state, version:"3.0"}
@@ -2388,17 +3664,70 @@ async function downloadBackupWithName(filename, payloadToSave = buildBackupPaylo
   // Letzter Fallback für Browser ohne Speichern-/Teilen-API.
   return createBackupDownload(suggestedName, payloadToSave, statusType);
 }
+
+function clearAllRevenueAndAppointmentData(){
+  // Vollbereinigung: Nur Umsatz- und Terminplan-Daten werden entfernt.
+  // Stammdaten wie Kundendatenbank, Leistungsdatenbank, Mitarbeiter und Einstellungen bleiben unverändert.
+  state.appointments = [];
+  state.excludedRevenueDays = [];
+  state.manualRevenueItems = [];
+  state.employeeDailyRevenueRecords = [];
+  state.revenue2Entries = [];
+  state.revenue2DeletedAppointmentIds = [];
+  state.revenue2CashEntries = [];
+  state.revenue2CashDeletedAppointmentIds = [];
+  state.cashWithdrawals = [];
+  state.cashDeposits = [];
+  state.journalRevenueCorrections = {};
+  state.journalRevenueDeletedDays = [];
+}
+
+function systemCleanAllRevenueAndAppointments(){
+  const msg1 = t("systemCleanConfirm");
+  if(!confirm(msg1)) return;
+  const msg2 = t("systemCleanConfirmFinal");
+  if(!confirm(msg2)) return;
+  clearAllRevenueAndAppointmentData();
+  saveState();
+  renderAll();
+  updateCleanupPreview();
+  applyLanguage();
+  alert(t("systemCleanDone"));
+}
+
 async function cleanupPastCompletedAndBackup(){
   const buttons = [$("cleanupPastAndBackupBtn")].filter(Boolean);
   const candidates = getPastCompletedCleanupCandidates();
   const today = todayISO();
-  const oldRevenueDays = (state.excludedRevenueDays || []).filter(d => d < today);
-  const msg = t("cleanupConfirm").replace("{appointments}", candidates.length).replace("{days}", oldRevenueDays.length);
+  const msg = t("cleanupConfirm").replace("{appointments}", candidates.length);
   if(!confirm(msg)) return;
   buttons.forEach(btn => { btn.disabled = true; btn.dataset.oldHtml = btn.innerHTML; btn.textContent = t("cleanupRunning"); });
-  const removeIds = new Set(candidates.map(a => a.id));
-  state.appointments = (state.appointments || []).filter(a => !removeIds.has(a.id));
-  state.excludedRevenueDays = (state.excludedRevenueDays || []).filter(d => d >= today);
+
+  // Reihenfolge ist wichtig: Erst endgültig löschen, dann Backup der bereinigten Daten erstellen.
+  // Termine von heute und Vergangenheit werden entfernt; nur Zukunft-Termine bleiben erhalten.
+  state.appointments = (state.appointments || []).filter(a => a && a.date > today);
+
+  // Alle Umsatzdaten aus „Mitarbeiter Umsatz“, „Einnahme“ und „Kasse“ vollständig entfernen,
+  // damit sie weder in der App noch im danach erzeugten Backup gespeichert sind.
+  state.employeeDailyRevenueRecords = [];
+  state.revenue2Entries = [];
+  state.revenue2DeletedAppointmentIds = [];
+  state.revenue2CashEntries = [];
+  state.revenue2CashDeletedAppointmentIds = [];
+  state.cashWithdrawals = [];
+  state.cashDeposits = [];
+
+  // Umsatzjournal/klassischer Umsatzbericht sowie Wochen- und Monatsumsatz bereinigen.
+  // Korrekturen und gelöschte Tage von heute und Vergangenheit werden entfernt.
+  state.excludedRevenueDays = (state.excludedRevenueDays || []).filter(d => d > today);
+  state.manualRevenueItems = (state.manualRevenueItems || []).filter(item => item && item.date > today);
+  state.journalRevenueDeletedDays = (state.journalRevenueDeletedDays || []).filter(d => d > today);
+  const cleanedCorrections = {};
+  Object.entries(state.journalRevenueCorrections || {}).forEach(([day, value]) => {
+    if(day > today) cleanedCorrections[day] = value;
+  });
+  state.journalRevenueCorrections = cleanedCorrections;
+
   saveState();
   renderAll();
   updateCleanupPreview();
@@ -2464,6 +3793,7 @@ function importBackup(e){
         revenueEnabled:typeof imported.revenueEnabled === "boolean" ? imported.revenueEnabled : false,
         displayDeviceMode:normalizeDisplayDeviceMode(imported.displayDeviceMode || "auto"),
         scheduleZoom:normalizeScheduleZoom(imported.scheduleZoom || "normal"),
+        reportPrintFormat:normalizeReportPrintFormat(imported.reportPrintFormat || "a4"),
         cloudBackupEnabled:!!imported.cloudBackupEnabled,
         cloudBackupProvider:normalizeCloudProvider(imported.cloudBackupProvider || "onedrive"),
         cloudBackupAfterCleanup:!!imported.cloudBackupAfterCleanup,
@@ -2488,6 +3818,7 @@ function openSettings(){
   $("languageSelect") && ($("languageSelect").value=state.language || "de");
   $("displayDeviceMode") && ($("displayDeviceMode").value = normalizeDisplayDeviceMode(state.displayDeviceMode || "auto"));
   $("scheduleZoom") && ($("scheduleZoom").value = normalizeScheduleZoom(state.scheduleZoom || "normal"));
+  $("reportPrintFormat") && ($("reportPrintFormat").value = normalizeReportPrintFormat(state.reportPrintFormat || "a4"));
   updateDisplayModeHint();
   $("settingsStudioName").value=state.studioName;
   $("settingsStudioPhone").value=state.studioPhone || "";
@@ -2500,12 +3831,15 @@ function openSettings(){
   $("settingsOpen").value=state.openTime;
   $("settingsClose").value=state.closeTime;
   renderSettingsEmployeeList();
+  renderCashTab();
   renderWorkTimeList();
   renderSettingsCustomerList();
   renderServiceList();
+  renderEmployeeDailyRevenue();
   updateDeletePeriodPreview();
   updateCleanupPreview();
   updateBackupStatuses();
+  updateLicenseInfoBox();
   switchSettingsTab("settingsGeneralTab");
   $("settingsDialog").showModal();
 }
@@ -2513,7 +3847,7 @@ function showAppointment(id){
   selectedAppointmentId=id;
   const a=state.appointments.find(x=>x.id===id); if(!a) return;
   const emp=state.employees.find(e=>e.id===a.employeeId);
-  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName || t("serviceFallback"))} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>${t("employeeLabel")}: ${escapeHtml(emp?.name||"")}</p><p>${t("phoneLabel")}: ${escapeHtml(a.phone||"-")}</p><p>${t("internalStatus")}: ${escapeHtml(a.status||"Gebucht")}${a.employeeAny ? " · Egal" : ""}</p><p>${t("priceLabel")}: ${money(a.price)}</p><p>${t("noteLabel")}: ${escapeHtml(a.note||"-")}</p>`;
+  $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName || t("serviceFallback"))} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>${t("employeeLabel")}: ${escapeHtml(emp?.name||"")}</p><p>${t("phoneLabel")}: ${escapeHtml(a.phone||"-")}</p><p>${t("internalStatus")}: ${escapeHtml(employeeDailyRevenueStatusLabel(a.status||"Gebucht"))}</p><p>${t("priceLabel")}: ${money(a.price)}</p><p>${t("noteLabel")}: ${escapeHtml(a.note||"-")}</p>`;
   $("appointmentDialog").showModal();
 }
 if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js")); }

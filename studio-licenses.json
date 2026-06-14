@@ -1,29 +1,28 @@
 {
-  "updatedAt": "2026-06-13",
   "studios": [
     {
       "id": "310366",
-      "name": "Teststudio Tam",
+      "name": "Nagelstudio TamTam",
       "plan": "full",
       "expiresAt": null,
       "active": true
     },
     {
-      "id": "123456",
+      "id": "BW123456",
       "name": "Beauty World",
       "plan": "trial",
       "expiresAt": "2026-07-31",
       "active": true
     },
     {
-      "id": "999",
-      "name": "Vollversion Beispielstudio",
+      "id": "Kawaii123456",
+      "name": "Test Studio",
       "plan": "trial",
-      "expiresAt": "2026-05-30",
+      "expiresAt": "2026-07-31",
       "active": true
     },
     {
-      "id": "123",
+      "id": "STUDIO-BLOCKED-BEISPIEL",
       "name": "Gesperrtes Beispielstudio",
       "plan": "blocked",
       "expiresAt": null,
