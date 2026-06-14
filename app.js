@@ -11,7 +11,6 @@ const $ = id => document.getElementById(id);
 // vor Manipulation, ist aber für eine benutzerfreundliche Testphase ohne Backend
 // ausreichend und hält die bestehenden lokalen App-Daten unverändert.
 const LICENSE_STUDIO_ID_KEY = "nail_studio_license_studio_id";
-const LICENSE_DEVICE_ID_KEY = "nail_studio_license_device_id";
 const LICENSE_FILE = "studio-licenses.json";
 let currentLicense = null;
 let currentLicenseResult = {valid:false, reason:"Lizenz wurde noch nicht geprüft."};
@@ -30,30 +29,6 @@ function setStoredStudioId(id){
   if(clean) localStorage.setItem(LICENSE_STUDIO_ID_KEY, clean);
   else localStorage.removeItem(LICENSE_STUDIO_ID_KEY);
   return clean;
-}
-
-// Geräte-ID: Wird einmal lokal erzeugt und bleibt im Browser gespeichert.
-// Diese ID muss in studio-licenses.json beim passenden Studio in allowedDevices stehen.
-function createDeviceId(){
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let suffix = "";
-  const bytes = new Uint8Array(6);
-  if(window.crypto && crypto.getRandomValues){
-    crypto.getRandomValues(bytes);
-    for(const b of bytes) suffix += chars[b % chars.length];
-  }else{
-    for(let i=0;i<6;i++) suffix += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return `DEVICE-${suffix}`;
-}
-
-function getDeviceId(){
-  let id = localStorage.getItem(LICENSE_DEVICE_ID_KEY);
-  if(!id){
-    id = createDeviceId();
-    localStorage.setItem(LICENSE_DEVICE_ID_KEY, id);
-  }
-  return id;
 }
 
 function planLabel(plan){
@@ -94,7 +69,7 @@ async function loadLicenseFile(){
   }
 }
 
-function validateStudioLicense(data, studioId, deviceId){
+function validateStudioLicense(data, studioId){
   if(!studioId){
     return {valid:false, reason:"Bitte geben Sie eine Studio-ID ein.", studio:null};
   }
@@ -115,15 +90,6 @@ function validateStudioLicense(data, studioId, deviceId){
     return {valid:false, reason:"Der Lizenzplan ist ungültig. Erlaubt sind trial oder full.", studio};
   }
 
-  // Gerätefreigabe: Das aktuelle Gerät muss in allowedDevices eingetragen sein.
-  const allowedDevices = Array.isArray(studio.allowedDevices) ? studio.allowedDevices.map(String) : [];
-  if(!deviceId || !allowedDevices.includes(deviceId)){
-    return {valid:false, reason:"Dieses Gerät ist für diese Studio-ID noch nicht freigeschaltet.", studio};
-  }
-  if(Number.isFinite(Number(studio.maxDevices)) && Number(studio.maxDevices) > 0 && allowedDevices.length > Number(studio.maxDevices)){
-    return {valid:false, reason:`Für diese Lizenz sind maximal ${Number(studio.maxDevices)} Gerät(e) erlaubt.`, studio};
-  }
-
   if(plan === "trial"){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(studio.expiresAt || "")){
       return {valid:false, reason:"Für die Testversion fehlt ein gültiges Ablaufdatum.", studio};
@@ -138,17 +104,16 @@ function validateStudioLicense(data, studioId, deviceId){
 
 async function checkLicense(studioId){
   const cleanStudioId = normalizeStudioId(studioId || getStoredStudioId());
-  const deviceId = getDeviceId();
   try{
     const data = await loadLicenseFile();
-    const result = validateStudioLicense(data, cleanStudioId, deviceId);
+    const result = validateStudioLicense(data, cleanStudioId);
     currentLicense = result.valid ? result.studio : null;
-    currentLicenseResult = {...result, studioId:cleanStudioId, deviceId};
+    currentLicenseResult = {...result, studioId:cleanStudioId};
     if(result.valid) setStoredStudioId(cleanStudioId);
     return currentLicenseResult;
   }catch(err){
     currentLicense = null;
-    currentLicenseResult = {valid:false, reason:err.message || "Lizenz konnte nicht geprüft werden.", studioId:cleanStudioId, deviceId};
+    currentLicenseResult = {valid:false, reason:err.message || "Lizenz konnte nicht geprüft werden.", studioId:cleanStudioId};
     return currentLicenseResult;
   }
 }
@@ -172,8 +137,7 @@ function showLicenseScreen(result, mode="blocked"){
     box.classList.remove("hidden", "license-ok", "license-error");
     box.classList.add(result?.valid ? "license-ok" : "license-error");
     const shownStudioId = studioId || "Keine Studio-ID gespeichert";
-    const deviceId = result?.deviceId || getDeviceId();
-    box.innerHTML = `<div><strong>Grund:</strong> ${escapeHtml(result?.reason || "Bitte Studio-ID prüfen.")}</div><div><strong>Studio-ID:</strong> ${escapeHtml(shownStudioId)}</div><div><strong>Geräte-ID:</strong> ${escapeHtml(deviceId)}</div><div class="license-device-hint">Bitte senden Sie diese Geräte-ID an den Anbieter zur Freischaltung.</div>`;
+    box.innerHTML = `<div><strong>Grund:</strong> ${escapeHtml(result?.reason || "Bitte Studio-ID prüfen.")}</div><div><strong>Studio-ID:</strong> ${escapeHtml(shownStudioId)}</div>`;
   }
 }
 
@@ -186,7 +150,7 @@ function continueAfterValidLicense(){
 async function verifyLicenseAndContinue(){
   const stored = getStoredStudioId();
   if(!stored){
-    currentLicenseResult = {valid:false, reason:"Bitte geben Sie eine Studio-ID ein.", studioId:"", deviceId:getDeviceId()};
+    currentLicenseResult = {valid:false, reason:"Bitte geben Sie eine Studio-ID ein.", studioId:""};
     showLicenseScreen(currentLicenseResult, "first");
     return false;
   }
@@ -222,7 +186,7 @@ function bindLicenseEvents(){
   $("licenseCheckBtn") && ($("licenseCheckBtn").onclick = submitLicenseFromScreen);
   $("licenseChangeStudioBtn") && ($("licenseChangeStudioBtn").onclick = () => {
     setStoredStudioId("");
-    currentLicenseResult = {valid:false, reason:"Bitte geben Sie eine neue Studio-ID ein.", studioId:"", deviceId:getDeviceId()};
+    currentLicenseResult = {valid:false, reason:"Bitte geben Sie eine neue Studio-ID ein.", studioId:""};
     showLicenseScreen(currentLicenseResult, "first");
     $("licenseStudioIdInput") && $("licenseStudioIdInput").focus();
   });
@@ -269,20 +233,18 @@ function updateLicenseInfoBox(){
   const result = currentLicenseResult || {};
   const studio = currentLicense || result.studio;
   const studioId = result.studioId || getStoredStudioId() || "-";
-  const deviceId = result.deviceId || getDeviceId();
   if(box){
     if(result.valid && studio){
       const plan = String(studio.plan || "").toLowerCase();
       box.innerHTML = [
         `<div><strong>Studio:</strong> ${escapeHtml(studio.name || "-")}</div>`,
         `<div><strong>Studio-ID:</strong> ${escapeHtml(studioId)}</div>`,
-        `<div><strong>Geräte-ID:</strong> ${escapeHtml(deviceId)}</div>`,
         `<div><strong>Plan:</strong> ${escapeHtml(planLabel(plan))}</div>`,
         plan === "trial" ? `<div><strong>Lizenz gültig bis:</strong> ${escapeHtml(formatLicenseDate(studio.expiresAt))}</div>` : `<div><strong>Lizenz gültig:</strong> Vollversion ohne Ablaufdatum</div>`,
         plan === "trial" ? `<div><strong>Testzeit läuft ab am:</strong> ${escapeHtml(formatLicenseDate(studio.expiresAt))}</div>` : ""
       ].filter(Boolean).join("");
     }else{
-      box.innerHTML = `<div><strong>Status:</strong> Gesperrt oder nicht geprüft</div><div><strong>Grund:</strong> ${escapeHtml(result.reason || "-")}</div><div><strong>Studio-ID:</strong> ${escapeHtml(studioId)}</div><div><strong>Geräte-ID:</strong> ${escapeHtml(deviceId)}</div>`;
+      box.innerHTML = `<div><strong>Status:</strong> Gesperrt oder nicht geprüft</div><div><strong>Grund:</strong> ${escapeHtml(result.reason || "-")}</div><div><strong>Studio-ID:</strong> ${escapeHtml(studioId)}</div>`;
     }
   }
   updateLicenseFooterBar();
@@ -1162,7 +1124,6 @@ function showStartupError(err){
     valid:false,
     reason:`Die App konnte nicht starten: ${message}`,
     studioId:getStoredStudioId(),
-    deviceId:getDeviceId()
   }, "blocked");
 }
 function showSetup(){ $("setupScreen").classList.remove("hidden"); $("mainScreen").classList.add("hidden"); }
@@ -2038,17 +1999,12 @@ function ensureCustomerFromAppointment(a){
   });
 }
 
-
-function normalizeServiceNameForCompare(name){
-  return String(name || "").trim().toLowerCase();
-}
-
 function ensureServiceFromAppointment(a){
-  if(!a || !a.serviceName) return;
-  state.services = state.services || [];
   const name = String(a.serviceName || "").trim();
   if(!name) return;
-  const existing = state.services.find(s => normalizeServiceNameForCompare(s.name) === normalizeServiceNameForCompare(name));
+
+  state.services = Array.isArray(state.services) ? state.services : [];
+  const existing = state.services.find(s => String(s.name || "").trim().toLowerCase() === name.toLowerCase());
   if(existing) return;
 
   const price = Number(a.price || 0);
@@ -2452,7 +2408,7 @@ function renderAppointmentEditForm(a){
         <button id="saveInlineAppointmentEditBtn" class="success">Änderungen speichern</button>
         <button id="cancelInlineAppointmentEditBtn" class="secondary">Abbrechen</button>
       </div>
-      <small>Neue Leistungen werden automatisch in der Leistungsdatenbank gespeichert. Bestehende Leistungs-Stammdaten bleiben unverändert.</small>
+      <small>Neue Leistungen werden mit Preis und Minuten automatisch in der Leistungsdatenbank gespeichert.</small>
     </div>`;
 
   $("saveInlineAppointmentEditBtn").onclick = saveInlineAppointmentEdit;
@@ -2844,8 +2800,6 @@ function markEmployeeDailyRevenueActionAUsed(id){
   record.originalServicePrice = originalAmount;
   record.actionAPrice = transferAmount;
   record.price = Math.max(0, originalAmount - transferAmount);
-  // Nach der A-Übertragung gilt der Kunde/Termin sofort als bezahlt.
-  // Die Restbetrag-Berechnung und die bestehende Einnahme-/Kassen-Logik bleiben unverändert.
   record.status = "Erledigt";
   if(appointment){
     appointment.status = "Erledigt";
