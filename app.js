@@ -272,7 +272,7 @@ function defaultServices(){ return [
   {id:uid(), name:"Nail Art", price:15, duration:30}
 ];}
 function defaultState(){ return {
-	  version:"3.0", configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
+	  version:"3.0", configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", scheduleIntervalMinutes:15, cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
   employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[], employeeDailyRevenueRecords:[], revenue2Entries:[], revenue2DeletedAppointmentIds:[], revenue2CashEntries:[], revenue2CashDeletedAppointmentIds:[], cashWithdrawals:[], cashDeposits:[], journalRevenueCorrections:{}, journalRevenueDeletedDays:[],
   selectedDate:todayISO(), journalDate:todayISO(), storageMode:"local"
 };}
@@ -310,6 +310,7 @@ function loadState(){
     data.displayDeviceMode = normalizeDisplayDeviceMode(data.displayDeviceMode || "auto");
     data.scheduleZoom = normalizeScheduleZoom(data.scheduleZoom || "normal");
     data.reportPrintFormat = normalizeReportPrintFormat(data.reportPrintFormat || "a4");
+    data.scheduleIntervalMinutes = normalizeScheduleIntervalMinutes(data.scheduleIntervalMinutes || 15);
     data.cloudBackupEnabled = !!data.cloudBackupEnabled;
     data.cloudBackupProvider = normalizeCloudProvider(data.cloudBackupProvider || "onedrive");
     data.cloudBackupAfterCleanup = !!data.cloudBackupAfterCleanup;
@@ -322,9 +323,8 @@ function saveState(){ localStorage.setItem(KEY, JSON.stringify(state)); }
 function timeToMinutes(t){ const [h,m]=t.split(":").map(Number); return h*60+m; }
 function minutesToTime(min){ return `${String(Math.floor(min/60)).padStart(2,"0")}:${String(min%60).padStart(2,"0")}`; }
 
-// Tagesplan-Raster: 15-Minuten-Abschnitte statt vorher 30 Minuten.
-// Diese Konstante wird für Zeitleiste, Termin-Spaltenbreite und Verfügbarkeit genutzt.
-const SLOT_INTERVAL_MINUTES = 15;
+// Tagesplan-Raster: wird in den Einstellungen zwischen 15 und 30 Minuten gewählt.
+// Wird für Zeitleiste, Termin-Spaltenbreite und Verfügbarkeit genutzt.
 
 function formatDateShort(dateString){
   if(!dateString || !dateString.includes("-")) return dateString || "";
@@ -351,7 +351,7 @@ function refreshCashJournalViews(){
 function money(n){ return Number(n||0).toLocaleString("de-DE",{style:"currency",currency:"EUR"}); }
 function statusClass(status){ return "status-" + String(status || "Gebucht").replace(/\s+/g,"-"); }
 function appointmentClass(a){ return `appointment ${statusClass(a && a.status)}${a && a.employeeAny ? " appointment-any-employee" : ""}`; }
-function slots(){ const out=[]; for(let m=timeToMinutes(state.openTime); m<timeToMinutes(state.closeTime); m+=SLOT_INTERVAL_MINUTES) out.push(minutesToTime(m)); return out; }
+function slots(){ const out=[]; for(let m=timeToMinutes(state.openTime); m<timeToMinutes(state.closeTime); m+=getSlotIntervalMinutes()) out.push(minutesToTime(m)); return out; }
 
 
 // Version 49: automatische Mitarbeiterfarben für den Tagesplan.
@@ -609,6 +609,13 @@ function normalizeScheduleZoom(zoom){
 function normalizeReportPrintFormat(format){
   return ["a4","thermal80","thermal58"].includes(format) ? format : "a4";
 }
+function normalizeScheduleIntervalMinutes(value){
+  const minutes = Number(value);
+  return [15,30].includes(minutes) ? minutes : 15;
+}
+function getSlotIntervalMinutes(){
+  return normalizeScheduleIntervalMinutes(state?.scheduleIntervalMinutes || 15);
+}
 function saveReportPrintFormatFromSelect(){
   if(!$("reportPrintFormat")) return;
   state.reportPrintFormat = normalizeReportPrintFormat($("reportPrintFormat").value);
@@ -646,9 +653,10 @@ function updateDisplayModeHint(){
   const setting = normalizeDisplayDeviceMode(state.displayDeviceMode || "auto");
   const mode = document.body?.dataset?.deviceMode || getEffectiveDeviceMode();
   const zoom = normalizeScheduleZoom(state.scheduleZoom || "normal");
+  const interval = normalizeScheduleIntervalMinutes(state.scheduleIntervalMinutes || 15);
   const names = {auto:t("deviceAuto"), iphone:"iPhone", ipad:"iPad", pc:"PC / Windows"};
   const zoomNames = {small:"Kompakt", normal:"Normal", large:"Groß"};
-  el.textContent = `${t("activeLabel")}: ${setting === "auto" ? t("deviceAuto") + " → " + names[mode] : names[mode]} · ${t("scheduleLabel")}: ${zoomNames[zoom]}`;
+  el.textContent = `${t("activeLabel")}: ${setting === "auto" ? t("deviceAuto") + " → " + names[mode] : names[mode]} · ${t("scheduleLabel")}: ${zoomNames[zoom]} · ${interval} Min`;
 }
 
 function escapeHtml(str){ return String(str??"").replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
@@ -1207,6 +1215,7 @@ function bindEvents(){
   $("toggleRevenueFeature") && ($("toggleRevenueFeature").onchange = () => { state.revenueEnabled = $("toggleRevenueFeature").checked; saveState(); applyRevenueVisibility(); renderReport(); });
   $("displayDeviceMode") && ($("displayDeviceMode").onchange = () => { state.displayDeviceMode = normalizeDisplayDeviceMode($("displayDeviceMode").value); saveState(); applyDeviceView(); renderCalendar(); });
   $("scheduleZoom") && ($("scheduleZoom").onchange = () => { state.scheduleZoom = normalizeScheduleZoom($("scheduleZoom").value); saveState(); applyDeviceView(); renderCalendar(); });
+  $("scheduleIntervalMinutes") && ($("scheduleIntervalMinutes").onchange = () => { state.scheduleIntervalMinutes = normalizeScheduleIntervalMinutes($("scheduleIntervalMinutes").value); saveState(); renderStartTimeOptions(); renderCalendar(); });
   if($("reportPrintFormat")){
     $("reportPrintFormat").onchange = saveReportPrintFormatFromSelect;
     $("reportPrintFormat").oninput = saveReportPrintFormatFromSelect;
@@ -1328,6 +1337,9 @@ Object.assign(I18N.de, {
   deviceIpad:"iPad",
   devicePc:"PC / Windows",
   scheduleZoom:"Tagesplan-Zoom",
+  scheduleInterval:"Tagesplan-Takt",
+  interval15:"15 Minuten",
+  interval30:"30 Minuten",
   zoomSmall:"Klein",
   zoomNormal:"Normal",
   zoomLarge:"Groß",
@@ -1346,6 +1358,9 @@ Object.assign(I18N.vi, {
   deviceIpad:"iPad",
   devicePc:"PC / Windows",
   scheduleZoom:"Phóng to lịch ngày",
+  scheduleInterval:"Nhịp lịch ngày",
+  interval15:"15 phút",
+  interval30:"30 phút",
   zoomSmall:"Nhỏ",
   zoomNormal:"Bình thường",
   zoomLarge:"Lớn",
@@ -1364,6 +1379,9 @@ Object.assign(I18N.en, {
   deviceIpad:"iPad",
   devicePc:"PC / Windows",
   scheduleZoom:"Schedule zoom",
+  scheduleInterval:"Schedule interval",
+  interval15:"15 minutes",
+  interval30:"30 minutes",
   zoomSmall:"Small",
   zoomNormal:"Normal",
   zoomLarge:"Large",
@@ -2160,10 +2178,10 @@ function renderCalendar(){
       if(skipUntil && timeToMinutes(t) < skipUntil) continue;
       const a=todays.find(x=>x.employeeId===emp.id && x.startTime===t);
       if(a){
-        const span=Math.max(1,Math.round(Number(a.duration)/SLOT_INTERVAL_MINUTES)); skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
+        const span=Math.max(1,Math.round(Number(a.duration)/getSlotIntervalMinutes())); skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
         grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)}</div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta">${escapeHtml(a.startTime)} · ${escapeHtml(a.phone||"")}</div></div></div>`);
       }else{
-        const issue = employeeAvailabilityIssue(emp, state.selectedDate, t, SLOT_INTERVAL_MINUTES);
+        const issue = employeeAvailabilityIssue(emp, state.selectedDate, t, getSlotIntervalMinutes());
         if(issue){
           grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"><span class="slot-lock">Gesperrt</span></div>`);
         }else{
@@ -2276,7 +2294,7 @@ function renderCurrentTimeLine(wrap){
   const now=new Date();
   const nowMin=now.getHours()*60+now.getMinutes();
   if(nowMin < start || nowMin > end) return;
-  const styles=getComputedStyle(document.documentElement); const employeeCol=parseFloat(styles.getPropertyValue("--employee-col")) || 190; const timeCol=parseFloat(styles.getPropertyValue("--time-col")) || 200; const left=employeeCol + ((nowMin-start)/SLOT_INTERVAL_MINUTES)*timeCol;
+  const styles=getComputedStyle(document.documentElement); const employeeCol=parseFloat(styles.getPropertyValue("--employee-col")) || 190; const timeCol=parseFloat(styles.getPropertyValue("--time-col")) || 200; const left=employeeCol + ((nowMin-start)/getSlotIntervalMinutes())*timeCol;
   const line=document.createElement("div");
   line.className="current-time-line";
   line.style.left=left+"px";
@@ -3564,6 +3582,7 @@ function openSettings(){
   $("languageSelect") && ($("languageSelect").value=state.language || "de");
   $("displayDeviceMode") && ($("displayDeviceMode").value = normalizeDisplayDeviceMode(state.displayDeviceMode || "auto"));
   $("scheduleZoom") && ($("scheduleZoom").value = normalizeScheduleZoom(state.scheduleZoom || "normal"));
+  $("scheduleIntervalMinutes") && ($("scheduleIntervalMinutes").value = String(normalizeScheduleIntervalMinutes(state.scheduleIntervalMinutes || 15)));
   $("reportPrintFormat") && ($("reportPrintFormat").value = normalizeReportPrintFormat(state.reportPrintFormat || "a4"));
   updateDisplayModeHint();
   $("settingsStudioName").value=state.studioName;
@@ -3599,6 +3618,7 @@ function saveSettings(silent=false){
   state.revenueEnabled = $("toggleRevenueFeature") ? $("toggleRevenueFeature").checked : state.revenueEnabled;
   state.displayDeviceMode = $("displayDeviceMode") ? normalizeDisplayDeviceMode($("displayDeviceMode").value) : normalizeDisplayDeviceMode(state.displayDeviceMode || "auto");
   state.scheduleZoom = $("scheduleZoom") ? normalizeScheduleZoom($("scheduleZoom").value) : normalizeScheduleZoom(state.scheduleZoom || "normal");
+  state.scheduleIntervalMinutes = $("scheduleIntervalMinutes") ? normalizeScheduleIntervalMinutes($("scheduleIntervalMinutes").value) : normalizeScheduleIntervalMinutes(state.scheduleIntervalMinutes || 15);
   state.reportPrintFormat = $("reportPrintFormat") ? normalizeReportPrintFormat($("reportPrintFormat").value) : normalizeReportPrintFormat(state.reportPrintFormat || "a4");
   state.openTime=$("settingsOpen").value||state.openTime;
   state.closeTime=$("settingsClose").value||state.closeTime;
@@ -3891,6 +3911,7 @@ function importBackup(e){
         revenueEnabled:typeof imported.revenueEnabled === "boolean" ? imported.revenueEnabled : false,
         displayDeviceMode:normalizeDisplayDeviceMode(imported.displayDeviceMode || "auto"),
         scheduleZoom:normalizeScheduleZoom(imported.scheduleZoom || "normal"),
+        scheduleIntervalMinutes:normalizeScheduleIntervalMinutes(imported.scheduleIntervalMinutes || 15),
         reportPrintFormat:normalizeReportPrintFormat(imported.reportPrintFormat || "a4"),
         cloudBackupEnabled:!!imported.cloudBackupEnabled,
         cloudBackupProvider:normalizeCloudProvider(imported.cloudBackupProvider || "onedrive"),
@@ -3916,6 +3937,7 @@ function openSettings(){
   $("languageSelect") && ($("languageSelect").value=state.language || "de");
   $("displayDeviceMode") && ($("displayDeviceMode").value = normalizeDisplayDeviceMode(state.displayDeviceMode || "auto"));
   $("scheduleZoom") && ($("scheduleZoom").value = normalizeScheduleZoom(state.scheduleZoom || "normal"));
+  $("scheduleIntervalMinutes") && ($("scheduleIntervalMinutes").value = String(normalizeScheduleIntervalMinutes(state.scheduleIntervalMinutes || 15)));
   $("reportPrintFormat") && ($("reportPrintFormat").value = normalizeReportPrintFormat(state.reportPrintFormat || "a4"));
   updateDisplayModeHint();
   $("settingsStudioName").value=state.studioName;
