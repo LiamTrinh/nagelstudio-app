@@ -1,32 +1,35 @@
 {
   "studios": [
     {
-      "id": "123456BW",
-      "name": "Beauty World",
-      "plan": "trial",
-      "expiresAt": "2026-07-31",
-      "active": true
-    },
-    {
-      "id": "123456Kawaii",
-      "name": "Kawaii Nails",
+      "id": "STUDIO-MARIA-FILIALE-1",
+      "name": "Maria Nails - Filiale 1",
       "plan": "trial",
       "expiresAt": "2026-08-01",
-      "active": true
+      "active": true,
+      "maxDevices": 1,
+      "allowedDevices": [
+        "DEVICE-BEISPIEL1"
+      ]
     },
     {
       "id": "310366",
       "name": "Tam Nagelstudio",
       "plan": "full",
       "expiresAt": null,
-      "active": true
+      "active": true,
+      "maxDevices": 1,
+      "allowedDevices": [
+        "DEVICE-BEISPIEL2"
+      ]
     },
     {
       "id": "STUDIO-BLOCKED-BEISPIEL",
       "name": "Gesperrtes Beispielstudio",
       "plan": "blocked",
       "expiresAt": null,
-      "active": false
+      "active": false,
+      "maxDevices": 1,
+      "allowedDevices": []
     }
   ]
 }

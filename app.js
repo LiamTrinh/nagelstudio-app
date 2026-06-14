@@ -11,6 +11,7 @@ const $ = id => document.getElementById(id);
 // vor Manipulation, ist aber für eine benutzerfreundliche Testphase ohne Backend
 // ausreichend und hält die bestehenden lokalen App-Daten unverändert.
 const LICENSE_STUDIO_ID_KEY = "nail_studio_license_studio_id";
+const LICENSE_DEVICE_ID_KEY = "nail_studio_license_device_id";
 const LICENSE_FILE = "studio-licenses.json";
 let currentLicense = null;
 let currentLicenseResult = {valid:false, reason:"Lizenz wurde noch nicht geprüft."};
@@ -29,6 +30,30 @@ function setStoredStudioId(id){
   if(clean) localStorage.setItem(LICENSE_STUDIO_ID_KEY, clean);
   else localStorage.removeItem(LICENSE_STUDIO_ID_KEY);
   return clean;
+}
+
+// Geräte-ID: Wird einmal lokal erzeugt und bleibt im Browser gespeichert.
+// Diese ID muss in studio-licenses.json beim passenden Studio in allowedDevices stehen.
+function createDeviceId(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let suffix = "";
+  const bytes = new Uint8Array(6);
+  if(window.crypto && crypto.getRandomValues){
+    crypto.getRandomValues(bytes);
+    for(const b of bytes) suffix += chars[b % chars.length];
+  }else{
+    for(let i=0;i<6;i++) suffix += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return `DEVICE-${suffix}`;
+}
+
+function getDeviceId(){
+  let id = localStorage.getItem(LICENSE_DEVICE_ID_KEY);
+  if(!id){
+    id = createDeviceId();
+    localStorage.setItem(LICENSE_DEVICE_ID_KEY, id);
+  }
+  return id;
 }
 
 function planLabel(plan){
@@ -69,7 +94,7 @@ async function loadLicenseFile(){
   }
 }
 
-function validateStudioLicense(data, studioId){
+function validateStudioLicense(data, studioId, deviceId){
   if(!studioId){
     return {valid:false, reason:"Bitte geben Sie eine Studio-ID ein.", studio:null};
   }
@@ -90,6 +115,14 @@ function validateStudioLicense(data, studioId){
     return {valid:false, reason:"Der Lizenzplan ist ungültig. Erlaubt sind trial oder full.", studio};
   }
 
+  // Gerätefreigabe: Das aktuelle Gerät muss in allowedDevices eingetragen sein.
+  const allowedDevices = Array.isArray(studio.allowedDevices) ? studio.allowedDevices.map(String) : [];
+  if(!deviceId || !allowedDevices.includes(deviceId)){
+    return {valid:false, reason:"Dieses Gerät ist für diese Studio-ID noch nicht freigeschaltet.", studio};
+  }
+  if(Number.isFinite(Number(studio.maxDevices)) && Number(studio.maxDevices) > 0 && allowedDevices.length > Number(studio.maxDevices)){
+    return {valid:false, reason:`Für diese Lizenz sind maximal ${Number(studio.maxDevices)} Gerät(e) erlaubt.`, studio};
+  }
 
   if(plan === "trial"){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(studio.expiresAt || "")){
@@ -105,16 +138,17 @@ function validateStudioLicense(data, studioId){
 
 async function checkLicense(studioId){
   const cleanStudioId = normalizeStudioId(studioId || getStoredStudioId());
+  const deviceId = getDeviceId();
   try{
     const data = await loadLicenseFile();
-    const result = validateStudioLicense(data, cleanStudioId);
+    const result = validateStudioLicense(data, cleanStudioId, deviceId);
     currentLicense = result.valid ? result.studio : null;
-    currentLicenseResult = {...result, studioId:cleanStudioId};
+    currentLicenseResult = {...result, studioId:cleanStudioId, deviceId};
     if(result.valid) setStoredStudioId(cleanStudioId);
     return currentLicenseResult;
   }catch(err){
     currentLicense = null;
-    currentLicenseResult = {valid:false, reason:err.message || "Lizenz konnte nicht geprüft werden.", studioId:cleanStudioId};
+    currentLicenseResult = {valid:false, reason:err.message || "Lizenz konnte nicht geprüft werden.", studioId:cleanStudioId, deviceId};
     return currentLicenseResult;
   }
 }
@@ -138,7 +172,8 @@ function showLicenseScreen(result, mode="blocked"){
     box.classList.remove("hidden", "license-ok", "license-error");
     box.classList.add(result?.valid ? "license-ok" : "license-error");
     const shownStudioId = studioId || "Keine Studio-ID gespeichert";
-    box.innerHTML = `<div><strong>Grund:</strong> ${escapeHtml(result?.reason || "Bitte Studio-ID prüfen.")}</div><div><strong>Studio-ID:</strong> ${escapeHtml(shownStudioId)}</div>`;
+    const deviceId = result?.deviceId || getDeviceId();
+    box.innerHTML = `<div><strong>Grund:</strong> ${escapeHtml(result?.reason || "Bitte Studio-ID prüfen.")}</div><div><strong>Studio-ID:</strong> ${escapeHtml(shownStudioId)}</div><div><strong>Geräte-ID:</strong> ${escapeHtml(deviceId)}</div><div class="license-device-hint">Bitte senden Sie diese Geräte-ID an den Anbieter zur Freischaltung.</div>`;
   }
 }
 
@@ -151,7 +186,7 @@ function continueAfterValidLicense(){
 async function verifyLicenseAndContinue(){
   const stored = getStoredStudioId();
   if(!stored){
-    currentLicenseResult = {valid:false, reason:"Bitte geben Sie eine Studio-ID ein.", studioId:""};
+    currentLicenseResult = {valid:false, reason:"Bitte geben Sie eine Studio-ID ein.", studioId:"", deviceId:getDeviceId()};
     showLicenseScreen(currentLicenseResult, "first");
     return false;
   }
@@ -187,7 +222,7 @@ function bindLicenseEvents(){
   $("licenseCheckBtn") && ($("licenseCheckBtn").onclick = submitLicenseFromScreen);
   $("licenseChangeStudioBtn") && ($("licenseChangeStudioBtn").onclick = () => {
     setStoredStudioId("");
-    currentLicenseResult = {valid:false, reason:"Bitte geben Sie eine neue Studio-ID ein.", studioId:""};
+    currentLicenseResult = {valid:false, reason:"Bitte geben Sie eine neue Studio-ID ein.", studioId:"", deviceId:getDeviceId()};
     showLicenseScreen(currentLicenseResult, "first");
     $("licenseStudioIdInput") && $("licenseStudioIdInput").focus();
   });
@@ -198,23 +233,59 @@ function bindLicenseEvents(){
   $("settingsRecheckLicenseBtn") && ($("settingsRecheckLicenseBtn").onclick = verifyLicenseAndContinue);
 }
 
+function licenseValidityLine(studio){
+  const plan = String(studio?.plan || "").toLowerCase();
+  if(plan === "trial"){
+    const date = formatLicenseDate(studio.expiresAt);
+    return `Lizenz gültig bis: ${date} · Testzeit läuft ab am: ${date}`;
+  }
+  if(plan === "full"){
+    return "Lizenz gültig: Vollversion ohne Ablaufdatum";
+  }
+  return "Lizenzstatus unbekannt";
+}
+
+function updateLicenseFooterBar(){
+  const footer = $("licenseFooterBar");
+  if(!footer) return;
+  const result = currentLicenseResult || {};
+  const studio = currentLicense || result.studio;
+  const plan = String(studio?.plan || "").toLowerCase();
+
+  // Die feste Lizenz-Fußleiste soll nur bei Testversionen sichtbar sein.
+  // Bei Vollversion bleibt die App unten frei; Details stehen weiterhin im Einstellungsbereich.
+  if(result.valid && studio && plan === "trial"){
+    const studioId = result.studioId || getStoredStudioId() || "-";
+    footer.textContent = `${studio.name || "Studio"} · ${studioId} · ${planLabel(studio.plan)} · ${licenseValidityLine(studio)}`;
+    footer.classList.remove("hidden");
+  }else{
+    footer.classList.add("hidden");
+    footer.textContent = "";
+  }
+}
+
 function updateLicenseInfoBox(){
   const box = $("licenseInfoBox");
-  if(!box) return;
   const result = currentLicenseResult || {};
   const studio = currentLicense || result.studio;
   const studioId = result.studioId || getStoredStudioId() || "-";
-  if(result.valid && studio){
-    const plan = String(studio.plan || "").toLowerCase();
-    box.innerHTML = [
-      `<div><strong>Studio:</strong> ${escapeHtml(studio.name || "-")}</div>`,
-      `<div><strong>Studio-ID:</strong> ${escapeHtml(studioId)}</div>`,
-      `<div><strong>Plan:</strong> ${escapeHtml(planLabel(plan))}</div>`,
-      plan === "trial" ? `<div><strong>Ablaufdatum:</strong> ${escapeHtml(formatLicenseDate(studio.expiresAt))}</div>` : ""
-    ].filter(Boolean).join("");
-  }else{
-    box.innerHTML = `<div><strong>Status:</strong> Gesperrt oder nicht geprüft</div><div><strong>Grund:</strong> ${escapeHtml(result.reason || "-")}</div><div><strong>Studio-ID:</strong> ${escapeHtml(studioId)}</div>`;
+  const deviceId = result.deviceId || getDeviceId();
+  if(box){
+    if(result.valid && studio){
+      const plan = String(studio.plan || "").toLowerCase();
+      box.innerHTML = [
+        `<div><strong>Studio:</strong> ${escapeHtml(studio.name || "-")}</div>`,
+        `<div><strong>Studio-ID:</strong> ${escapeHtml(studioId)}</div>`,
+        `<div><strong>Geräte-ID:</strong> ${escapeHtml(deviceId)}</div>`,
+        `<div><strong>Plan:</strong> ${escapeHtml(planLabel(plan))}</div>`,
+        plan === "trial" ? `<div><strong>Lizenz gültig bis:</strong> ${escapeHtml(formatLicenseDate(studio.expiresAt))}</div>` : `<div><strong>Lizenz gültig:</strong> Vollversion ohne Ablaufdatum</div>`,
+        plan === "trial" ? `<div><strong>Testzeit läuft ab am:</strong> ${escapeHtml(formatLicenseDate(studio.expiresAt))}</div>` : ""
+      ].filter(Boolean).join("");
+    }else{
+      box.innerHTML = `<div><strong>Status:</strong> Gesperrt oder nicht geprüft</div><div><strong>Grund:</strong> ${escapeHtml(result.reason || "-")}</div><div><strong>Studio-ID:</strong> ${escapeHtml(studioId)}</div><div><strong>Geräte-ID:</strong> ${escapeHtml(deviceId)}</div>`;
+    }
   }
+  updateLicenseFooterBar();
 }
 
 let state;
@@ -1086,7 +1157,8 @@ function showStartupError(err){
   showLicenseScreen({
     valid:false,
     reason:`Die App konnte nicht starten: ${message}`,
-    studioId:getStoredStudioId()
+    studioId:getStoredStudioId(),
+    deviceId:getDeviceId()
   }, "blocked");
 }
 function showSetup(){ $("setupScreen").classList.remove("hidden"); $("mainScreen").classList.add("hidden"); }
