@@ -1044,12 +1044,50 @@ function printAccountingReport(type){
 }
 
 async function boot(){
-  $("currentDateInput").value = state.selectedDate || todayISO();
-  bindEvents();
-  bindLicenseEvents();
-  startCurrentTimeTicker();
-  window.addEventListener("resize", () => { if((state.displayDeviceMode || "auto") === "auto"){ applyDeviceView(); renderCalendar(); } });
-  await verifyLicenseAndContinue();
+  // Robuster Start: Die Lizenz-/Studio-ID-Seite wird zuerst vorbereitet.
+  // So bleibt die App nicht leer, falls danach beim Initialisieren ein Fehler auftritt.
+  try{
+    const currentDateInput = $("currentDateInput");
+    if(currentDateInput) currentDateInput.value = state.selectedDate || todayISO();
+
+    bindLicenseEvents();
+
+    if(typeof startCurrentTimeTicker === "function") startCurrentTimeTicker();
+
+    window.addEventListener("resize", () => {
+      try{
+        if((state.displayDeviceMode || "auto") === "auto"){
+          applyDeviceView();
+          renderCalendar();
+        }
+      }catch(err){
+        console.error("Fehler beim Aktualisieren der Ansicht:", err);
+      }
+    });
+
+    await verifyLicenseAndContinue();
+
+    // Bestehende App-Buttons erst nach der Lizenzprüfung verbinden.
+    // Dadurch kann ein Fehler in der Haupt-App die Studio-ID-Seite nicht mehr unsichtbar lassen.
+    try{
+      bindEvents();
+    }catch(err){
+      console.error("Fehler beim Verbinden der App-Buttons:", err);
+      showStartupError(err);
+    }
+  }catch(err){
+    console.error("Startfehler:", err);
+    showStartupError(err);
+  }
+}
+
+function showStartupError(err){
+  const message = err && err.message ? err.message : "Unbekannter Fehler";
+  showLicenseScreen({
+    valid:false,
+    reason:`Die App konnte nicht starten: ${message}`,
+    studioId:getStoredStudioId()
+  }, "blocked");
 }
 function showSetup(){ $("setupScreen").classList.remove("hidden"); $("mainScreen").classList.add("hidden"); }
 function showMain(){ $("setupScreen").classList.add("hidden"); $("mainScreen").classList.remove("hidden"); renderAll(); }

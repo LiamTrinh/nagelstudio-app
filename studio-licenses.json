@@ -1,24 +1,17 @@
 {
   "studios": [
     {
+      "id": "123456BW",
+      "name": "Maria Nails - Filiale 1",
+      "plan": "trial",
+      "expiresAt": "2026-08-01",
+      "active": true
+    },
+    {
       "id": "310366",
-      "name": "Nagelstudio TamTam",
+      "name": "Tam Nagelstudio",
       "plan": "full",
       "expiresAt": null,
-      "active": true
-    },
-    {
-      "id": "BW123456",
-      "name": "Beauty World",
-      "plan": "trial",
-      "expiresAt": "2026-07-31",
-      "active": true
-    },
-    {
-      "id": "Kawaii123456",
-      "name": "Test Studio",
-      "plan": "trial",
-      "expiresAt": "2026-07-31",
       "active": true
     },
     {
