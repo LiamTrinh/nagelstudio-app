@@ -4,7 +4,7 @@
       "id": "123456BW",
       "name": "Beauty World",
       "plan": "trial",
-      "expiresAt": "2026-08-01",
+      "expiresAt": "2026-07-31",
       "active": true
     },
     {
@@ -15,7 +15,7 @@
       "active": true
     },
     {
-      "id": "31030606",
+      "id": "310366",
       "name": "Tam Nagelstudio",
       "plan": "full",
       "expiresAt": null,

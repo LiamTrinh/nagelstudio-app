@@ -322,6 +322,10 @@ function saveState(){ localStorage.setItem(KEY, JSON.stringify(state)); }
 function timeToMinutes(t){ const [h,m]=t.split(":").map(Number); return h*60+m; }
 function minutesToTime(min){ return `${String(Math.floor(min/60)).padStart(2,"0")}:${String(min%60).padStart(2,"0")}`; }
 
+// Tagesplan-Raster: 15-Minuten-Abschnitte statt vorher 30 Minuten.
+// Diese Konstante wird für Zeitleiste, Termin-Spaltenbreite und Verfügbarkeit genutzt.
+const SLOT_INTERVAL_MINUTES = 15;
+
 function formatDateShort(dateString){
   if(!dateString || !dateString.includes("-")) return dateString || "";
   const [yyyy, mm, dd] = dateString.split("-");
@@ -347,7 +351,7 @@ function refreshCashJournalViews(){
 function money(n){ return Number(n||0).toLocaleString("de-DE",{style:"currency",currency:"EUR"}); }
 function statusClass(status){ return "status-" + String(status || "Gebucht").replace(/\s+/g,"-"); }
 function appointmentClass(a){ return `appointment ${statusClass(a && a.status)}${a && a.employeeAny ? " appointment-any-employee" : ""}`; }
-function slots(){ const out=[]; for(let m=timeToMinutes(state.openTime); m<timeToMinutes(state.closeTime); m+=30) out.push(minutesToTime(m)); return out; }
+function slots(){ const out=[]; for(let m=timeToMinutes(state.openTime); m<timeToMinutes(state.closeTime); m+=SLOT_INTERVAL_MINUTES) out.push(minutesToTime(m)); return out; }
 
 
 // Version 49: automatische Mitarbeiterfarben für den Tagesplan.
@@ -2138,10 +2142,10 @@ function renderCalendar(){
       if(skipUntil && timeToMinutes(t) < skipUntil) continue;
       const a=todays.find(x=>x.employeeId===emp.id && x.startTime===t);
       if(a){
-        const span=Math.max(1,Math.round(Number(a.duration)/30)); skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
+        const span=Math.max(1,Math.round(Number(a.duration)/SLOT_INTERVAL_MINUTES)); skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
         grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)}</div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta">${escapeHtml(a.startTime)} · ${escapeHtml(a.phone||"")}</div></div></div>`);
       }else{
-        const issue = employeeAvailabilityIssue(emp, state.selectedDate, t, 30);
+        const issue = employeeAvailabilityIssue(emp, state.selectedDate, t, SLOT_INTERVAL_MINUTES);
         if(issue){
           grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"><span class="slot-lock">Gesperrt</span></div>`);
         }else{
@@ -2254,7 +2258,7 @@ function renderCurrentTimeLine(wrap){
   const now=new Date();
   const nowMin=now.getHours()*60+now.getMinutes();
   if(nowMin < start || nowMin > end) return;
-  const styles=getComputedStyle(document.documentElement); const employeeCol=parseFloat(styles.getPropertyValue("--employee-col")) || 190; const timeCol=parseFloat(styles.getPropertyValue("--time-col")) || 200; const left=employeeCol + ((nowMin-start)/30)*timeCol;
+  const styles=getComputedStyle(document.documentElement); const employeeCol=parseFloat(styles.getPropertyValue("--employee-col")) || 190; const timeCol=parseFloat(styles.getPropertyValue("--time-col")) || 200; const left=employeeCol + ((nowMin-start)/SLOT_INTERVAL_MINUTES)*timeCol;
   const line=document.createElement("div");
   line.className="current-time-line";
   line.style.left=left+"px";
