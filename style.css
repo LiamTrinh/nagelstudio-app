@@ -2666,14 +2666,6 @@ body.app-device-ipad .appointment{
 .license-info-box strong{color:var(--text);}
 .license-info-section button{margin-right:8px;margin-bottom:8px;}
 
-/* Geräte-ID-Hinweis in der Lizenz-/Sperrseite */
-.license-device-hint{
-  margin-top:8px;
-  font-size:.95rem;
-  color:var(--muted);
-}
-
-
 /* Permanente Lizenz-Fußleiste: zeigt nur bei Testversionen Studio, Plan und Ablaufdatum unten in der App. */
 .license-footer-bar{
   position:fixed;

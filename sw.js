@@ -1,4 +1,4 @@
-const CACHE = "nail-studio-pwa-v112-studio-device-id-trial-footer-only";
+const CACHE = "nail-studio-pwa-v113-studio-id-trial-footer-only";
 const FILES = ["./","./index.html","./style.css","./app.js","./studio-licenses.json","./manifest.json","./icon.svg","./logo-192.png","./logo-512.png","./logo-header.png","./lotus-lt-system-logo.png","./backup-modern-icon.png"];
 self.addEventListener("install", e => {
   self.skipWaiting();
