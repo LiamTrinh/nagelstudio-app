@@ -1972,6 +1972,11 @@ body.app-device-ipad .appointment{
 .appointment.appointment-any-employee .meta,.appointment.appointment-any-employee .name{color:#2d2300!important}
 .employee-any-edit-label{display:flex;flex-direction:column;gap:4px;justify-content:center}
 .employee-any-edit-label input{width:auto;align-self:flex-start}
+.any-employee-booked-popup{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(80,0,0,.18);padding:20px}
+.any-employee-booked-popup.hidden{display:none}
+.any-employee-booked-box{width:min(420px,92vw);border:2px solid #f5a3a3;border-radius:18px;background:#ffe5e5;color:#8a1111;text-align:center;box-shadow:0 22px 70px rgba(138,17,17,.28);padding:24px 22px}
+.any-employee-booked-box p{margin:0 0 18px;font-size:20px;line-height:1.35;font-weight:900}
+.any-employee-booked-box button{background:#dc2626;color:#fff;border:0;border-radius:12px;padding:11px 26px;font-weight:900}
 
 
 /* Version 100: Arbeitszeit / Urlaub Mitarbeiter farblich kennzeichnen */

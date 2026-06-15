@@ -2330,6 +2330,78 @@ function findAppointmentConflict(candidate, ignoreId){
     return start < existingEnd && end > existingStart;
   });
 }
+function activeEmployeesInScheduleOrder(selectedEmployeeId=""){
+  const active = state.employees.filter(e => e.active).sort(byName);
+  if(!selectedEmployeeId) return active;
+  const selectedIndex = active.findIndex(e => e.id === selectedEmployeeId);
+  if(selectedIndex < 0) return active;
+  return active.slice(selectedIndex).concat(active.slice(0, selectedIndex));
+}
+function findNextFreeEmployeeForAnyAppointment(candidate, ignoreId, excludedEmployeeIds=[]){
+  const excluded = new Set(excludedEmployeeIds.filter(Boolean));
+  return activeEmployeesInScheduleOrder(candidate.employeeId).find(emp => {
+    if(excluded.has(emp.id)) return false;
+    const test = {...candidate, employeeId:emp.id};
+    return !employeeAvailabilityIssue(emp, test.date, test.startTime, test.duration) && !findAppointmentConflict(test, ignoreId);
+  }) || null;
+}
+function moveAnyAppointmentAwayFromFixedAppointment(fixedAppointment){
+  const movedIds = new Set();
+  const movedAppointments = [];
+  const rollbackMovedAppointments = () => {
+    movedAppointments.forEach(item => {
+      item.appointment.employeeId = item.employeeId;
+    });
+  };
+  let guard = 0;
+  while(guard < 50){
+    guard += 1;
+    const conflict = findAppointmentConflict(fixedAppointment, fixedAppointment.id);
+    if(!conflict) return true;
+    if(movedIds.has(conflict.id) || !conflict.employeeAny || (conflict.status || "Gebucht") !== "Gebucht"){
+      rollbackMovedAppointments();
+      showAppointmentConflict(conflict);
+      return false;
+    }
+    const freeEmployee = findNextFreeEmployeeForAnyAppointment(
+      {...conflict, employeeId:fixedAppointment.employeeId},
+      conflict.id,
+      [fixedAppointment.employeeId]
+    );
+    if(!freeEmployee){
+      rollbackMovedAppointments();
+      showAnyEmployeeFullyBookedPopup();
+      return false;
+    }
+    movedAppointments.push({appointment:conflict, employeeId:conflict.employeeId});
+    conflict.employeeId = freeEmployee.id;
+    movedIds.add(conflict.id);
+  }
+  rollbackMovedAppointments();
+  showAnyEmployeeFullyBookedPopup();
+  return false;
+}
+function showAnyEmployeeFullyBookedPopup(){
+  const text = "Bitte UHRZEIT NEU wählen !!! Diese Uhrzeit sind alle besetzt";
+  let popup = $("anyEmployeeBookedPopup");
+  if(!popup){
+    popup = document.createElement("div");
+    popup.id = "anyEmployeeBookedPopup";
+    popup.className = "any-employee-booked-popup hidden";
+    popup.innerHTML = `
+      <div class="any-employee-booked-box" role="alertdialog" aria-modal="true" aria-live="assertive">
+        <p>${escapeHtml(text)}</p>
+        <button type="button">OK</button>
+      </div>`;
+    document.body.appendChild(popup);
+    popup.querySelector("button").onclick = () => popup.classList.add("hidden");
+    popup.onclick = (event) => {
+      if(event.target === popup) popup.classList.add("hidden");
+    };
+  }
+  popup.querySelector("p").textContent = text;
+  popup.classList.remove("hidden");
+}
 function showAppointmentConflict(conflict){
   const msg = t("appointmentConflictMessage")
     .replace("{customer}", conflict.customerName || t("customer"))
@@ -2344,11 +2416,16 @@ function saveAppointment(){
   if(!a.customerName||!a.employeeId||!a.startTime){ alert("Bitte Kunde, Mitarbeiter und Uhrzeit eintragen."); return; }
   if(!Number.isFinite(a.duration) || a.duration < 1){ alert("Bitte eine gültige Dauer in Minuten eintragen."); return; }
   a.duration = Math.max(1, Math.round(a.duration));
-  const emp = state.employees.find(e => e.id === a.employeeId);
-  const availabilityIssue = employeeAvailabilityIssue(emp, a.date, a.startTime, a.duration);
-  if(availabilityIssue){ alert("Termin nicht möglich\n\n" + availabilityIssue); return; }
-  const conflict = findAppointmentConflict(a, a.id);
-  if(conflict){ showAppointmentConflict(conflict); return; }
+  if(a.employeeAny){
+    const freeEmployee = findNextFreeEmployeeForAnyAppointment(a, a.id);
+    if(!freeEmployee){ showAnyEmployeeFullyBookedPopup(); return; }
+    a.employeeId = freeEmployee.id;
+  }else{
+    const emp = state.employees.find(e => e.id === a.employeeId);
+    const availabilityIssue = employeeAvailabilityIssue(emp, a.date, a.startTime, a.duration);
+    if(availabilityIssue){ alert("Termin nicht möglich\n\n" + availabilityIssue); return; }
+    if(!moveAnyAppointmentAwayFromFixedAppointment(a)) return;
+  }
   state.appointments=state.appointments.filter(x=>x.id!==a.id); state.appointments.push(a); ensureCustomerFromAppointment(a); ensureServiceFromAppointment(a); saveState(); clearForm(); renderAll();
 }
 function clearForm(){
@@ -2464,17 +2541,22 @@ function saveInlineAppointmentEdit(){
     return;
   }
 
-  const emp = state.employees.find(e => e.id === updated.employeeId);
-  const availabilityIssue = employeeAvailabilityIssue(emp, updated.date, updated.startTime, updated.duration);
-  if(availabilityIssue){
-    alert("Termin nicht möglich\n\n" + availabilityIssue);
-    return;
-  }
+  if(updated.employeeAny){
+    const freeEmployee = findNextFreeEmployeeForAnyAppointment(updated, updated.id);
+    if(!freeEmployee){
+      showAnyEmployeeFullyBookedPopup();
+      return;
+    }
+    updated.employeeId = freeEmployee.id;
+  }else{
+    const emp = state.employees.find(e => e.id === updated.employeeId);
+    const availabilityIssue = employeeAvailabilityIssue(emp, updated.date, updated.startTime, updated.duration);
+    if(availabilityIssue){
+      alert("Termin nicht möglich\n\n" + availabilityIssue);
+      return;
+    }
 
-  const conflict = findAppointmentConflict(updated, updated.id);
-  if(conflict){
-    showAppointmentConflict(conflict);
-    return;
+    if(!moveAnyAppointmentAwayFromFixedAppointment(updated)) return;
   }
 
   Object.assign(a, updated);
