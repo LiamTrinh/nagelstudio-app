@@ -2609,7 +2609,68 @@ body.app-device-ipad .appointment{
   }
 }
 
-/* Studio-ID / Lizenzprüfung für GitHub-Pages-Testphase */
+/* Version 3.32: iPad-Kassensystem / Bezahlen */
+ .payment-dashboard-button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border:2px solid #d4a017;
+  background:#fff;
+  color:var(--text);
+  box-shadow:0 8px 20px rgba(212,160,23,.10);
+}
+.payment-dashboard-button:hover,
+.payment-dashboard-button:focus{
+  border-color:#f0c94a;
+  box-shadow:0 0 0 4px rgba(240,201,74,.18), 0 8px 20px rgba(212,160,23,.14);
+}
+.payment-dialog{width:min(1180px,96vw);max-height:92vh;padding:0;overflow:hidden;}
+.payment-dialog-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line);background:#fff7fb;}
+.payment-dialog-header h2{margin:0;font-size:26px;}
+.payment-layout{display:grid;grid-template-columns:.85fr 1.25fr;gap:0;min-height:680px;max-height:calc(92vh - 76px);}
+.payment-panel{padding:18px;overflow:auto;}
+.payment-products-panel{background:#fff;border-left:1px solid var(--line);order:2;}
+.payment-cart-panel{background:#fffafc;display:flex;flex-direction:column;gap:14px;order:1;}
+.payment-section-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;}
+.payment-section-title h3{margin:0;font-size:20px;}
+.payment-section-title input{max-width:260px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;font-weight:800;}
+.payment-service-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+.payment-service-card{min-height:112px;border:1px solid #f0cddd;border-radius:20px;background:linear-gradient(180deg,#fff,#fff4f9);padding:14px;text-align:left;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 8px 20px rgba(120,40,80,.08);}
+.payment-service-card strong{font-size:16px;color:#3b2430;}
+.payment-service-card span{font-size:22px;font-weight:1000;color:#be185d;}
+.payment-service-card small{color:var(--muted);font-weight:800;}
+.payment-cart-panel label{font-weight:900;color:#4b2234;display:flex;flex-direction:column;gap:8px;}
+.payment-cart-panel select,.payment-cart-panel input{padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#fff;font-weight:800;}
+.payment-cart-list{display:flex;flex-direction:column;gap:10px;min-height:120px;}
+.payment-cart-item{display:flex;justify-content:space-between;gap:12px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:0 6px 18px rgba(30,20,30,.05);}
+.payment-cart-item small{display:block;color:var(--muted);font-weight:800;margin-top:4px;}
+.payment-cart-actions{display:flex;align-items:center;gap:8px;}
+.payment-cart-actions button{min-width:36px;padding:8px 10px;border-radius:12px;}
+.payment-totals{background:#fff;border:1px solid var(--line);border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.payment-totals>div,.payment-discount-row{display:flex!important;flex-direction:row!important;justify-content:space-between;align-items:center;gap:12px;color:#4b2234;font-weight:900;}
+.payment-discount-row input{width:130px;text-align:right;}
+.payment-total-row{font-size:22px;border-top:1px solid var(--line);padding-top:12px;}
+.payment-total-row strong{color:#be185d;font-size:28px;}
+.payment-methods{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.payment-method{background:#fff;border:1px solid var(--line);color:#4b2234;}
+.payment-method.active{background:#111827;color:#fff;border-color:#111827;}
+.payment-complete-btn{font-size:20px;padding:16px;border-radius:18px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:0;box-shadow:0 12px 28px rgba(21,128,61,.22);}
+@media(max-width:900px){
+  .payment-layout{grid-template-columns:1fr;min-height:0;}
+  .payment-products-panel{border-left:0;border-bottom:1px solid var(--line);order:2;}
+  .payment-cart-panel{order:1;}
+  .payment-service-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(max-width:560px){
+  .payment-service-grid{grid-template-columns:1fr;}
+  .payment-section-title{flex-direction:column;align-items:stretch;}
+  .payment-methods{grid-template-columns:1fr;}
+}
+.payment-cart-info{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.payment-price-edit{display:flex!important;flex-direction:row!important;align-items:center;gap:8px;margin-top:4px;font-size:13px;font-weight:900;color:#4b2234;}
+.payment-price-edit input{width:120px!important;padding:8px 10px!important;border-radius:12px!important;text-align:right;font-size:15px;}
+
 .license-screen{
   min-height:100dvh;
   display:flex;
@@ -2670,8 +2731,6 @@ body.app-device-ipad .appointment{
 }
 .license-info-box strong{color:var(--text);}
 .license-info-section button{margin-right:8px;margin-bottom:8px;}
-
-/* Permanente Lizenz-Fußleiste: zeigt nur bei Testversionen Studio, Plan und Ablaufdatum unten in der App. */
 .license-footer-bar{
   position:fixed;
   left:12px;

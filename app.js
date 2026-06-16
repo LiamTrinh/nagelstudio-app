@@ -2,19 +2,10 @@ const KEY = "nail_studio_pwa_v63";
 const OLD_KEYS = ["nail_studio_pwa_v62", "nail_studio_pwa_v61", "nail_studio_pwa_v60", "nail_studio_pwa_v59", "nail_studio_pwa_v58", "nail_studio_pwa_v57", "nail_studio_pwa_v56", "nail_studio_pwa_v55", "nail_studio_pwa_v54", "nail_studio_pwa_v53", "nail_studio_pwa_v52", "nail_studio_pwa_v51", "nail_studio_pwa_v50", "nail_studio_pwa_v49", "nail_studio_pwa_v48", "nail_studio_pwa_v47", "nail_studio_pwa_v46", "nail_studio_pwa_v45", "nail_studio_pwa_v44", "nail_studio_pwa_v43", "nail_studio_pwa_v42", "nail_studio_pwa_v41", "nail_studio_pwa_v40", "nail_studio_pwa_v39", "nail_studio_pwa_v38", "nail_studio_pwa_v37", "nail_studio_pwa_v36", "nail_studio_pwa_v35", "nail_studio_pwa_v34", "nail_studio_pwa_v33", "nail_studio_pwa_v32", "nail_studio_pwa_v31", "nail_studio_pwa_v30", "nail_studio_pwa_v29", "nail_studio_pwa_v28", "nail_studio_pwa_v27", "nail_studio_pwa_v26", "nail_studio_pwa_v25", "nail_studio_pwa_v24", "nail_studio_pwa_v23", "nail_studio_pwa_v22", "nail_studio_pwa_v21", "nail_studio_pwa_v20", "nail_studio_pwa_v19", "nail_studio_pwa_v18", "nail_studio_pwa_v17", "nail_studio_pwa_v16", "nail_studio_pwa_v15", "nail_studio_pwa_v14", "nail_studio_pwa_v13", "nail_studio_pwa_v12", "nail_studio_pwa_v11", "nail_studio_pwa_v10", "nail_studio_pwa_v9", "nail_studio_pwa_v8", "nail_studio_pwa_v7", "nail_studio_pwa_v6", "nail_studio_pwa_v5", "nail_studio_pwa_v4", "nail_studio_pwa_v3", "nail_studio_pwa_v2", "nail_studio_pwa_v1"];
 const $ = id => document.getElementById(id);
 
-
-
-// -----------------------------------------------------------------------------
-// Studio-ID / Lizenzprüfung für GitHub Pages
-// -----------------------------------------------------------------------------
-// Hinweis: Diese Prüfung läuft bewusst vollständig clientseitig. Sie schützt nicht
-// vor Manipulation, ist aber für eine benutzerfreundliche Testphase ohne Backend
-// ausreichend und hält die bestehenden lokalen App-Daten unverändert.
 const LICENSE_STUDIO_ID_KEY = "nail_studio_license_studio_id";
 const LICENSE_FILE = "studio-licenses.json";
 let currentLicense = null;
 let currentLicenseResult = {valid:false, reason:"Lizenz wurde noch nicht geprüft."};
-let licenseReadyContinuation = null;
 
 function normalizeStudioId(id){
   return String(id || "").trim().toUpperCase();
@@ -73,12 +64,10 @@ function validateStudioLicense(data, studioId){
   if(!studioId){
     return {valid:false, reason:"Bitte geben Sie eine Studio-ID ein.", studio:null};
   }
-
   const studio = data.studios.find(item => normalizeStudioId(item.id) === studioId);
   if(!studio){
     return {valid:false, reason:"Diese Studio-ID wurde in studio-licenses.json nicht gefunden.", studio:null};
   }
-
   const plan = String(studio.plan || "").toLowerCase();
   if(studio.active !== true){
     return {valid:false, reason:"Diese Lizenz ist deaktiviert.", studio};
@@ -89,7 +78,6 @@ function validateStudioLicense(data, studioId){
   if(!["trial", "full"].includes(plan)){
     return {valid:false, reason:"Der Lizenzplan ist ungültig. Erlaubt sind trial oder full.", studio};
   }
-
   if(plan === "trial"){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(studio.expiresAt || "")){
       return {valid:false, reason:"Für die Testversion fehlt ein gültiges Ablaufdatum.", studio};
@@ -98,7 +86,6 @@ function validateStudioLicense(data, studioId){
       return {valid:false, reason:`Die Testversion ist am ${formatLicenseDate(studio.expiresAt)} abgelaufen.`, studio};
     }
   }
-
   return {valid:true, reason:"Lizenz gültig.", studio};
 }
 
@@ -129,9 +116,9 @@ function showLicenseScreen(result, mode="blocked"){
   $("setupScreen") && $("setupScreen").classList.add("hidden");
   $("mainScreen") && $("mainScreen").classList.add("hidden");
   screen.classList.remove("hidden");
-  if($('licenseStudioIdInput')) $('licenseStudioIdInput').value = studioId;
-  if($('licenseTitle')) $('licenseTitle').textContent = mode === "first" ? "Studio-ID eingeben" : "App gesperrt";
-  if($('licenseMessage')) $('licenseMessage').textContent = mode === "first" ? "Bitte geben Sie beim ersten Start Ihre Studio-ID ein." : "Die Lizenz konnte nicht gültig geprüft werden.";
+  if($("licenseStudioIdInput")) $("licenseStudioIdInput").value = studioId;
+  if($("licenseTitle")) $("licenseTitle").textContent = mode === "first" ? "Studio-ID eingeben" : "App gesperrt";
+  if($("licenseMessage")) $("licenseMessage").textContent = mode === "first" ? "Bitte geben Sie beim ersten Start Ihre Studio-ID ein." : "Die Lizenz konnte nicht gültig geprüft werden.";
   const box = $("licenseStatusBox");
   if(box){
     box.classList.remove("hidden", "license-ok", "license-error");
@@ -215,9 +202,6 @@ function updateLicenseFooterBar(){
   const result = currentLicenseResult || {};
   const studio = currentLicense || result.studio;
   const plan = String(studio?.plan || "").toLowerCase();
-
-  // Die feste Lizenz-Fußleiste soll nur bei Testversionen sichtbar sein.
-  // Bei Vollversion bleibt die App unten frei; Details stehen weiterhin im Einstellungsbereich.
   if(result.valid && studio && plan === "trial"){
     const studioId = result.studioId || getStoredStudioId() || "-";
     footer.textContent = `${studio.name || "Studio"} · ${studioId} · ${planLabel(studio.plan)} · ${licenseValidityLine(studio)}`;
@@ -273,7 +257,7 @@ function defaultServices(){ return [
 ];}
 function defaultState(){ return {
 	  version:"3.0", configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", scheduleIntervalMinutes:15, cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
-  employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[], employeeDailyRevenueRecords:[], revenue2Entries:[], revenue2DeletedAppointmentIds:[], revenue2CashEntries:[], revenue2CashDeletedAppointmentIds:[], cashWithdrawals:[], cashDeposits:[], journalRevenueCorrections:{}, journalRevenueDeletedDays:[],
+  employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[], employeeDailyRevenueRecords:[], revenue2Entries:[], revenue2DeletedAppointmentIds:[], revenue2CashEntries:[], revenue2CashDeletedAppointmentIds:[], cashWithdrawals:[], cashDeposits:[], journalRevenueCorrections:{}, journalRevenueDeletedDays:[], paymentSales:[],
   selectedDate:todayISO(), journalDate:todayISO(), storageMode:"local"
 };}
 function loadState(){
@@ -299,6 +283,7 @@ function loadState(){
     data.cashDeposits = data.cashDeposits || [];
     data.journalRevenueCorrections = data.journalRevenueCorrections || {};
     data.journalRevenueDeletedDays = data.journalRevenueDeletedDays || [];
+    data.paymentSales = data.paymentSales || [];
     data.journalDate = data.journalDate || data.selectedDate || todayISO();
     data.customers = data.customers || [];
     data.appointments = (data.appointments || []).map(a => ({...a, status:a.status || "Gebucht", employeeAny: !!a.employeeAny}));
@@ -889,9 +874,13 @@ function journalDayDeleted(day){
 }
 function journalDayRawTotal(day){
   ensureEmployeeDailyRevenueRecordsForDay(day);
-  return employeeDailyRevenueRecordsForDay(day)
+  const appointmentTotal = employeeDailyRevenueRecordsForDay(day)
     .filter(r => r.status === "Erledigt")
     .reduce((sum,r)=>sum + Number(r.price || 0), 0);
+  const manualTotal = (state.manualRevenueItems || [])
+    .filter(x => x.date === day)
+    .reduce((sum,x)=>sum + Number(x.amount || 0), 0);
+  return appointmentTotal + manualTotal;
 }
 function journalDayCustomerCount(day){
   ensureEmployeeDailyRevenueRecordsForDay(day);
@@ -1089,8 +1078,6 @@ function printAccountingReport(type){
 }
 
 async function boot(){
-  // Robuster Start: Die Lizenz-/Studio-ID-Seite wird zuerst vorbereitet.
-  // So bleibt die App nicht leer, falls danach beim Initialisieren ein Fehler auftritt.
   try{
     const currentDateInput = $("currentDateInput");
     if(currentDateInput) currentDateInput.value = state.selectedDate || todayISO();
@@ -1112,8 +1099,6 @@ async function boot(){
 
     await verifyLicenseAndContinue();
 
-    // Bestehende App-Buttons erst nach der Lizenzprüfung verbinden.
-    // Dadurch kann ein Fehler in der Haupt-App die Studio-ID-Seite nicht mehr unsichtbar lassen.
     try{
       bindEvents();
     }catch(err){
@@ -1134,8 +1119,8 @@ function showStartupError(err){
     studioId:getStoredStudioId(),
   }, "blocked");
 }
-function showSetup(){ $("setupScreen").classList.remove("hidden"); $("mainScreen").classList.add("hidden"); }
-function showMain(){ $("setupScreen").classList.add("hidden"); $("mainScreen").classList.remove("hidden"); renderAll(); }
+function showSetup(){ hideLicenseScreen(); $("setupScreen").classList.remove("hidden"); $("mainScreen").classList.add("hidden"); }
+function showMain(){ hideLicenseScreen(); $("setupScreen").classList.add("hidden"); $("mainScreen").classList.remove("hidden"); renderAll(); }
 
 function bindEvents(){
   $("finishSetupBtn").onclick = () => {
@@ -1182,9 +1167,18 @@ function bindEvents(){
   $("cloudBackupNowBtn") && ($("cloudBackupNowBtn").onclick = cloudBackupNow);
   $("cloudBackupProvider") && ($("cloudBackupProvider").onchange = saveCloudBackupSettings);
   $("cloudBackupEnabled") && ($("cloudBackupEnabled").onchange = saveCloudBackupSettings);
+  $("dashboardPaymentBtn") && ($("dashboardPaymentBtn").onclick = openPaymentSystem);
   $("dashboardCashJournalBtn") && ($("dashboardCashJournalBtn").onclick = openCashJournal);
   $("languageSelect") && ($("languageSelect").onchange = () => { state.language = $("languageSelect").value; saveState(); renderAll(); updateCleanupPreview(); applyLanguage(); });
   $("closeSettingsBtn") && ($("closeSettingsBtn").onclick = closeSettingsWithSave);
+  $("closePaymentBtn") && ($("closePaymentBtn").onclick = () => $("paymentDialog").close());
+  $("paymentSearchInput") && ($("paymentSearchInput").oninput = renderPaymentSystem);
+  $("paymentAppointmentSelect") && ($("paymentAppointmentSelect").onchange = paymentLoadAppointment);
+  $("paymentClearCartBtn") && ($("paymentClearCartBtn").onclick = paymentClearCart);
+  $("paymentDiscountInput") && ($("paymentDiscountInput").oninput = renderPaymentCart);
+  $("paymentTipInput") && ($("paymentTipInput").oninput = renderPaymentCart);
+  $("paymentCompleteBtn") && ($("paymentCompleteBtn").onclick = completePaymentSale);
+  document.querySelectorAll(".payment-method").forEach(btn => btn.onclick = () => setPaymentMethod(btn.dataset.paymentMethod));
   $("closeCashJournalBtn") && ($("closeCashJournalBtn").onclick = () => $("cashJournalDialog").close());
   $("saveSettingsBtn") && ($("saveSettingsBtn").onclick = saveSettings);
   $("addServiceBtn").onclick = addService;
@@ -1195,7 +1189,7 @@ function bindEvents(){
   $("closeAppointmentBtn").onclick = () => $("appointmentDialog").close();
   $("deleteAppointmentBtn").onclick = deleteSelectedAppointment;
   $("editAppointmentBtn").onclick = editSelectedAppointment;
-  $("completeAppointmentBtn").onclick = completeSelectedAppointment;
+  $("completeAppointmentBtn").onclick = paySelectedAppointment;
   $("noShowAppointmentBtn") && ($("noShowAppointmentBtn").onclick = noShowSelectedAppointment);
   $("exportBtn") && ($("exportBtn").onclick = exportBackup);
   $("settingsBackupBtn") && ($("settingsBackupBtn").onclick = exportBackup);
@@ -1261,6 +1255,198 @@ function openCashJournal(){
   $("cashJournalDialog") && $("cashJournalDialog").showModal();
 }
 
+
+let paymentCart = [];
+let paymentMethod = "Bar";
+
+function openPaymentSystem(options = {}){
+  if(!options.keepCart) paymentCart = [];
+  paymentMethod = "Bar";
+  if($("paymentDiscountInput")) $("paymentDiscountInput").value = "0";
+  if($("paymentTipInput")) $("paymentTipInput").value = "0";
+  setPaymentMethod("Bar");
+  renderPaymentSystem();
+  $("paymentDialog") && $("paymentDialog").showModal();
+}
+
+function setPaymentMethod(method){
+  paymentMethod = method || "Bar";
+  document.querySelectorAll(".payment-method").forEach(btn=>btn.classList.toggle("active", btn.dataset.paymentMethod === paymentMethod));
+}
+
+function renderPaymentSystem(){
+  renderPaymentAppointments();
+  renderPaymentServices();
+  renderPaymentCart();
+}
+
+function renderPaymentAppointments(){
+  const select = $("paymentAppointmentSelect");
+  if(!select) return;
+  const day = state.selectedDate || todayISO();
+  const apps = (state.appointments || [])
+    .filter(a => a.date === day && a.status !== "Nicht erschienen")
+    .sort((a,b)=>(a.startTime || "").localeCompare(b.startTime || ""));
+  select.innerHTML = `<option value="">Ohne Termin / freier Verkauf</option>` + apps.map(a=>{
+    const paid = a.status === "Erledigt" ? " ✓" : "";
+    return `<option value="${escapeHtml(a.id)}">${escapeHtml(a.startTime || "")} · ${escapeHtml(a.customerName || "Kunde")} · ${escapeHtml(a.serviceName || "Leistung")} · ${money(a.price || 0)}${paid}</option>`;
+  }).join("");
+}
+
+function renderPaymentServices(){
+  const grid = $("paymentServiceGrid");
+  if(!grid) return;
+  const q = ($("paymentSearchInput")?.value || "").trim().toLowerCase();
+  const services = (state.services || []).filter(s => !q || String(s.name || "").toLowerCase().includes(q));
+  grid.innerHTML = services.length ? services.map(s=>`
+    <button type="button" class="payment-service-card" data-payment-service="${escapeHtml(s.id)}">
+      <strong>${escapeHtml(s.name || "Leistung")}</strong>
+      <span>${money(s.price || 0)}</span>
+      <small>${Number(s.duration || 0)} Min</small>
+    </button>`).join("") : `<p class="hint">Keine Leistung gefunden.</p>`;
+  grid.querySelectorAll("[data-payment-service]").forEach(btn=>btn.onclick=()=>{
+    const service = (state.services || []).find(s=>s.id === btn.dataset.paymentService);
+    if(service) addPaymentCartItem(service.name, Number(service.price || 0), service.id);
+  });
+}
+
+function paymentLoadAppointment(){
+  const id = $("paymentAppointmentSelect")?.value;
+  if(!id) return;
+  const a = (state.appointments || []).find(x=>x.id === id);
+  if(!a) return;
+  const matchedService = (state.services || []).find(s => String(s.name || "").trim().toLowerCase() === String(a.serviceName || "").trim().toLowerCase());
+  const appointmentPrice = Number(a.price || 0) || Number(matchedService?.price || 0);
+  paymentCart = [{id: uid(), sourceAppointmentId: a.id, serviceId: matchedService?.id, title: a.serviceName || matchedService?.name || "Termin", qty: 1, price: appointmentPrice}];
+  renderPaymentCart();
+}
+
+function addPaymentCartItem(title, price, serviceId){
+  const existing = paymentCart.find(x=>x.serviceId === serviceId && !x.sourceAppointmentId);
+  if(existing) existing.qty += 1;
+  else paymentCart.push({id: uid(), serviceId, title: title || "Leistung", qty: 1, price: Number(price || 0)});
+  renderPaymentCart();
+}
+
+function paymentClearCart(){
+  paymentCart = [];
+  if($("paymentAppointmentSelect")) $("paymentAppointmentSelect").value = "";
+  if($("paymentDiscountInput")) $("paymentDiscountInput").value = "0";
+  if($("paymentTipInput")) $("paymentTipInput").value = "0";
+  renderPaymentCart();
+}
+
+function paymentTotals(){
+  const subtotal = paymentCart.reduce((sum,item)=>sum + Number(item.price || 0) * Number(item.qty || 1), 0);
+  const discount = Math.max(0, Number($("paymentDiscountInput")?.value || 0));
+  const tip = Math.max(0, Number($("paymentTipInput")?.value || 0));
+  return {subtotal, discount, tip, total: Math.max(0, subtotal - discount + tip)};
+}
+
+function renderPaymentCart(){
+  const list = $("paymentCartList");
+  if(!list) return;
+  list.innerHTML = paymentCart.length ? paymentCart.map(item=>`
+    <div class="payment-cart-item">
+      <div class="payment-cart-info">
+        <strong>${escapeHtml(item.title)}</strong>
+        <label class="payment-price-edit">Betrag €
+          <input type="number" min="0" step="0.01" value="${Number(item.price || 0)}" data-payment-price="${escapeHtml(item.id)}">
+        </label>
+        <small>${money(item.price)} × ${Number(item.qty || 1)}</small>
+      </div>
+      <div class="payment-cart-actions">
+        <button type="button" data-payment-minus="${escapeHtml(item.id)}">−</button>
+        <span>${Number(item.qty || 1)}</span>
+        <button type="button" data-payment-plus="${escapeHtml(item.id)}">+</button>
+        <button type="button" data-payment-remove="${escapeHtml(item.id)}">×</button>
+      </div>
+    </div>`).join("") : `<p class="hint">Noch keine Position im Warenkorb.</p>`;
+  list.querySelectorAll("[data-payment-price]").forEach(input=>input.oninput=()=>updatePaymentItemPrice(input.dataset.paymentPrice, input.value));
+  list.querySelectorAll("[data-payment-minus]").forEach(btn=>btn.onclick=()=>changePaymentQty(btn.dataset.paymentMinus, -1));
+  list.querySelectorAll("[data-payment-plus]").forEach(btn=>btn.onclick=()=>changePaymentQty(btn.dataset.paymentPlus, 1));
+  list.querySelectorAll("[data-payment-remove]").forEach(btn=>btn.onclick=()=>{ paymentCart = paymentCart.filter(x=>x.id !== btn.dataset.paymentRemove); renderPaymentCart(); });
+  const totals = paymentTotals();
+  if($("paymentSubtotal")) $("paymentSubtotal").textContent = money(totals.subtotal);
+  if($("paymentTotal")) $("paymentTotal").textContent = money(totals.total);
+}
+
+function updatePaymentItemPrice(id, value){
+  const item = paymentCart.find(x=>x.id === id);
+  if(!item) return;
+  item.price = Math.max(0, Number(String(value).replace(",", ".") || 0));
+  const totals = paymentTotals();
+  if($("paymentSubtotal")) $("paymentSubtotal").textContent = money(totals.subtotal);
+  if($("paymentTotal")) $("paymentTotal").textContent = money(totals.total);
+}
+
+function changePaymentQty(id, delta){
+  const item = paymentCart.find(x=>x.id === id);
+  if(!item) return;
+  item.qty = Math.max(1, Number(item.qty || 1) + delta);
+  renderPaymentCart();
+}
+
+function completePaymentSale(){
+  if(!paymentCart.length){ alert("Bitte zuerst eine Leistung oder einen Termin auswählen."); return; }
+  const totals = paymentTotals();
+  const sale = {id: uid(), date: state.selectedDate || todayISO(), createdAt: new Date().toISOString(), method: paymentMethod, items: paymentCart.map(x=>({...x})), subtotal: totals.subtotal, discount: totals.discount, tip: totals.tip, total: totals.total};
+  state.paymentSales = state.paymentSales || [];
+  state.paymentSales.push(sale);
+
+  // Verknüpfung Bezahlen -> Kasse/Umsatz:
+  // Beim Abschluss werden verknüpfte Termine als bezahlt markiert und der tatsächlich kassierte Betrag
+  // direkt in den Mitarbeiter-Umsatz/Kasse-Datensatz übernommen. Dadurch erscheint der Umsatz sofort in „Kasse“.
+  const touchedDays = new Set([sale.date]);
+  paymentCart.forEach(item=>{
+    if(item.sourceAppointmentId){
+      const paidAmount = Number(item.price || 0) * Number(item.qty || 1);
+      const a = (state.appointments || []).find(x=>x.id === item.sourceAppointmentId);
+      if(a){
+        a.status = "Erledigt";
+        a.price = paidAmount;
+        touchedDays.add(a.date || sale.date);
+      }
+      ensureEmployeeDailyRevenueRecordsForDay(a?.date || sale.date);
+      const record = employeeDailyRevenueRecordByAppointmentId(item.sourceAppointmentId);
+      if(record){
+        record.status = "Erledigt";
+        record.price = paidAmount;
+        record.originalServicePrice = paidAmount;
+        record.serviceName = item.title || record.serviceName || "Leistung";
+        record.updatedAt = new Date().toISOString();
+      }
+    }
+  });
+
+  const appointmentAmount = paymentCart
+    .filter(item => item.sourceAppointmentId)
+    .reduce((sum,item)=>sum + Number(item.price || 0) * Number(item.qty || 1), 0);
+  const manualAmount = totals.total - appointmentAmount;
+  if(Math.abs(manualAmount) > 0.001){
+    state.manualRevenueItems = state.manualRevenueItems || [];
+    const productNote = sale.items.filter(x=>!x.sourceAppointmentId).map(x=>`${x.title} x${x.qty}`).join(", ");
+    state.manualRevenueItems.push({
+      id: uid(),
+      date: sale.date,
+      title: `Bezahlen ${paymentMethod}`,
+      label: `Bezahlen ${paymentMethod}`,
+      note: productNote || "Rabatt / Trinkgeld / Korrektur",
+      amount: manualAmount,
+      paymentSaleId: sale.id
+    });
+  }
+
+  saveState();
+  touchedDays.forEach(day => ensureEmployeeDailyRevenueRecordsForDay(day));
+  renderAll();
+  renderCashTab();
+  renderEmployeeDailyRevenue();
+  renderReport();
+  paymentClearCart();
+  alert(`Bezahlung gespeichert und in Kasse übernommen: ${money(totals.total)} (${paymentMethod})`);
+}
+
 function switchCashJournalTab(id){
   const target = id || "settingsCashTab";
   const dialog = $("cashJournalDialog");
@@ -1320,13 +1506,13 @@ const I18N = {
   }
 };
 Object.assign(I18N.de, {
-  initialSetup:"Ersteinrichtung", setupHint:"Die App läuft lokal auf diesem Gerät. Cloud-Backup nutzt aktuell Export oder Teilen-Menü.", opensAt:"Öffnet um", closesAt:"Schließt um", initialEmployees:"Erste Mitarbeiter, getrennt mit Komma", startApp:"App starten", dailySchedule:"Tagesplan", revenueReport:"Umsatzbericht", from:"Von", to:"Bis", refreshReport:"Bericht aktualisieren", period:"Zeitraum", appointmentsPeriod:"Termine Zeitraum", deletedFromRevenue:"Aus Umsatz gelöscht", daysInReport:"Tage im Bericht", deleteRevenueHint:"Mit „Aus Umsatz löschen“ wird der komplette Tag nicht mehr im Umsatzbericht gezählt. Die Termine bleiben im Kalender erhalten.", deletedRevenueDays:"Gelöschte Tage für Umsatzbericht", employeeHint:"Mitarbeiter hier anlegen, verändern oder deaktivieren.", calendarFontColor:"Schriftfarbe im Kalender", customerHint:"Kunden hier anlegen, bearbeiten oder löschen. Beim Eintippen im Terminformular werden Kundendaten vorgeschlagen.", serviceHint:"Leistungen mit Preisen und Dauer selbst gestalten und speichern.", deleteAppointmentsPermanently:"Termine endgültig löschen", deleteAppointmentsHint:"Achtung: Diese Funktion löscht Termine endgültig. Es gibt keine Wiederherstellung in der App. Vorher am besten ein Backup exportieren.", wholeDay:"Ganzer Tag", wholeWeek:"Ganze Woche", wholeMonth:"Ganzer Monat", appointment:"Termin", markDonePaid:"Als bezahlt", markNoShow:"Nicht erschienen", localBackup:"💾 Lokal Backup", localBackupHint:"Exportiert und importiert lokale JSON-Backups. „Bereinigung + Backup“ löscht zuerst alle Termine von heute und Vergangenheit sowie Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz. Danach wird ein Backup erstellt. Nur Zukunft-Termine bleiben erhalten.", cleanupAndBackup:"Bereinigung + Backup", cloudBackupNow:"Cloud Backup jetzt erstellen", autoAfterCleanup:"Automatisch nach „Bereinigung + Backup“", enableRevenueArea:"Umsatzbereich aktivieren", revenueVisibilityHint:"Wenn deaktiviert, werden Umsatzbericht, Umsatzbutton und Umsatzfunktionen ausgeblendet.", noLocalBackup:"Noch kein lokales Backup erstellt.", lastLocalBackup:"Letztes lokales Backup", noCloudBackup:"Noch kein Cloud Backup erstellt.", lastCloudBackup:"Letztes Cloud Backup", cloudDisabled:"Cloud Backup ist deaktiviert.", cloudStatusHint:"Bei aktivem Cloud Backup wird das Teilen/Speichern-Menü genutzt.", importSuccess:"Backup wurde erfolgreich wiederhergestellt.", importFailed:"Backup konnte nicht gelesen werden. Datei ist ungültig oder beschädigt.", backupManualDownload:"Backup-Datei manuell herunterladen", noCleanupData:"Keine alten Daten zum Bereinigen gefunden.", cleanupConfirm:"Alle Termine von heute und Vergangenheit sowie alle Umsätze aus Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz werden gelöscht. Danach wird ein Backup erstellt. Nur Zukunft-Termine bleiben erhalten. Fortfahren?", cleanupRunning:"Bereinige und erstelle Backup...", cleanupDone:"Bereinigung abgeschlossen. Nur Zukunft-Termine bleiben erhalten. Backup wurde erstellt: {filename}.", serviceFallback:"Leistung", employeeLabel:"Mitarbeiter", phoneLabel:"Telefon", internalStatus:"Status intern", priceLabel:"Preis", noteLabel:"Notiz", noAppointmentsInRange:"Keine Termine im Zeitraum.", noDeletedDays:"Keine Tage gelöscht.", appointmentsWord:"Termine", revenueDeletedPermanently:"Umsatz endgültig gelöscht", notRecoverable:"Nicht wiederherstellbar", revenueWord:"Umsatz", deleteRevenuePermanently:"Umsatz endgültig löschen", noAppointmentsInRange:"Keine Termine im Zeitraum.", noDeletedDays:"Keine Tage gelöscht.", days:"Tage"
+  initialSetup:"Ersteinrichtung", setupHint:"Die App läuft lokal auf diesem Gerät. Cloud-Backup nutzt aktuell Export oder Teilen-Menü.", opensAt:"Öffnet um", closesAt:"Schließt um", initialEmployees:"Erste Mitarbeiter, getrennt mit Komma", startApp:"App starten", dailySchedule:"Tagesplan", revenueReport:"Umsatzbericht", from:"Von", to:"Bis", refreshReport:"Bericht aktualisieren", period:"Zeitraum", appointmentsPeriod:"Termine Zeitraum", deletedFromRevenue:"Aus Umsatz gelöscht", daysInReport:"Tage im Bericht", deleteRevenueHint:"Mit „Aus Umsatz löschen“ wird der komplette Tag nicht mehr im Umsatzbericht gezählt. Die Termine bleiben im Kalender erhalten.", deletedRevenueDays:"Gelöschte Tage für Umsatzbericht", employeeHint:"Mitarbeiter hier anlegen, verändern oder deaktivieren.", calendarFontColor:"Schriftfarbe im Kalender", customerHint:"Kunden hier anlegen, bearbeiten oder löschen. Beim Eintippen im Terminformular werden Kundendaten vorgeschlagen.", serviceHint:"Leistungen mit Preisen und Dauer selbst gestalten und speichern.", deleteAppointmentsPermanently:"Termine endgültig löschen", deleteAppointmentsHint:"Achtung: Diese Funktion löscht Termine endgültig. Es gibt keine Wiederherstellung in der App. Vorher am besten ein Backup exportieren.", wholeDay:"Ganzer Tag", wholeWeek:"Ganze Woche", wholeMonth:"Ganzer Monat", appointment:"Termin", markDonePaid:"Bezahlen", markNoShow:"Nicht erschienen", localBackup:"💾 Lokal Backup", localBackupHint:"Exportiert und importiert lokale JSON-Backups. „Bereinigung + Backup“ löscht zuerst alle Termine von heute und Vergangenheit sowie Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz. Danach wird ein Backup erstellt. Nur Zukunft-Termine bleiben erhalten.", cleanupAndBackup:"Bereinigung + Backup", cloudBackupNow:"Cloud Backup jetzt erstellen", autoAfterCleanup:"Automatisch nach „Bereinigung + Backup“", enableRevenueArea:"Umsatzbereich aktivieren", revenueVisibilityHint:"Wenn deaktiviert, werden Umsatzbericht, Umsatzbutton und Umsatzfunktionen ausgeblendet.", noLocalBackup:"Noch kein lokales Backup erstellt.", lastLocalBackup:"Letztes lokales Backup", noCloudBackup:"Noch kein Cloud Backup erstellt.", lastCloudBackup:"Letztes Cloud Backup", cloudDisabled:"Cloud Backup ist deaktiviert.", cloudStatusHint:"Bei aktivem Cloud Backup wird das Teilen/Speichern-Menü genutzt.", importSuccess:"Backup wurde erfolgreich wiederhergestellt.", importFailed:"Backup konnte nicht gelesen werden. Datei ist ungültig oder beschädigt.", backupManualDownload:"Backup-Datei manuell herunterladen", noCleanupData:"Keine alten Daten zum Bereinigen gefunden.", cleanupConfirm:"Alle Termine von heute und Vergangenheit sowie alle Umsätze aus Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz werden gelöscht. Danach wird ein Backup erstellt. Nur Zukunft-Termine bleiben erhalten. Fortfahren?", cleanupRunning:"Bereinige und erstelle Backup...", cleanupDone:"Bereinigung abgeschlossen. Nur Zukunft-Termine bleiben erhalten. Backup wurde erstellt: {filename}.", serviceFallback:"Leistung", employeeLabel:"Mitarbeiter", phoneLabel:"Telefon", internalStatus:"Status intern", priceLabel:"Preis", noteLabel:"Notiz", noAppointmentsInRange:"Keine Termine im Zeitraum.", noDeletedDays:"Keine Tage gelöscht.", appointmentsWord:"Termine", revenueDeletedPermanently:"Umsatz endgültig gelöscht", notRecoverable:"Nicht wiederherstellbar", revenueWord:"Umsatz", deleteRevenuePermanently:"Umsatz endgültig löschen", noAppointmentsInRange:"Keine Termine im Zeitraum.", noDeletedDays:"Keine Tage gelöscht.", days:"Tage"
 });
 Object.assign(I18N.vi, {
-  initialSetup:"Thiết lập ban đầu", setupHint:"Ứng dụng lưu dữ liệu cục bộ trên thiết bị này. Sao lưu Cloud hiện dùng xuất file hoặc menu chia sẻ.", opensAt:"Mở cửa lúc", closesAt:"Đóng cửa lúc", initialEmployees:"Nhân viên ban đầu, cách nhau bằng dấu phẩy", startApp:"Bắt đầu ứng dụng", dailySchedule:"Lịch trong ngày", revenueReport:"Báo cáo doanh thu", from:"Từ", to:"Đến", refreshReport:"Cập nhật báo cáo", period:"Khoảng thời gian", appointmentsPeriod:"Lịch hẹn trong khoảng", deletedFromRevenue:"Đã xóa khỏi doanh thu", daysInReport:"Ngày trong báo cáo", deleteRevenueHint:"Khi dùng “Xóa khỏi doanh thu”, cả ngày sẽ không còn được tính trong báo cáo. Lịch hẹn vẫn ở trong lịch.", deletedRevenueDays:"Ngày đã xóa khỏi báo cáo doanh thu", employeeHint:"Tạo, sửa hoặc tắt nhân viên tại đây.", calendarFontColor:"Màu chữ trong lịch", customerHint:"Tạo, sửa hoặc xóa khách hàng. Khi nhập lịch hẹn, dữ liệu khách sẽ được gợi ý.", serviceHint:"Tự tạo dịch vụ với giá và thời lượng.", deleteAppointmentsPermanently:"Xóa lịch hẹn vĩnh viễn", deleteAppointmentsHint:"Chú ý: Chức năng này xóa lịch hẹn vĩnh viễn. Không thể khôi phục trong ứng dụng. Nên xuất sao lưu trước.", wholeDay:"Cả ngày", wholeWeek:"Cả tuần", wholeMonth:"Cả tháng", appointment:"Lịch hẹn", markDonePaid:"Đánh dấu xong / đã trả", localBackup:"💾 Sao lưu cục bộ", localBackupHint:"Xuất và nhập file sao lưu JSON cục bộ. “Dọn dẹp + Sao lưu” xóa tất cả lịch hẹn hôm nay và quá khứ cùng doanh thu nhân viên, thu nhập, kassa, doanh thu tuần và doanh thu tháng. Sau đó tạo sao lưu. Chỉ lịch hẹn tương lai được giữ lại.", cleanupAndBackup:"Dọn dẹp + Sao lưu", cloudBackupNow:"Tạo sao lưu Cloud ngay", autoAfterCleanup:"Tự động sau “Dọn dẹp + sao lưu”", enableRevenueArea:"Bật khu vực doanh thu", revenueVisibilityHint:"Khi tắt, báo cáo doanh thu, nút doanh thu và chức năng doanh thu sẽ bị ẩn.", noLocalBackup:"Chưa tạo sao lưu cục bộ.", lastLocalBackup:"Sao lưu cục bộ gần nhất", noCloudBackup:"Chưa tạo sao lưu Cloud.", lastCloudBackup:"Sao lưu Cloud gần nhất", cloudDisabled:"Sao lưu Cloud đang tắt.", cloudStatusHint:"Khi bật Cloud Backup, ứng dụng dùng menu chia sẻ/lưu.", importSuccess:"Đã khôi phục sao lưu thành công.", importFailed:"Không đọc được sao lưu. File không hợp lệ hoặc bị hỏng.", backupManualDownload:"Tải file sao lưu thủ công", noCleanupData:"Không có dữ liệu cũ để dọn dẹp.", cleanupConfirm:"Tất cả lịch hẹn hôm nay và quá khứ cùng doanh thu nhân viên, thu nhập, kassa, doanh thu tuần và doanh thu tháng sẽ bị xóa. Sau đó sẽ tạo sao lưu. Chỉ lịch hẹn tương lai được giữ lại. Tiếp tục?", cleanupRunning:"Đang dọn dẹp và tạo sao lưu...", cleanupDone:"Dọn dẹp xong. Chỉ lịch hẹn tương lai được giữ lại. Đã tạo file sao lưu: {filename}.", serviceFallback:"Dịch vụ", employeeLabel:"Nhân viên", phoneLabel:"Số điện thoại", internalStatus:"Trạng thái nội bộ", priceLabel:"Giá", noteLabel:"Ghi chú", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", appointmentsWord:"lịch hẹn", revenueDeletedPermanently:"Doanh thu đã xóa vĩnh viễn", notRecoverable:"Không thể khôi phục", revenueWord:"Doanh thu", deleteRevenuePermanently:"Xóa doanh thu vĩnh viễn", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", days:"ngày"
+  initialSetup:"Thiết lập ban đầu", setupHint:"Ứng dụng lưu dữ liệu cục bộ trên thiết bị này. Sao lưu Cloud hiện dùng xuất file hoặc menu chia sẻ.", opensAt:"Mở cửa lúc", closesAt:"Đóng cửa lúc", initialEmployees:"Nhân viên ban đầu, cách nhau bằng dấu phẩy", startApp:"Bắt đầu ứng dụng", dailySchedule:"Lịch trong ngày", revenueReport:"Báo cáo doanh thu", from:"Từ", to:"Đến", refreshReport:"Cập nhật báo cáo", period:"Khoảng thời gian", appointmentsPeriod:"Lịch hẹn trong khoảng", deletedFromRevenue:"Đã xóa khỏi doanh thu", daysInReport:"Ngày trong báo cáo", deleteRevenueHint:"Khi dùng “Xóa khỏi doanh thu”, cả ngày sẽ không còn được tính trong báo cáo. Lịch hẹn vẫn ở trong lịch.", deletedRevenueDays:"Ngày đã xóa khỏi báo cáo doanh thu", employeeHint:"Tạo, sửa hoặc tắt nhân viên tại đây.", calendarFontColor:"Màu chữ trong lịch", customerHint:"Tạo, sửa hoặc xóa khách hàng. Khi nhập lịch hẹn, dữ liệu khách sẽ được gợi ý.", serviceHint:"Tự tạo dịch vụ với giá và thời lượng.", deleteAppointmentsPermanently:"Xóa lịch hẹn vĩnh viễn", deleteAppointmentsHint:"Chú ý: Chức năng này xóa lịch hẹn vĩnh viễn. Không thể khôi phục trong ứng dụng. Nên xuất sao lưu trước.", wholeDay:"Cả ngày", wholeWeek:"Cả tuần", wholeMonth:"Cả tháng", appointment:"Lịch hẹn", markDonePaid:"Thanh toán", localBackup:"💾 Sao lưu cục bộ", localBackupHint:"Xuất và nhập file sao lưu JSON cục bộ. “Dọn dẹp + Sao lưu” xóa tất cả lịch hẹn hôm nay và quá khứ cùng doanh thu nhân viên, thu nhập, kassa, doanh thu tuần và doanh thu tháng. Sau đó tạo sao lưu. Chỉ lịch hẹn tương lai được giữ lại.", cleanupAndBackup:"Dọn dẹp + Sao lưu", cloudBackupNow:"Tạo sao lưu Cloud ngay", autoAfterCleanup:"Tự động sau “Dọn dẹp + sao lưu”", enableRevenueArea:"Bật khu vực doanh thu", revenueVisibilityHint:"Khi tắt, báo cáo doanh thu, nút doanh thu và chức năng doanh thu sẽ bị ẩn.", noLocalBackup:"Chưa tạo sao lưu cục bộ.", lastLocalBackup:"Sao lưu cục bộ gần nhất", noCloudBackup:"Chưa tạo sao lưu Cloud.", lastCloudBackup:"Sao lưu Cloud gần nhất", cloudDisabled:"Sao lưu Cloud đang tắt.", cloudStatusHint:"Khi bật Cloud Backup, ứng dụng dùng menu chia sẻ/lưu.", importSuccess:"Đã khôi phục sao lưu thành công.", importFailed:"Không đọc được sao lưu. File không hợp lệ hoặc bị hỏng.", backupManualDownload:"Tải file sao lưu thủ công", noCleanupData:"Không có dữ liệu cũ để dọn dẹp.", cleanupConfirm:"Tất cả lịch hẹn hôm nay và quá khứ cùng doanh thu nhân viên, thu nhập, kassa, doanh thu tuần và doanh thu tháng sẽ bị xóa. Sau đó sẽ tạo sao lưu. Chỉ lịch hẹn tương lai được giữ lại. Tiếp tục?", cleanupRunning:"Đang dọn dẹp và tạo sao lưu...", cleanupDone:"Dọn dẹp xong. Chỉ lịch hẹn tương lai được giữ lại. Đã tạo file sao lưu: {filename}.", serviceFallback:"Dịch vụ", employeeLabel:"Nhân viên", phoneLabel:"Số điện thoại", internalStatus:"Trạng thái nội bộ", priceLabel:"Giá", noteLabel:"Ghi chú", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", appointmentsWord:"lịch hẹn", revenueDeletedPermanently:"Doanh thu đã xóa vĩnh viễn", notRecoverable:"Không thể khôi phục", revenueWord:"Doanh thu", deleteRevenuePermanently:"Xóa doanh thu vĩnh viễn", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", days:"ngày"
 });
 Object.assign(I18N.en, {
-  initialSetup:"Initial setup", setupHint:"The app stores data locally on this device. Cloud backup currently uses export or the share menu.", opensAt:"Opens at", closesAt:"Closes at", initialEmployees:"Initial employees, separated by commas", startApp:"Start app", dailySchedule:"Daily schedule", revenueReport:"Revenue report", from:"From", to:"To", refreshReport:"Refresh report", period:"Period", appointmentsPeriod:"Appointments period", deletedFromRevenue:"Deleted from revenue", daysInReport:"Days in report", deleteRevenueHint:"When “Delete from revenue” is used, the whole day is no longer counted in the revenue report. Appointments stay in the calendar.", deletedRevenueDays:"Deleted days for revenue report", employeeHint:"Create, edit or deactivate employees here.", calendarFontColor:"Calendar font color", customerHint:"Create, edit or delete customers here. Customer data is suggested when typing in the appointment form.", serviceHint:"Create services with custom prices and durations.", deleteAppointmentsPermanently:"Permanently delete appointments", deleteAppointmentsHint:"Warning: This permanently deletes appointments. There is no restore function in the app. Export a backup first if needed.", wholeDay:"Whole day", wholeWeek:"Whole week", wholeMonth:"Whole month", appointment:"Appointment", markDonePaid:"Mark done / paid", markNoShow:"No-show", localBackup:"💾 Local Backup", localBackupHint:"Exports and imports local JSON backups. “Cleanup + Backup” deletes all appointments from today and the past plus Employee Revenue, Income, Cash Register, Weekly Revenue and Monthly Revenue. Then it creates the backup. Only future appointments remain.", cleanupAndBackup:"Cleanup + Backup", cloudBackupNow:"Create cloud backup now", autoAfterCleanup:"Automatically after “Cleanup + Backup”", enableRevenueArea:"Enable revenue area", revenueVisibilityHint:"When disabled, the revenue report, revenue button and revenue functions are hidden.", noLocalBackup:"No local backup created yet.", lastLocalBackup:"Last local backup", noCloudBackup:"No cloud backup created yet.", lastCloudBackup:"Last cloud backup", cloudDisabled:"Cloud backup is disabled.", cloudStatusHint:"When cloud backup is active, the share/save menu is used.", importSuccess:"Backup restored successfully.", importFailed:"Backup could not be read. The file is invalid or damaged.", backupManualDownload:"Download backup file manually", noCleanupData:"No old data found for cleanup.", cleanupConfirm:"All appointments from today and the past plus all revenue data from Employee Revenue, Income, Cash Register, Weekly Revenue and Monthly Revenue will be deleted. Then a backup will be created. Only future appointments remain. Continue?", cleanupRunning:"Cleaning and creating backup...", cleanupDone:"Cleanup completed. Only future appointments remain. Backup file created: {filename}.", serviceFallback:"Service", employeeLabel:"Employee", phoneLabel:"Phone", internalStatus:"Internal status", priceLabel:"Price", noteLabel:"Note", noAppointmentsInRange:"No appointments in this period.", noDeletedDays:"No days deleted.", appointmentsWord:"appointments", revenueDeletedPermanently:"Revenue permanently deleted", notRecoverable:"Not recoverable", revenueWord:"Revenue", deleteRevenuePermanently:"Permanently delete revenue", noAppointmentsInRange:"No appointments in this period.", noDeletedDays:"No days deleted.", days:"days"
+  initialSetup:"Initial setup", setupHint:"The app stores data locally on this device. Cloud backup currently uses export or the share menu.", opensAt:"Opens at", closesAt:"Closes at", initialEmployees:"Initial employees, separated by commas", startApp:"Start app", dailySchedule:"Daily schedule", revenueReport:"Revenue report", from:"From", to:"To", refreshReport:"Refresh report", period:"Period", appointmentsPeriod:"Appointments period", deletedFromRevenue:"Deleted from revenue", daysInReport:"Days in report", deleteRevenueHint:"When “Delete from revenue” is used, the whole day is no longer counted in the revenue report. Appointments stay in the calendar.", deletedRevenueDays:"Deleted days for revenue report", employeeHint:"Create, edit or deactivate employees here.", calendarFontColor:"Calendar font color", customerHint:"Create, edit or delete customers here. Customer data is suggested when typing in the appointment form.", serviceHint:"Create services with custom prices and durations.", deleteAppointmentsPermanently:"Permanently delete appointments", deleteAppointmentsHint:"Warning: This permanently deletes appointments. There is no restore function in the app. Export a backup first if needed.", wholeDay:"Whole day", wholeWeek:"Whole week", wholeMonth:"Whole month", appointment:"Appointment", markDonePaid:"Pay", markNoShow:"No-show", localBackup:"💾 Local Backup", localBackupHint:"Exports and imports local JSON backups. “Cleanup + Backup” deletes all appointments from today and the past plus Employee Revenue, Income, Cash Register, Weekly Revenue and Monthly Revenue. Then it creates the backup. Only future appointments remain.", cleanupAndBackup:"Cleanup + Backup", cloudBackupNow:"Create cloud backup now", autoAfterCleanup:"Automatically after “Cleanup + Backup”", enableRevenueArea:"Enable revenue area", revenueVisibilityHint:"When disabled, the revenue report, revenue button and revenue functions are hidden.", noLocalBackup:"No local backup created yet.", lastLocalBackup:"Last local backup", noCloudBackup:"No cloud backup created yet.", lastCloudBackup:"Last cloud backup", cloudDisabled:"Cloud backup is disabled.", cloudStatusHint:"When cloud backup is active, the share/save menu is used.", importSuccess:"Backup restored successfully.", importFailed:"Backup could not be read. The file is invalid or damaged.", backupManualDownload:"Download backup file manually", noCleanupData:"No old data found for cleanup.", cleanupConfirm:"All appointments from today and the past plus all revenue data from Employee Revenue, Income, Cash Register, Weekly Revenue and Monthly Revenue will be deleted. Then a backup will be created. Only future appointments remain. Continue?", cleanupRunning:"Cleaning and creating backup...", cleanupDone:"Cleanup completed. Only future appointments remain. Backup file created: {filename}.", serviceFallback:"Service", employeeLabel:"Employee", phoneLabel:"Phone", internalStatus:"Internal status", priceLabel:"Price", noteLabel:"Note", noAppointmentsInRange:"No appointments in this period.", noDeletedDays:"No days deleted.", appointmentsWord:"appointments", revenueDeletedPermanently:"Revenue permanently deleted", notRecoverable:"Not recoverable", revenueWord:"Revenue", deleteRevenuePermanently:"Permanently delete revenue", noAppointmentsInRange:"No appointments in this period.", noDeletedDays:"No days deleted.", days:"days"
 });
 Object.assign(I18N.de, {
   displaySettings:"Darstellung / Geräteansicht",
@@ -2566,10 +2752,41 @@ function saveInlineAppointmentEdit(){
   renderAll();
   showAppointment(a.id);
 }
-function completeSelectedAppointment(){
-  const a=state.appointments.find(x=>x.id===selectedAppointmentId); if(!a) return;
-  a.status="Erledigt";
-  saveState(); $("appointmentDialog").close(); renderAll();
+function paySelectedAppointment(){
+  openPaymentForAppointment(selectedAppointmentId);
+}
+
+function openPaymentForAppointment(appointmentId){
+  const a = (state.appointments || []).find(x => x.id === appointmentId);
+  if(!a) return;
+  selectedAppointmentId = appointmentId;
+
+  // Terminfenster schließen und direkt in den Bezahlen-Bereich wechseln.
+  try{ if($("appointmentDialog") && $("appointmentDialog").open) $("appointmentDialog").close(); }catch(err){}
+
+  const matchedService = (state.services || []).find(s => String(s.name || "").trim().toLowerCase() === String(a.serviceName || "").trim().toLowerCase());
+  const appointmentPrice = Number(a.price || 0) || Number(matchedService?.price || 0);
+  paymentCart = [{
+    id: uid(),
+    sourceAppointmentId: a.id,
+    serviceId: matchedService?.id,
+    title: a.serviceName || matchedService?.name || "Termin",
+    qty: 1,
+    price: appointmentPrice
+  }];
+  paymentMethod = "Bar";
+  if($("paymentDiscountInput")) $("paymentDiscountInput").value = "0";
+  if($("paymentTipInput")) $("paymentTipInput").value = "0";
+
+  openPaymentSystem({keepCart:true});
+
+  // Nach dem Rendern den Kunden/Termin im Auswahlfeld anzeigen.
+  setTimeout(() => {
+    if($("paymentAppointmentSelect")){
+      $("paymentAppointmentSelect").value = a.id;
+    }
+    renderPaymentCart();
+  }, 0);
 }
 function noShowSelectedAppointment(){
   const a=state.appointments.find(x=>x.id===selectedAppointmentId); if(!a) return;
@@ -4041,7 +4258,6 @@ function openSettings(){
   updateDeletePeriodPreview();
   updateCleanupPreview();
   updateBackupStatuses();
-  updateLicenseInfoBox();
   switchSettingsTab("settingsGeneralTab");
   $("settingsDialog").showModal();
 }

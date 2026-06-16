@@ -11,8 +11,6 @@
 </head>
 <body>
 <div id="app">
-
-  <!-- Lizenz-/Studio-ID-Sperrseite: Wird vor Setup oder Haupt-App angezeigt, bis die Lizenz geprüft wurde. -->
   <section id="licenseScreen" class="screen hidden license-screen">
     <div class="license-card">
       <img class="setup-logo" src="logo-192.png" alt="Logo">
@@ -25,13 +23,13 @@
 
       <div id="licenseStatusBox" class="license-status-box hidden"></div>
 
-
       <div class="license-actions">
         <button id="licenseCheckBtn" type="button">Lizenz prüfen</button>
         <button id="licenseChangeStudioBtn" type="button" class="secondary">Studio-ID ändern</button>
       </div>
     </div>
   </section>
+
   <section id="setupScreen" class="screen hidden">
     <div class="setup-card">
       <img class="setup-logo" src="logo-192.png" alt="Logo">
@@ -78,6 +76,7 @@
       </div>
       <div class="top-actions">
         <button id="revenueHeaderButton" class="icon-tab revenue-feature" data-tab="reportTab" title="Umsatzbericht" data-i18n-title="revenueReport">📊</button>
+        <button id="dashboardPaymentBtn" class="settings-button payment-dashboard-button">💳 <span>Bezahlen</span></button>
         <button id="dashboardCashJournalBtn" class="settings-button cash-dashboard-button">💶 <span data-i18n="cashRegister">Kasse</span></button>
         <button id="settingsBtn" class="settings-button">⚙️ <span data-i18n="settings">Einstellungen</span></button>
       </div>
@@ -301,14 +300,12 @@
           <p id="displayModeHint" class="hint">Aktiv: Automatisch</p>
         </div>
 
-        <!-- Lizenzanzeige: Statusinformationen und Wechsel der Studio-ID. -->
         <div class="settings-section license-info-section">
           <h3>Lizenz</h3>
           <div id="licenseInfoBox" class="license-info-box">Lizenz wird geprüft …</div>
           <button id="settingsChangeStudioIdBtn" type="button" class="secondary">Studio-ID ändern</button>
           <button id="settingsRecheckLicenseBtn" type="button" class="secondary">Lizenz erneut prüfen</button>
         </div>
-
         <div class="settings-section">
           <h3 data-i18n="employeeDatabase">Mitarbeiter-Datenbank</h3>
           <p class="hint" data-i18n="employeeHint">Mitarbeiter hier anlegen, verändern oder deaktivieren.</p>
@@ -454,6 +451,46 @@
     <menu>
       <button id="closeSettingsBtn" data-i18n="close">Schließen</button>
     </menu>
+  </dialog>
+
+
+  <dialog id="paymentDialog" class="settings-dialog payment-dialog">
+    <div class="settings-dialog-header payment-dialog-header">
+      <h2>💳 Bezahlen</h2>
+      <button id="closePaymentBtn" type="button" class="secondary">Schließen</button>
+    </div>
+    <div class="payment-layout">
+      <section class="payment-panel payment-products-panel">
+        <div class="payment-section-title">
+          <h3>Leistungen / Produkte</h3>
+          <input id="paymentSearchInput" type="search" placeholder="Suchen...">
+        </div>
+        <div id="paymentServiceGrid" class="payment-service-grid"></div>
+      </section>
+      <section class="payment-panel payment-cart-panel">
+        <div class="payment-section-title">
+          <h3>Warenkorb</h3>
+          <button id="paymentClearCartBtn" type="button" class="secondary">Leeren</button>
+        </div>
+        <label>Termin/Kunde von heute
+          <select id="paymentAppointmentSelect"></select>
+        </label>
+        <div id="paymentCartList" class="payment-cart-list"></div>
+        <div class="payment-totals">
+          <div><span>Zwischensumme</span><strong id="paymentSubtotal">0,00 €</strong></div>
+          <label class="payment-discount-row"><span>Rabatt €</span><input id="paymentDiscountInput" type="number" min="0" step="0.01" value="0"></label>
+          <label class="payment-discount-row"><span>Trinkgeld €</span><input id="paymentTipInput" type="number" min="0" step="0.01" value="0"></label>
+          <div class="payment-total-row"><span>Gesamt</span><strong id="paymentTotal">0,00 €</strong></div>
+        </div>
+        <div class="payment-methods">
+          <button type="button" class="payment-method active" data-payment-method="Bar">Bar</button>
+          <button type="button" class="payment-method" data-payment-method="Karte">Karte</button>
+          <button type="button" class="payment-method" data-payment-method="Gutschein">Gutschein</button>
+        </div>
+        <button id="paymentCompleteBtn" type="button" class="payment-complete-btn">Bezahlung abschließen</button>
+        <p class="hint">Hinweis: Diese Kasse speichert lokal Umsatzpositionen und markiert ausgewählte Termine als bezahlt. Für eine echte Deutschland-Kasse müssen TSE, DSFinV-K und GoBD noch angebunden werden.</p>
+      </section>
+    </div>
   </dialog>
 
   <dialog id="cashJournalDialog" class="settings-dialog cash-journal-dialog">
@@ -720,16 +757,14 @@
 
     <menu>
       <button id="editAppointmentBtn" class="secondary" data-i18n="edit">Bearbeiten</button>
-      <button id="completeAppointmentBtn" class="success" data-i18n="markDonePaid">Als bezahlt</button>
+      <button id="completeAppointmentBtn" class="success" data-i18n="markDonePaid">Bezahlen</button>
       <button id="noShowAppointmentBtn" class="secondary" data-i18n="markNoShow">Nicht erschienen</button>
       <button id="deleteAppointmentBtn" class="danger" data-i18n="delete">Löschen</button>
       <button id="closeAppointmentBtn" data-i18n="close">Schließen</button>
     </menu>
   </dialog>
 
-  <!-- Lizenz-Fußleiste: immer sichtbar, wenn die App freigeschaltet ist. -->
   <div id="licenseFooterBar" class="license-footer-bar hidden" aria-live="polite">Lizenz wird geprüft …</div>
-
 <script src="app.js"></script>
 </body>
 </html>
