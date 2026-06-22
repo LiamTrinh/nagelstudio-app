@@ -247,7 +247,7 @@ menu{display:flex;justify-content:flex-end;gap:10px;padding:0;position:sticky;bo
   bottom:0;
   width:4px;
   background:#ffd400;
-  z-index:15;
+  z-index:7;
   border-radius:4px;
   box-shadow:0 0 0 2px rgba(255,212,0,.25), 0 0 12px rgba(255,212,0,.75);
   pointer-events:none;
@@ -262,7 +262,7 @@ menu{display:flex;justify-content:flex-end;gap:10px;padding:0;position:sticky;bo
   font-weight:900;
   padding:4px 8px;
   border-radius:999px;
-  z-index:16;
+  z-index:9;
   pointer-events:none;
   white-space:nowrap;
 }

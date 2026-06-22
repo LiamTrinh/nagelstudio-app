@@ -245,7 +245,6 @@ let touchDragPointerId = null;
 let suppressAppointmentClick = false;
 let editingEmployeeId = null;
 let editingCustomerId = null;
-let dashboardReturnTimer = null;
 
 function uid(){ return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()); }
 function todayISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
@@ -1121,7 +1120,7 @@ function showStartupError(err){
   }, "blocked");
 }
 function showSetup(){ hideLicenseScreen(); $("setupScreen").classList.remove("hidden"); $("mainScreen").classList.add("hidden"); }
-function showMain(){ hideLicenseScreen(); $("setupScreen").classList.add("hidden"); $("mainScreen").classList.remove("hidden"); renderAll(); setTimeout(() => scrollCalendarToCurrentTime({smooth:false}), 50); }
+function showMain(){ hideLicenseScreen(); $("setupScreen").classList.add("hidden"); $("mainScreen").classList.remove("hidden"); renderAll(); }
 
 function bindEvents(){
   $("finishSetupBtn").onclick = () => {
@@ -1143,8 +1142,8 @@ function bindEvents(){
   $("customerName").oninput = renderCustomerNameSuggestions;
   $("customerName").onchange = applyExactCustomer;
   $("customerPhonePrefix") && ($("customerPhonePrefix").onchange = () => { $("customerPhoneNumber") && $("customerPhoneNumber").focus(); });
-  $("currentDateInput").onchange = e => { state.selectedDate=e.target.value; saveState(); renderCalendar(); renderReport(); if(state.selectedDate===todayISO()) setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 50); };
-  $("todayBtn").onclick = () => { state.selectedDate=todayISO(); $("currentDateInput").value=state.selectedDate; saveState(); switchTab("calendarTab"); renderCalendar(); renderReport(); setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 50); };
+  $("currentDateInput").onchange = e => { state.selectedDate=e.target.value; saveState(); renderCalendar(); renderReport(); };
+  $("todayBtn").onclick = () => { state.selectedDate=todayISO(); $("currentDateInput").value=state.selectedDate; saveState(); switchTab("calendarTab"); renderCalendar(); renderReport(); };
   $("prevDayBtn").onclick = () => shiftDay(-1);
   $("nextDayBtn").onclick = () => shiftDay(1);
   $("settingsBtn").onclick = openSettings;
@@ -1468,7 +1467,7 @@ function switchCashJournalTab(id){
 
 function shiftDay(n){
   const d=new Date(state.selectedDate+"T12:00:00"); d.setDate(d.getDate()+n);
-  state.selectedDate=d.toISOString().slice(0,10); $("currentDateInput").value=state.selectedDate; saveState(); renderCalendar(); renderReport(); if(state.selectedDate===todayISO()) setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 50);
+  state.selectedDate=d.toISOString().slice(0,10); $("currentDateInput").value=state.selectedDate; saveState(); renderCalendar(); renderReport();
 }
 
 const I18N = {
@@ -2476,9 +2475,12 @@ function renderCalendar(){
 
 function renderCurrentTimeLine(wrap){
   if(state.selectedDate !== todayISO()) return;
-  const pos = getCurrentTimeLinePosition();
-  if(!pos) return;
-  const left = pos.left;
+  const start=timeToMinutes(state.openTime);
+  const end=timeToMinutes(state.closeTime);
+  const now=new Date();
+  const nowMin=now.getHours()*60+now.getMinutes();
+  if(nowMin < start || nowMin > end) return;
+  const styles=getComputedStyle(document.documentElement); const employeeCol=parseFloat(styles.getPropertyValue("--employee-col")) || 190; const timeCol=parseFloat(styles.getPropertyValue("--time-col")) || 200; const left=employeeCol + ((nowMin-start)/getSlotIntervalMinutes())*timeCol;
   const line=document.createElement("div");
   line.className="current-time-line";
   line.style.left=left+"px";
@@ -2488,53 +2490,6 @@ function renderCurrentTimeLine(wrap){
   label.textContent=minutesToTime(nowMin);
   wrap.appendChild(line);
   wrap.appendChild(label);
-}
-
-function getCurrentTimeLinePosition(){
-  if(state.selectedDate !== todayISO()) return null;
-  const start=timeToMinutes(state.openTime);
-  const end=timeToMinutes(state.closeTime);
-  const now=new Date();
-  const nowMin=now.getHours()*60+now.getMinutes();
-  if(nowMin < start || nowMin > end) return null;
-  const styles=getComputedStyle(document.documentElement);
-  const employeeCol=parseFloat(styles.getPropertyValue("--employee-col")) || 190;
-  const timeCol=parseFloat(styles.getPropertyValue("--time-col")) || 200;
-  return {
-    left: employeeCol + ((nowMin-start)/getSlotIntervalMinutes())*timeCol,
-    nowMin
-  };
-}
-
-function scrollCalendarToCurrentTime(options={}){
-  const calendar = $("calendar");
-  if(!calendar || state.selectedDate !== todayISO()) return;
-  const pos = getCurrentTimeLinePosition();
-  if(!pos) return;
-  const maxLeft = Math.max(0, calendar.scrollWidth - calendar.clientWidth);
-  const targetLeft = Math.max(0, Math.min(maxLeft, pos.left - Math.round(calendar.clientWidth * 0.35)));
-  const behavior = options.smooth ? "smooth" : "auto";
-  try{
-    calendar.scrollTo({left:targetLeft, top:0, behavior});
-  }catch(err){
-    calendar.scrollLeft = targetLeft;
-    calendar.scrollTop = 0;
-  }
-}
-
-function returnDashboardToTodayNow(){
-  state.selectedDate = todayISO();
-  if($("currentDateInput")) $("currentDateInput").value = state.selectedDate;
-  saveState();
-  switchTab("calendarTab");
-  renderCalendar();
-  renderReport();
-  setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 50);
-}
-
-function scheduleDashboardReturnToTodayNow(delay=3000){
-  clearTimeout(dashboardReturnTimer);
-  dashboardReturnTimer = setTimeout(returnDashboardToTodayNow, delay);
 }
 function startCurrentTimeTicker(){
   setInterval(() => {
@@ -2657,7 +2612,7 @@ function saveAppointment(){
     if(availabilityIssue){ alert("Termin nicht möglich\n\n" + availabilityIssue); return; }
     if(!moveAnyAppointmentAwayFromFixedAppointment(a)) return;
   }
-  state.appointments=state.appointments.filter(x=>x.id!==a.id); state.appointments.push(a); ensureCustomerFromAppointment(a); ensureServiceFromAppointment(a); saveState(); clearForm(); renderAll(); scheduleDashboardReturnToTodayNow();
+  state.appointments=state.appointments.filter(x=>x.id!==a.id); state.appointments.push(a); ensureCustomerFromAppointment(a); ensureServiceFromAppointment(a); saveState(); clearForm(); renderAll();
 }
 function clearForm(){
   editingAppointmentId=null; ["customerName","customerPhonePrefix","customerPhoneNumber","serviceName","note","startTime"].forEach(id=>{ if($(id)) $(id).value=""; }); $("price").value="0"; $("duration").value="60"; setEmployeeAnyActive(false); $("serviceSuggestions").innerHTML="";
@@ -2796,7 +2751,6 @@ function saveInlineAppointmentEdit(){
   saveState();
   renderAll();
   showAppointment(a.id);
-  scheduleDashboardReturnToTodayNow();
 }
 function paySelectedAppointment(){
   openPaymentForAppointment(selectedAppointmentId);
@@ -2837,9 +2791,9 @@ function openPaymentForAppointment(appointmentId){
 function noShowSelectedAppointment(){
   const a=state.appointments.find(x=>x.id===selectedAppointmentId); if(!a) return;
   a.status="Nicht erschienen";
-  saveState(); $("appointmentDialog").close(); renderAll(); scheduleDashboardReturnToTodayNow();
+  saveState(); $("appointmentDialog").close(); renderAll();
 }
-function deleteSelectedAppointment(){ if(selectedAppointmentId && confirm("Termin wirklich löschen?")){ state.appointments=state.appointments.filter(a=>a.id!==selectedAppointmentId); saveState(); $("appointmentDialog").close(); renderAll(); scheduleDashboardReturnToTodayNow(); } }
+function deleteSelectedAppointment(){ if(selectedAppointmentId && confirm("Termin wirklich löschen?")){ state.appointments=state.appointments.filter(a=>a.id!==selectedAppointmentId); saveState(); $("appointmentDialog").close(); renderAll(); } }
 
 function renderCustomerSearch(){
   const input=$("customerSearchInput"), box=$("customerSearchResults"); if(!input||!box) return;
@@ -2869,7 +2823,7 @@ function renderCustomerSearch(){
       </div>
     </div>`;
   }).join("") : `<small>${state.language==="vi" ? "Không tìm thấy lịch hẹn sắp tới" : state.language==="en" ? "No open future appointments found" : "Keine offenen zukünftigen Termine gefunden."}</small>`;
-  box.querySelectorAll(".search-result").forEach(el=>el.onclick=()=>{ const a=state.appointments.find(x=>x.id===el.dataset.id); if(a){ state.selectedDate=a.date; $("currentDateInput").value=a.date; saveState(); renderCalendar(); showAppointment(a.id); scheduleDashboardReturnToTodayNow(); }});
+  box.querySelectorAll(".search-result").forEach(el=>el.onclick=()=>{ const a=state.appointments.find(x=>x.id===el.dataset.id); if(a){ state.selectedDate=a.date; $("currentDateInput").value=a.date; saveState(); renderCalendar(); showAppointment(a.id); }});
 }
 
 function applyRevenueVisibility(){
