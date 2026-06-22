@@ -1139,7 +1139,7 @@ function bindEvents(){
   $("employeeAnyBtn") && ($("employeeAnyBtn").onclick = () => setEmployeeAnyActive(!isEmployeeAnyActive()));
   $("serviceName").oninput = renderServiceSuggestions;
   $("serviceName").onchange = applyExactService;
-  $("customerSearchInput").oninput = renderCustomerSearch;
+  $("customerSearchInput").oninput = () => { renderCustomerSearch(); scheduleDashboardReturnToTodayNow(); };
   $("customerName").oninput = renderCustomerNameSuggestions;
   $("customerName").onchange = applyExactCustomer;
   $("customerPhonePrefix") && ($("customerPhonePrefix").onchange = () => { $("customerPhoneNumber") && $("customerPhoneNumber").focus(); });
@@ -2490,26 +2490,28 @@ function renderCurrentTimeLine(wrap){
   wrap.appendChild(label);
 }
 
-function getCurrentTimeLinePosition(){
+function getCurrentTimeLinePosition(options={}){
   if(state.selectedDate !== todayISO()) return null;
   const start=timeToMinutes(state.openTime);
   const end=timeToMinutes(state.closeTime);
   const now=new Date();
-  const nowMin=now.getHours()*60+now.getMinutes();
-  if(nowMin < start || nowMin > end) return null;
+  const realNowMin=now.getHours()*60+now.getMinutes();
+  if(!options.clamp && (realNowMin < start || realNowMin > end)) return null;
+  const nowMin = options.clamp ? Math.max(start, Math.min(end, realNowMin)) : realNowMin;
   const styles=getComputedStyle(document.documentElement);
   const employeeCol=parseFloat(styles.getPropertyValue("--employee-col")) || 190;
   const timeCol=parseFloat(styles.getPropertyValue("--time-col")) || 200;
   return {
     left: employeeCol + ((nowMin-start)/getSlotIntervalMinutes())*timeCol,
-    nowMin
+    nowMin: realNowMin,
+    scrollMin: nowMin
   };
 }
 
 function scrollCalendarToCurrentTime(options={}){
   const calendar = $("calendar");
   if(!calendar || state.selectedDate !== todayISO()) return;
-  const pos = getCurrentTimeLinePosition();
+  const pos = getCurrentTimeLinePosition({clamp:true});
   if(!pos) return;
   const maxLeft = Math.max(0, calendar.scrollWidth - calendar.clientWidth);
   const targetLeft = Math.max(0, Math.min(maxLeft, pos.left - Math.round(calendar.clientWidth * 0.35)));
@@ -2543,10 +2545,12 @@ function returnDashboardToTodayNow(){
   if($("currentDateInput")) $("currentDateInput").value = state.selectedDate;
   saveState();
   switchTab("calendarTab");
+  clearCustomerSearchView();
   renderCalendar();
   renderReport();
-  clearCustomerSearchView();
-  setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 50);
+  requestAnimationFrame(() => scrollCalendarToCurrentTime({smooth:true}));
+  setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 80);
+  setTimeout(() => scrollCalendarToCurrentTime({smooth:false}), 350);
 }
 
 function scheduleDashboardReturnToTodayNow(delay=3000){
@@ -2812,7 +2816,6 @@ function saveInlineAppointmentEdit(){
   ensureServiceFromAppointment(a);
   saveState();
   renderAll();
-  showAppointment(a.id);
   scheduleDashboardReturnToTodayNow();
 }
 function paySelectedAppointment(){
