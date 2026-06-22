@@ -2522,13 +2522,30 @@ function scrollCalendarToCurrentTime(options={}){
   }
 }
 
+function closeDashboardOverlayDialogs(){
+  ["appointmentDialog","paymentDialog"].forEach(id => {
+    const dlg = $(id);
+    if(dlg && dlg.open){
+      try{ dlg.close(); }catch(err){}
+    }
+  });
+}
+
+function clearCustomerSearchView(){
+  const input = $("customerSearchInput");
+  if(input) input.value = "";
+  renderCustomerSearch();
+}
+
 function returnDashboardToTodayNow(){
+  closeDashboardOverlayDialogs();
   state.selectedDate = todayISO();
   if($("currentDateInput")) $("currentDateInput").value = state.selectedDate;
   saveState();
   switchTab("calendarTab");
   renderCalendar();
   renderReport();
+  clearCustomerSearchView();
   setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 50);
 }
 
