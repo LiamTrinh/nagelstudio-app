@@ -2279,6 +2279,12 @@ function moveAppointmentTo(employeeId, startTime){
   const a = state.appointments.find(x => x.id === movingAppointmentId);
   if(!a){ cancelMoveAppointment(); return false; }
   const candidate = {...a, employeeId, startTime, date:state.selectedDate};
+  if(isAppointmentDateTimeInPast(candidate.date, candidate.startTime)){
+    showPastAppointmentWarning();
+    cancelMoveAppointment();
+    renderCalendar();
+    return false;
+  }
   const emp = state.employees.find(e => e.id === employeeId);
   const availabilityIssue = employeeAvailabilityIssue(emp, candidate.date, candidate.startTime, candidate.duration);
   if(availabilityIssue){
@@ -2368,9 +2374,11 @@ function renderCalendar(){
         const span=Math.max(1,Math.round(Number(a.duration)/getSlotIntervalMinutes())); skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
         grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)}</div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta">${escapeHtml(a.startTime)} · ${escapeHtml(a.phone||"")}</div></div></div>`);
       }else{
-        const issue = employeeAvailabilityIssue(emp, state.selectedDate, t, getSlotIntervalMinutes());
+        const pastIssue = isAppointmentDateTimeInPast(state.selectedDate, t) ? pastAppointmentWarningText() : "";
+        const issue = pastIssue || employeeAvailabilityIssue(emp, state.selectedDate, t, getSlotIntervalMinutes());
         if(issue){
-          grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"><span class="slot-lock">Gesperrt</span></div>`);
+          const lockText = pastIssue ? "Vergangenheit" : "Gesperrt";
+          grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"><span class="slot-lock">${escapeHtml(lockText)}</span></div>`);
         }else{
           grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp)} data-employee="${emp.id}" data-time="${t}"></div>`);
         }
@@ -2387,6 +2395,11 @@ function renderCalendar(){
     el.onclick=()=>{
       if(movingAppointmentId){
         moveAppointmentTo(el.dataset.employee, el.dataset.time);
+        return;
+      }
+      if(isAppointmentDateTimeInPast(state.selectedDate, el.dataset.time)){
+        showPastAppointmentWarning();
+        renderCalendar();
         return;
       }
       $("employeeSelect").value=el.dataset.employee;
@@ -2553,7 +2566,7 @@ function returnDashboardToTodayNow(){
   setTimeout(() => scrollCalendarToCurrentTime({smooth:false}), 350);
 }
 
-function scheduleDashboardReturnToTodayNow(delay=3000){
+function scheduleDashboardReturnToTodayNow(delay=5000){
   clearTimeout(dashboardReturnTimer);
   dashboardReturnTimer = setTimeout(returnDashboardToTodayNow, delay);
 }
@@ -2563,6 +2576,49 @@ function startCurrentTimeTicker(){
   }, 60000);
 }
 
+
+function pastAppointmentWarningText(){
+  return "Bitte neuen Termin wählen – diese Zeit liegt in der Vergangenheit.";
+}
+
+function isAppointmentDateTimeInPast(date, startTime){
+  if(!date || !startTime) return false;
+  const today = todayISO();
+  if(date < today) return true;
+  if(date > today) return false;
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return timeToMinutes(startTime) < nowMin;
+}
+
+function showPastAppointmentWarning(){
+  const text = pastAppointmentWarningText();
+  let note = $("pastAppointmentWarning");
+  if(!note){
+    note = document.createElement("div");
+    note.id = "pastAppointmentWarning";
+    note.setAttribute("role", "alert");
+    note.style.position = "fixed";
+    note.style.left = "50%";
+    note.style.top = "18px";
+    note.style.transform = "translateX(-50%)";
+    note.style.zIndex = "99999";
+    note.style.maxWidth = "92vw";
+    note.style.padding = "12px 16px";
+    note.style.borderRadius = "14px";
+    note.style.background = "#fff7ed";
+    note.style.color = "#9a3412";
+    note.style.border = "1px solid #fed7aa";
+    note.style.boxShadow = "0 12px 30px rgba(0,0,0,.18)";
+    note.style.fontWeight = "800";
+    note.style.textAlign = "center";
+    document.body.appendChild(note);
+  }
+  note.textContent = text;
+  note.style.display = "block";
+  clearTimeout(note._hideTimer);
+  note._hideTimer = setTimeout(() => { note.style.display = "none"; }, 2600);
+}
 
 function appointmentEndTime(a){
   const start = timeToMinutes(a.startTime || "00:00");
@@ -2666,6 +2722,7 @@ function saveAppointment(){
   const old = state.appointments.find(x=>x.id===a.id);
   if(old && (old.status==="Erledigt" || old.status==="Nicht erschienen")) a.status=old.status;
   if(!a.customerName||!a.employeeId||!a.startTime){ alert("Bitte Kunde, Mitarbeiter und Uhrzeit eintragen."); return; }
+  if(isAppointmentDateTimeInPast(a.date, a.startTime)){ showPastAppointmentWarning(); return; }
   if(!Number.isFinite(a.duration) || a.duration < 1){ alert("Bitte eine gültige Dauer in Minuten eintragen."); return; }
   a.duration = Math.max(1, Math.round(a.duration));
   if(a.employeeAny){
@@ -2781,6 +2838,10 @@ function saveInlineAppointmentEdit(){
 
   if(!updated.customerName || !updated.employeeId || !updated.startTime){
     alert("Bitte Kunde, Mitarbeiter und Uhrzeit eintragen.");
+    return;
+  }
+  if(isAppointmentDateTimeInPast(updated.date, updated.startTime) && (updated.date !== a.date || updated.startTime !== a.startTime)){
+    showPastAppointmentWarning();
     return;
   }
   if(!Number.isFinite(updated.duration) || updated.duration < 1){
