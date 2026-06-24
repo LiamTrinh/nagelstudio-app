@@ -959,12 +959,11 @@ function renderPeriodRevenue(type){
   const range = journalPeriodRange(isMonth ? "month" : "week");
   const days = eachDayISO(range.from, range.to);
   const rows = days.map(day => {
-    const raw = journalDayRawTotal(day);
     const corrected = state.journalRevenueCorrections?.[day];
     const deleted = journalDayDeleted(day);
     const total = journalDayTotal(day);
     const count = deleted ? 0 : journalDayCustomerCount(day);
-    return {day, raw, corrected, deleted, total, count};
+    return {day, corrected, deleted, total, count};
   });
   const activeRows = rows.filter(r => !r.deleted && (r.total > 0 || r.count > 0 || r.corrected !== undefined));
   const displayRows = activeRows.length ? activeRows : rows;
@@ -973,32 +972,24 @@ function renderPeriodRevenue(type){
   const daysCountEl = $(isMonth ? "monthlyRevenueDaysCount" : "weeklyRevenueDaysCount");
   const totalEl = $(isMonth ? "monthlyRevenueTotal" : "weeklyRevenueTotal");
   if(rangeEl) rangeEl.textContent = range.label;
-  if(daysCountEl) daysCountEl.textContent = String(rows.filter(r => !r.deleted && (r.total > 0 || r.count > 0 || r.corrected !== undefined)).length);
+  if(daysCountEl) daysCountEl.textContent = String(activeRows.length);
   if(totalEl) totalEl.textContent = money(total);
+
+  // Wochen Umsatz und Monat Umsatz sind reine Tagesumsatz-Übersichten.
+  // Korrektur-, Speichern- und Löschen-Funktionen bleiben hier bewusst ausgeblendet,
+  // damit die Synchronisierung aus Bezahlen/Kasse unverändert als Quelle dient.
   list.innerHTML = `
-    <div class="period-revenue-table">
-      <div class="period-revenue-row period-revenue-head">
-        <span>Datum</span><span>Einträge</span><span>Gesamt Umsatz</span><span>Korrigieren</span><span>Aktion</span>
+    <div class="period-revenue-table period-revenue-table-readonly">
+      <div class="period-revenue-row period-revenue-row-readonly period-revenue-head">
+        <span>Datum</span><span>Einträge</span><span>Tagesumsatz</span>
       </div>
       ${displayRows.map(r => `
-        <div class="period-revenue-row ${r.deleted ? 'period-revenue-deleted' : ''}">
+        <div class="period-revenue-row period-revenue-row-readonly ${r.deleted ? 'period-revenue-deleted' : ''}">
           <strong>${formatDateShort(r.day)}</strong>
           <span>${r.deleted ? '-' : String(r.count)}</span>
           <strong>${r.deleted ? 'Gelöscht' : money(r.total)}</strong>
-          <input type="number" min="0" step="0.01" value="${r.deleted ? 0 : Number(r.total || 0)}" data-journal-day-correction="${escapeHtml(r.day)}" aria-label="Umsatz ${formatDateShort(r.day)} korrigieren">
-          <span class="period-revenue-actions">
-            ${r.deleted
-              ? `<button type="button" class="secondary" data-journal-day-restore="${escapeHtml(r.day)}">Wiederherstellen</button>`
-              : `<button type="button" data-journal-day-save="${escapeHtml(r.day)}">${t("saveWord")}</button><button type="button" class="danger" data-journal-day-delete="${escapeHtml(r.day)}">${t("delete")}</button>`}
-          </span>
         </div>`).join("")}
     </div>`;
-  list.querySelectorAll('button[data-journal-day-save]').forEach(btn => btn.onclick = () => saveJournalDayCorrection(btn.dataset.journalDaySave));
-  list.querySelectorAll('button[data-journal-day-delete]').forEach(btn => btn.onclick = () => deleteJournalDayFromPeriod(btn.dataset.journalDayDelete));
-  list.querySelectorAll('button[data-journal-day-restore]').forEach(btn => btn.onclick = () => restoreJournalDayInPeriod(btn.dataset.journalDayRestore));
-  list.querySelectorAll('input[data-journal-day-correction]').forEach(input => {
-    input.onkeydown = e => { if(e.key === 'Enter') saveJournalDayCorrection(input.dataset.journalDayCorrection); };
-  });
 }
 
 
@@ -1190,7 +1181,7 @@ function bindEvents(){
   $("cloudBackupEnabled") && ($("cloudBackupEnabled").onchange = saveCloudBackupSettings);
   $("dashboardPaymentBtn") && ($("dashboardPaymentBtn").onclick = openPaymentSystem);
   $("dashboardCashJournalBtn") && ($("dashboardCashJournalBtn").onclick = openCashJournal);
-  $("languageSelect") && ($("languageSelect").onchange = () => { state.language = $("languageSelect").value; saveState(); renderAll(); updateCleanupPreview(); applyLanguage(); });
+  $("languageSelect") && ($("languageSelect").onchange = () => { state.language = $("languageSelect").value; saveState(); renderAll(); updateCleanupPreview(); renderPaymentSystem(); applyLanguage(); });
   $("closeSettingsBtn") && ($("closeSettingsBtn").onclick = closeSettingsWithSave);
   $("closePaymentBtn") && ($("closePaymentBtn").onclick = () => $("paymentDialog").close());
   $("paymentSearchInput") && ($("paymentSearchInput").oninput = renderPaymentSystem);
@@ -1296,6 +1287,13 @@ function setPaymentMethod(method){
   document.querySelectorAll(".payment-method").forEach(btn=>btn.classList.toggle("active", btn.dataset.paymentMethod === paymentMethod));
 }
 
+function localizedPaymentMethod(method){
+  if(method === "Bar") return t("cashPayment");
+  if(method === "Karte") return t("cardPayment");
+  if(method === "Gutschein") return t("voucherPayment");
+  return method || "";
+}
+
 function renderPaymentSystem(){
   renderPaymentAppointments();
   renderPaymentServices();
@@ -1309,9 +1307,9 @@ function renderPaymentAppointments(){
   const apps = (state.appointments || [])
     .filter(a => a.date === day && a.status !== "Nicht erschienen")
     .sort((a,b)=>(a.startTime || "").localeCompare(b.startTime || ""));
-  select.innerHTML = `<option value="">Ohne Termin / freier Verkauf</option>` + apps.map(a=>{
+  select.innerHTML = `<option value="">${escapeHtml(t("noAppointmentFreeSale"))}</option>` + apps.map(a=>{
     const paid = a.status === "Erledigt" ? " ✓" : "";
-    return `<option value="${escapeHtml(a.id)}">${escapeHtml(a.startTime || "")} · ${escapeHtml(a.customerName || "Kunde")} · ${escapeHtml(a.serviceName || "Leistung")} · ${money(a.price || 0)}${paid}</option>`;
+    return `<option value="${escapeHtml(a.id)}">${escapeHtml(a.startTime || "")} · ${escapeHtml(a.customerName || t("customerFallback"))} · ${escapeHtml(a.serviceName || t("serviceFallback"))} · ${money(a.price || 0)}${paid}</option>`;
   }).join("");
 }
 
@@ -1322,10 +1320,10 @@ function renderPaymentServices(){
   const services = (state.services || []).filter(s => !q || String(s.name || "").toLowerCase().includes(q));
   grid.innerHTML = services.length ? services.map(s=>`
     <button type="button" class="payment-service-card" data-payment-service="${escapeHtml(s.id)}">
-      <strong>${escapeHtml(s.name || "Leistung")}</strong>
+      <strong>${escapeHtml(s.name || t("serviceFallback"))}</strong>
       <span>${money(s.price || 0)}</span>
       <small>${Number(s.duration || 0)} Min</small>
-    </button>`).join("") : `<p class="hint">Keine Leistung gefunden.</p>`;
+    </button>`).join("") : `<p class="hint">${escapeHtml(t("noServiceFound"))}</p>`;
   grid.querySelectorAll("[data-payment-service]").forEach(btn=>btn.onclick=()=>{
     const service = (state.services || []).find(s=>s.id === btn.dataset.paymentService);
     if(service) addPaymentCartItem(service.name, Number(service.price || 0), service.id);
@@ -1339,14 +1337,14 @@ function paymentLoadAppointment(){
   if(!a) return;
   const matchedService = (state.services || []).find(s => String(s.name || "").trim().toLowerCase() === String(a.serviceName || "").trim().toLowerCase());
   const appointmentPrice = Number(a.price || 0) || Number(matchedService?.price || 0);
-  paymentCart = [{id: uid(), sourceAppointmentId: a.id, serviceId: matchedService?.id, title: a.serviceName || matchedService?.name || "Termin", qty: 1, price: appointmentPrice}];
+  paymentCart = [{id: uid(), sourceAppointmentId: a.id, serviceId: matchedService?.id, title: a.serviceName || matchedService?.name || t("appointment"), qty: 1, price: appointmentPrice}];
   renderPaymentCart();
 }
 
 function addPaymentCartItem(title, price, serviceId){
   const existing = paymentCart.find(x=>x.serviceId === serviceId && !x.sourceAppointmentId);
   if(existing) existing.qty += 1;
-  else paymentCart.push({id: uid(), serviceId, title: title || "Leistung", qty: 1, price: Number(price || 0)});
+  else paymentCart.push({id: uid(), serviceId, title: title || t("serviceFallback"), qty: 1, price: Number(price || 0)});
   renderPaymentCart();
 }
 
@@ -1372,7 +1370,7 @@ function renderPaymentCart(){
     <div class="payment-cart-item">
       <div class="payment-cart-info">
         <strong>${escapeHtml(item.title)}</strong>
-        <label class="payment-price-edit">Betrag €
+        <label class="payment-price-edit">${escapeHtml(t("amountEuro"))}
           <input type="number" min="0" step="0.01" value="${Number(item.price || 0)}" data-payment-price="${escapeHtml(item.id)}">
         </label>
         <small>${money(item.price)} × ${Number(item.qty || 1)}</small>
@@ -1383,7 +1381,7 @@ function renderPaymentCart(){
         <button type="button" data-payment-plus="${escapeHtml(item.id)}">+</button>
         <button type="button" data-payment-remove="${escapeHtml(item.id)}">×</button>
       </div>
-    </div>`).join("") : `<p class="hint">Noch keine Position im Warenkorb.</p>`;
+    </div>`).join("") : `<p class="hint">${escapeHtml(t("emptyCart"))}</p>`;
   list.querySelectorAll("[data-payment-price]").forEach(input=>input.oninput=()=>updatePaymentItemPrice(input.dataset.paymentPrice, input.value));
   list.querySelectorAll("[data-payment-minus]").forEach(btn=>btn.onclick=()=>changePaymentQty(btn.dataset.paymentMinus, -1));
   list.querySelectorAll("[data-payment-plus]").forEach(btn=>btn.onclick=()=>changePaymentQty(btn.dataset.paymentPlus, 1));
@@ -1420,7 +1418,7 @@ function paymentSaleDateFromCart(){
 }
 
 function completePaymentSale(){
-  if(!paymentCart.length){ alert("Bitte zuerst eine Leistung oder einen Termin auswählen."); return; }
+  if(!paymentCart.length){ alert(t("selectServiceOrAppointmentFirst")); return; }
   const totals = paymentTotals();
   const sale = {id: uid(), date: paymentSaleDateFromCart(), createdAt: new Date().toISOString(), method: paymentMethod, items: paymentCart.map(x=>({...x})), subtotal: totals.subtotal, discount: totals.discount, tip: totals.tip, total: totals.total};
   state.paymentSales = state.paymentSales || [];
@@ -1461,9 +1459,9 @@ function completePaymentSale(){
     state.manualRevenueItems.push({
       id: uid(),
       date: sale.date,
-      title: `Bezahlen ${paymentMethod}`,
-      label: `Bezahlen ${paymentMethod}`,
-      note: productNote || "Rabatt / Trinkgeld / Korrektur",
+      title: `${t("paymentTitlePlain")} ${localizedPaymentMethod(paymentMethod)}`,
+      label: `${t("paymentTitlePlain")} ${localizedPaymentMethod(paymentMethod)}`,
+      note: productNote || t("discountTipCorrection"),
       amount: manualAmount,
       paymentSaleId: sale.id
     });
@@ -1481,7 +1479,7 @@ function completePaymentSale(){
   renderEmployeeDailyRevenue();
   renderReport();
   paymentClearCart();
-  alert(`Bezahlung gespeichert und in Kasse übernommen: ${money(totals.total)} (${paymentMethod})`);
+  alert(`${t("paymentSavedToCash")}: ${money(totals.total)} (${localizedPaymentMethod(paymentMethod)})`);
 }
 
 function switchCashJournalTab(id){
@@ -1628,6 +1626,16 @@ Object.assign(I18N.en, {
 });
 Object.assign(I18N.vi, {
   openRevenue:"Báo cáo doanh thu", cashRegister:"Kassa", day:"Ngày", week:"Tuần", month:"Tháng", date:"Ngày", dailyRevenueTotal:"Doanh thu ngày / tổng", appointments:"Lịch hẹn", dailyRevenueByEmployee:"Doanh thu ngày theo nhân viên", dailyRevenueByEmployeeHint:"Tổng quan gọn với lịch hẹn khách, dịch vụ và giá. Báo cáo có thể xem theo ngày, tuần hoặc tháng.", workTimeVacation:"Giờ làm / nghỉ phép", workTimeVacationHint:"Tất cả nhân viên được liệt kê ở đây. Thiết lập toàn thời gian, phụ/part-time, mini-job hoặc ngày làm riêng. Thời gian được phép, giờ làm theo thứ Hai đến thứ Bảy, kỳ nghỉ và ngày nghỉ lẻ sẽ được tính trong lịch hẹn.", reportPrintFormat:"Định dạng in báo cáo", reportPrintFormatHint:"Áp dụng cho báo cáo kassa, doanh thu nhân viên và thu nhập. Xuất Excel không thay đổi.", versionLabel:"Phiên bản:", developerLabel:"Nhà sản xuất / phát triển:", copyrightLabel:"Bản quyền:", revenueJournal:"Nhật ký doanh thu", employeeRevenue:"Doanh thu nhân viên", weeklyRevenue:"Doanh thu tuần", monthlyRevenue:"Doanh thu tháng", selectDay:"Chọn ngày", printReport:"In báo cáo", currentCash:"Hiện có trong kassa", total:"Tổng", depositChange:"Nạp tiền / tiền lẻ", description:"Mô tả", amountEuro:"Số tiền €", saveDeposit:"Lưu khoản nạp", depositsTotal:"Tổng tiền nạp", cashWithdrawal:"Rút tiền khỏi kassa", withdrawalReason:"Rút tiền để làm gì?", saveWithdrawal:"Lưu khoản rút", withdrawalsTotal:"Tổng tiền rút", employeeRevenueHint:"Hiển thị tất cả lịch hẹn của ngày đã chọn: mở, đã trả và không đến. Có thể sửa số tiền trực tiếp tại đây.", openAmount:"Số tiền còn mở", sumPaid:"Tổng đã trả", periodRevenueHintWeek:"Hiển thị tổng tiền từng ngày trong tuần đã chọn. Không hiển thị thông tin khách riêng lẻ.", totalRevenue:"Tổng doanh thu", periodRevenueHintMonth:"Hiển thị tổng tiền từng ngày trong tháng đã chọn. Không hiển thị thông tin khách riêng lẻ.", income:"Thu nhập", entries:"Mục", employeeIncome:"Thu nhập nhân viên", fromCashRegister:"Từ kassa", remainingCash:"Còn trong kassa", editRevenue:"Sửa doanh thu", editRevenueHint:"Chọn ngày, kiểm tra doanh thu ngày và sửa lịch hẹn trực tiếp theo nhân viên.", dailyRevenue:"Doanh thu ngày", includeDayRevenue:"Tính lại ngày vào doanh thu", excludeDayRevenue:"Loại ngày khỏi doanh thu", appointmentsByEmployee:"Lịch hẹn theo nhân viên", addManualRevenueItem:"Thêm mục doanh thu thủ công", amount:"Số tiền", manualRevenueTitlePlaceholder:"ví dụ: tiền tip, bán hàng, chỉnh sửa", optional:"Tùy chọn", saveManualItem:"Lưu mục thủ công", noEntries:"Chưa có mục nào.", noAppointmentsToday:"Chưa có lịch hẹn cho ngày này.", customersCount:"Khách", openStatus:"Mở", paidStatus:"Đã trả", bookedStatus:"Đã đặt", noPaidRevenueToday:"Chưa có doanh thu trạng thái “Đã trả” cho ngày này.", noRevenue2EmployeeEntries:"Chưa có mục nào. Nhấn nút “E” màu vàng trong tab Doanh thu nhân viên.", noRevenue2CashEntries:"Chưa có mục nào. Nhấn nút “A” màu xanh trong tab Doanh thu nhân viên.", noPaidCustomers:"Không có lịch hẹn khách đã trả.", noAppointmentsOnDay:"Không có lịch hẹn trong ngày này.", noManualRevenueItems:"Chưa có mục doanh thu thủ công cho ngày này.", withoutEmployee:"Không có nhân viên", customerFallback:"Khách", noShowStatus:"Không đến", saveWord:"Lưu", statusChangeTitle:"Đổi trạng thái", changeAmountTitle:"Đổi số tiền", changeIncomeAmountTitle:"Đổi số tiền thu nhập", dayExcludedStatus:"Ngày này hiện đã bị loại khỏi doanh thu.", dayIncludedStatus:"Ngày này hiện được tính vào doanh thu.", activeLabel:"Đang bật", scheduleLabel:"Lịch ngày", cashReport:"Báo cáo kassa", cashBalance:"Số dư kassa", systemCleanBtn:"Dọn dẹp hệ thống", systemCleanHint:"Xóa toàn bộ doanh thu đã lưu và toàn bộ lịch hẹn trong lịch ngày. Cơ sở dữ liệu khách hàng và dịch vụ vẫn được giữ lại.", systemCleanConfirm:"Dọn dẹp hệ thống? Toàn bộ doanh thu đã lưu và toàn bộ lịch hẹn trong lịch ngày sẽ bị xóa vĩnh viễn – quá khứ và tương lai. Cơ sở dữ liệu khách hàng và dịch vụ vẫn được giữ lại.", systemCleanConfirmFinal:"Xác nhận lần cuối: Việc dọn dẹp này không thể hoàn tác trong ứng dụng. Thực sự xóa ngay bây giờ?", systemCleanDone:"Hệ thống đã được dọn dẹp. Toàn bộ doanh thu và lịch hẹn đã bị xóa. Cơ sở dữ liệu khách hàng và dịch vụ vẫn được giữ lại."
+});
+
+Object.assign(I18N.de, {
+  paymentTitle:"💳 Bezahlen", paymentTitlePlain:"Bezahlen", paymentProducts:"Leistungen / Produkte", searchPlaceholder:"Suchen...", cart:"Warenkorb", clear:"Leeren", todayAppointmentCustomer:"Termin/Kunde von heute", subtotal:"Zwischensumme", discountEuro:"Rabatt €", tipEuro:"Trinkgeld €", cashPayment:"Bar", cardPayment:"Karte", voucherPayment:"Gutschein", completePayment:"Bezahlung abschließen", paymentLocalHint:"Hinweis: Diese Kasse speichert lokal Umsatzpositionen und markiert ausgewählte Termine als bezahlt. Für eine echte Deutschland-Kasse müssen TSE, DSFinV-K und GoBD noch angebunden werden.", noAppointmentFreeSale:"Ohne Termin / freier Verkauf", noServiceFound:"Keine Leistung gefunden.", emptyCart:"Noch keine Position im Warenkorb.", selectServiceOrAppointmentFirst:"Bitte zuerst eine Leistung oder einen Termin auswählen.", paymentSavedToCash:"Bezahlung gespeichert und in Kasse übernommen", discountTipCorrection:"Rabatt / Trinkgeld / Korrektur"
+});
+Object.assign(I18N.en, {
+  paymentTitle:"💳 Payment", paymentTitlePlain:"Payment", paymentProducts:"Services / products", searchPlaceholder:"Search...", cart:"Cart", clear:"Clear", todayAppointmentCustomer:"Today’s appointment/customer", subtotal:"Subtotal", discountEuro:"Discount €", tipEuro:"Tip €", cashPayment:"Cash", cardPayment:"Card", voucherPayment:"Voucher", completePayment:"Complete payment", paymentLocalHint:"Note: This checkout stores revenue items locally and marks selected appointments as paid. For a real German cash register, TSE, DSFinV-K and GoBD still need to be connected.", noAppointmentFreeSale:"No appointment / free sale", noServiceFound:"No service found.", emptyCart:"No items in the cart yet.", selectServiceOrAppointmentFirst:"Please select a service or appointment first.", paymentSavedToCash:"Payment saved and added to cash register", discountTipCorrection:"Discount / tip / correction"
+});
+Object.assign(I18N.vi, {
+  paymentTitle:"💳 Thanh toán", paymentTitlePlain:"Thanh toán", paymentProducts:"Dịch vụ / sản phẩm", searchPlaceholder:"Tìm kiếm...", cart:"Giỏ hàng", clear:"Xóa", todayAppointmentCustomer:"Lịch hẹn/khách hôm nay", subtotal:"Tạm tính", discountEuro:"Giảm giá €", tipEuro:"Tiền tip €", cashPayment:"Tiền mặt", cardPayment:"Thẻ", voucherPayment:"Phiếu quà tặng", completePayment:"Hoàn tất thanh toán", paymentLocalHint:"Ghi chú: Kassa này lưu doanh thu cục bộ và đánh dấu lịch hẹn đã chọn là đã thanh toán. Để dùng như kassa chính thức tại Đức, cần kết nối TSE, DSFinV-K và GoBD.", noAppointmentFreeSale:"Không có lịch hẹn / bán tự do", noServiceFound:"Không tìm thấy dịch vụ.", emptyCart:"Chưa có mục nào trong giỏ hàng.", selectServiceOrAppointmentFirst:"Vui lòng chọn dịch vụ hoặc lịch hẹn trước.", paymentSavedToCash:"Thanh toán đã lưu và chuyển vào kassa", discountTipCorrection:"Giảm giá / tip / điều chỉnh"
 });
 
 function t(key){
@@ -2969,7 +2977,7 @@ function openPaymentForAppointment(appointmentId){
     id: uid(),
     sourceAppointmentId: a.id,
     serviceId: matchedService?.id,
-    title: a.serviceName || matchedService?.name || "Termin",
+    title: a.serviceName || matchedService?.name || t("appointment"),
     qty: 1,
     price: appointmentPrice
   }];

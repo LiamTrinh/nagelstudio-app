@@ -2940,3 +2940,11 @@ body.app-device-ipad .cash-journal-dialog.employee-revenue-tab-active menu .empl
   outline:none !important;
   text-decoration:none !important;
 }
+
+/* Wochen Umsatz / Monat Umsatz: nur Tagesumsatz anzeigen, ohne Korrekturaktionen */
+.period-revenue-row.period-revenue-row-readonly{grid-template-columns:1fr .7fr 1fr;}
+.period-revenue-table-readonly .period-revenue-row strong:last-child{text-align:right;}
+@media (max-width:760px){
+  .period-revenue-row.period-revenue-row-readonly{grid-template-columns:1fr 1fr;}
+  .period-revenue-row.period-revenue-row-readonly strong:last-child{grid-column:1/3;text-align:left;}
+}

@@ -76,7 +76,7 @@
       </div>
       <div class="top-actions">
         <button id="revenueHeaderButton" class="icon-tab revenue-feature" data-tab="reportTab" title="Umsatzbericht" data-i18n-title="revenueReport">📊</button>
-        <button id="dashboardPaymentBtn" class="settings-button payment-dashboard-button">💳 <span>Bezahlen</span></button>
+        <button id="dashboardPaymentBtn" class="settings-button payment-dashboard-button">💳 <span data-i18n="paymentTitlePlain">Bezahlen</span></button>
         <button id="dashboardCashJournalBtn" class="settings-button cash-dashboard-button">💶 <span data-i18n="cashRegister">Kasse</span></button>
         <button id="settingsBtn" class="settings-button">⚙️ <span data-i18n="settings">Einstellungen</span></button>
       </div>
@@ -456,39 +456,39 @@
 
   <dialog id="paymentDialog" class="settings-dialog payment-dialog">
     <div class="settings-dialog-header payment-dialog-header">
-      <h2>💳 Bezahlen</h2>
-      <button id="closePaymentBtn" type="button" class="secondary">Schließen</button>
+      <h2 data-i18n="paymentTitle">💳 Bezahlen</h2>
+      <button id="closePaymentBtn" type="button" class="secondary" data-i18n="close">Schließen</button>
     </div>
     <div class="payment-layout">
       <section class="payment-panel payment-products-panel">
         <div class="payment-section-title">
-          <h3>Leistungen / Produkte</h3>
-          <input id="paymentSearchInput" type="search" placeholder="Suchen...">
+          <h3 data-i18n="paymentProducts">Leistungen / Produkte</h3>
+          <input id="paymentSearchInput" type="search" placeholder="Suchen..." data-i18n-placeholder="searchPlaceholder">
         </div>
         <div id="paymentServiceGrid" class="payment-service-grid"></div>
       </section>
       <section class="payment-panel payment-cart-panel">
         <div class="payment-section-title">
-          <h3>Warenkorb</h3>
-          <button id="paymentClearCartBtn" type="button" class="secondary">Leeren</button>
+          <h3 data-i18n="cart">Warenkorb</h3>
+          <button id="paymentClearCartBtn" type="button" class="secondary" data-i18n="clear">Leeren</button>
         </div>
-        <label>Termin/Kunde von heute
+        <label><span data-i18n="todayAppointmentCustomer">Termin/Kunde von heute</span>
           <select id="paymentAppointmentSelect"></select>
         </label>
         <div id="paymentCartList" class="payment-cart-list"></div>
         <div class="payment-totals">
-          <div><span>Zwischensumme</span><strong id="paymentSubtotal">0,00 €</strong></div>
-          <label class="payment-discount-row"><span>Rabatt €</span><input id="paymentDiscountInput" type="number" min="0" step="0.01" value="0"></label>
-          <label class="payment-discount-row"><span>Trinkgeld €</span><input id="paymentTipInput" type="number" min="0" step="0.01" value="0"></label>
-          <div class="payment-total-row"><span>Gesamt</span><strong id="paymentTotal">0,00 €</strong></div>
+          <div><span data-i18n="subtotal">Zwischensumme</span><strong id="paymentSubtotal">0,00 €</strong></div>
+          <label class="payment-discount-row"><span data-i18n="discountEuro">Rabatt €</span><input id="paymentDiscountInput" type="number" min="0" step="0.01" value="0"></label>
+          <label class="payment-discount-row"><span data-i18n="tipEuro">Trinkgeld €</span><input id="paymentTipInput" type="number" min="0" step="0.01" value="0"></label>
+          <div class="payment-total-row"><span data-i18n="total">Gesamt</span><strong id="paymentTotal">0,00 €</strong></div>
         </div>
         <div class="payment-methods">
-          <button type="button" class="payment-method active" data-payment-method="Bar">Bar</button>
-          <button type="button" class="payment-method" data-payment-method="Karte">Karte</button>
-          <button type="button" class="payment-method" data-payment-method="Gutschein">Gutschein</button>
+          <button type="button" class="payment-method active" data-payment-method="Bar" data-i18n="cashPayment">Bar</button>
+          <button type="button" class="payment-method" data-payment-method="Karte" data-i18n="cardPayment">Karte</button>
+          <button type="button" class="payment-method" data-payment-method="Gutschein" data-i18n="voucherPayment">Gutschein</button>
         </div>
-        <button id="paymentCompleteBtn" type="button" class="payment-complete-btn">Bezahlung abschließen</button>
-        <p class="hint">Hinweis: Diese Kasse speichert lokal Umsatzpositionen und markiert ausgewählte Termine als bezahlt. Für eine echte Deutschland-Kasse müssen TSE, DSFinV-K und GoBD noch angebunden werden.</p>
+        <button id="paymentCompleteBtn" type="button" class="payment-complete-btn" data-i18n="completePayment">Bezahlung abschließen</button>
+        <p class="hint" data-i18n="paymentLocalHint">Hinweis: Diese Kasse speichert lokal Umsatzpositionen und markiert ausgewählte Termine als bezahlt. Für eine echte Deutschland-Kasse müssen TSE, DSFinV-K und GoBD noch angebunden werden.</p>
       </section>
     </div>
   </dialog>
