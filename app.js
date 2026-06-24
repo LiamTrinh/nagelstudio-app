@@ -1626,8 +1626,44 @@ function paymentSaleDateFromCart(){
   return todayISO();
 }
 
+function showPaymentNotice(message, options = {}){
+  const type = options.type || "success";
+  let note = document.getElementById("paymentSuccessNotice");
+  if(!note){
+    note = document.createElement("div");
+    note.id = "paymentSuccessNotice";
+    note.setAttribute("role", "status");
+    note.style.position = "fixed";
+    note.style.left = "50%";
+    note.style.top = "22px";
+    note.style.transform = "translateX(-50%)";
+    note.style.zIndex = "20000";
+    note.style.borderRadius = "18px";
+    note.style.padding = "16px 22px";
+    note.style.fontWeight = "900";
+    note.style.boxShadow = "0 18px 40px rgba(0,0,0,.22)";
+    note.style.maxWidth = "min(92vw, 620px)";
+    note.style.textAlign = "center";
+    note.style.pointerEvents = "none";
+    document.body.appendChild(note);
+  }
+  if(type === "success"){
+    note.style.background = "#f0fff4";
+    note.style.border = "3px solid #2fb344";
+    note.style.color = "#166534";
+  }else{
+    note.style.background = "#fff7ed";
+    note.style.border = "3px solid #f97316";
+    note.style.color = "#9a3412";
+  }
+  note.textContent = message || "";
+  note.style.display = "block";
+  clearTimeout(showPaymentNotice.timer);
+  showPaymentNotice.timer = setTimeout(() => { if(note) note.style.display = "none"; }, options.duration || 3000);
+}
+
 function completePaymentSale(){
-  if(!paymentCart.length){ alert(t("selectServiceOrAppointmentFirst")); return; }
+  if(!paymentCart.length){ showPaymentNotice(t("selectServiceOrAppointmentFirst"), {type:"warning", duration:3000}); return; }
   const totals = paymentTotals();
   const sale = {id: uid(), date: paymentSaleDateFromCart(), createdAt: new Date().toISOString(), method: paymentMethod, items: paymentCart.map(x=>({...x})), subtotal: totals.subtotal, discount: totals.discount, tip: totals.tip, total: totals.total};
   state.paymentSales = state.paymentSales || [];
@@ -1688,7 +1724,9 @@ function completePaymentSale(){
   renderEmployeeDailyRevenue();
   renderReport();
   paymentClearCart();
-  alert(`${t("paymentSavedToCash")}: ${money(totals.total)} (${localizedPaymentMethod(paymentMethod)})`);
+  showPaymentNotice(t("paymentSavedToCash"), {type:"success", duration:3000});
+  clearTimeout(dashboardReturnTimer);
+  dashboardReturnTimer = setTimeout(returnDashboardToTodayNow, 3000);
 }
 
 function switchCashJournalTab(id){
