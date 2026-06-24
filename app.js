@@ -2396,8 +2396,11 @@ function renderCalendar(){
         const pastIssue = isAppointmentDateTimeInPast(state.selectedDate, t) ? pastAppointmentWarningText() : "";
         const issue = pastIssue || employeeAvailabilityIssue(emp, state.selectedDate, t, getSlotIntervalMinutes());
         if(issue){
-          const lockText = pastIssue ? "Vergangenheit" : "Gesperrt";
-          grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"><span class="slot-lock">${escapeHtml(lockText)}</span></div>`);
+          if(pastIssue){
+            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot past-slot" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"></div>`);
+          }else{
+            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"><span class="slot-lock">Gesperrt</span></div>`);
+          }
         }else{
           grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp)} data-employee="${emp.id}" data-time="${t}"></div>`);
         }

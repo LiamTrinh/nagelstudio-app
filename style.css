@@ -2759,3 +2759,6 @@ body.app-device-ipad .appointment{
     line-height:1.35;
   }
 }
+/* Vergangene freie Zeiten: nur grau, ohne Beschriftung */
+.past-slot{background:#e5e7eb !important;opacity:.75;cursor:not-allowed;}
+.past-slot:hover{background:#e5e7eb !important;}
