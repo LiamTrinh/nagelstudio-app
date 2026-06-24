@@ -196,15 +196,34 @@ function licenseValidityLine(studio){
   return "Lizenzstatus unbekannt";
 }
 
+function licenseDaysUntilExpiry(studio){
+  const expiresAt = studio?.expiresAt;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(expiresAt || "")) return null;
+  const today = new Date(`${todayISO()}T00:00:00`);
+  const expiry = new Date(`${expiresAt}T00:00:00`);
+  if(Number.isNaN(today.getTime()) || Number.isNaN(expiry.getTime())) return null;
+  return Math.ceil((expiry - today) / 86400000);
+}
+
+function licenseExpiryCountdownText(daysLeft){
+  if(daysLeft === 0) return "heute";
+  if(daysLeft === 1) return "morgen";
+  return `in ${daysLeft} Tagen`;
+}
+
 function updateLicenseFooterBar(){
   const footer = $("licenseFooterBar");
   if(!footer) return;
   const result = currentLicenseResult || {};
   const studio = currentLicense || result.studio;
   const plan = String(studio?.plan || "").toLowerCase();
-  if(result.valid && studio && plan === "trial"){
-    const studioId = result.studioId || getStoredStudioId() || "-";
-    footer.textContent = `${studio.name || "Studio"} · ${studioId} · ${planLabel(studio.plan)} · ${licenseValidityLine(studio)}`;
+  const daysLeft = result.valid && studio && plan === "trial" ? licenseDaysUntilExpiry(studio) : null;
+
+  // Standardmäßig bleibt die Lizenz-Leiste im Dashboard ausgeblendet.
+  // Sie erscheint nur als Erinnerung ab 7 Tage vor Ablauf der Testlizenz.
+  if(result.valid && studio && plan === "trial" && daysLeft !== null && daysLeft >= 0 && daysLeft <= 7){
+    const date = formatLicenseDate(studio.expiresAt);
+    footer.textContent = `Erinnerung: Lizenz läuft ${licenseExpiryCountdownText(daysLeft)} ab · Ablaufdatum: ${date}`;
     footer.classList.remove("hidden");
   }else{
     footer.classList.add("hidden");
