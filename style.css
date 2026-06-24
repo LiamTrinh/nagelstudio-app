@@ -2902,3 +2902,41 @@ body.app-device-ipad .cash-journal-dialog.employee-revenue-tab-active menu .empl
   font-size:12px;
   max-width:calc(100% - 110px);
 }
+
+
+/* Version 3.24: Unsichtbarer Einnahme-Zugang auf dem Copyright-C/© */
+.employee-revenue-footer-copyright .footer-secret-c-wrap{
+  position:relative;
+  display:inline-block;
+  line-height:1;
+}
+.employee-revenue-footer-copyright .footer-revenue2-trigger{
+  position:absolute !important;
+  left:50%;
+  top:50%;
+  width:30px;
+  height:30px;
+  transform:translate(-50%, -50%);
+  margin:0 !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  color:transparent !important;
+  opacity:0 !important;
+  appearance:none;
+  cursor:default;
+  box-shadow:none !important;
+  outline:none !important;
+  z-index:2;
+}
+.employee-revenue-footer-copyright .footer-revenue2-trigger:hover,
+.employee-revenue-footer-copyright .footer-revenue2-trigger:focus,
+.employee-revenue-footer-copyright .footer-revenue2-trigger:active{
+  background:transparent !important;
+  color:transparent !important;
+  opacity:0 !important;
+  box-shadow:none !important;
+  outline:none !important;
+  text-decoration:none !important;
+}
