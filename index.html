@@ -502,8 +502,14 @@
         <button type="button" class="settings-tab cash-journal-tab" data-journal-tab="settingsWeeklyRevenueTab" data-i18n="weeklyRevenue">Wochen Umsatz</button>
         <button type="button" class="settings-tab cash-journal-tab" data-journal-tab="settingsMonthlyRevenueTab" data-i18n="monthlyRevenue">Monat Umsatz</button>
       </div>
-      <label class="journal-date-control"><span data-i18n="selectDay">Tag auswählen</span>
+      <label id="journalDateControl" class="journal-date-control"><span data-i18n="selectDay">Tag auswählen</span>
         <input id="journalDateInput" type="date">
+      </label>
+      <label id="journalWeekControl" class="journal-date-control hidden"><span data-i18n="selectWeek">KW auswählen</span>
+        <select id="journalWeekSelect"></select>
+      </label>
+      <label id="journalMonthControl" class="journal-date-control hidden"><span data-i18n="selectMonth">Monat auswählen</span>
+        <select id="journalMonthSelect"></select>
       </label>
     </div>
 
@@ -576,7 +582,7 @@
           <div>
             <h3 data-i18n="employeeRevenue">Mitarbeiter Umsatz</h3>
             <p class="hint" data-i18n="employeeRevenueHint">Zeigt alle Termine vom ausgewählten Tag: offen, bezahlt und nicht erschienen. Beträge können direkt hier geändert werden.</p>
-            <p class="hint employee-revenue-note"><strong>Anmerkung:</strong> aktuell haben die Button E und A keine Funktion. „E“ soll später für „Eintragung Bonus“ und „A“ für „Aufteilung Leistung / Mitarbeiter“ sein.</p>
+            <p class="hint employee-revenue-note" data-i18n="employeeRevenueNote"><strong>Anmerkung:</strong> aktuell haben die Button E und A keine Funktion. „E“ soll später für „Eintragung Bonus“ und „A“ für „Aufteilung Leistung / Mitarbeiter“ sein.</p>
           </div>
           <button id="printEmployeeDailyRevenueReportBtn" type="button" class="secondary" data-i18n="printReport">Bericht Drucken</button>
         </div>
@@ -615,7 +621,6 @@
           <div class="stat-card employee-revenue-paid-total"><span data-i18n="totalRevenue">Gesamt Umsatz</span><strong id="weeklyRevenueTotal">0 €</strong></div>
         </div>
         <div id="weeklyRevenueList" class="period-revenue-list"></div>
-        <p class="hint backup-copyright period-revenue-footer-copyright weekly-revenue-footer-copyright">Copyright <span class="period-secret-c-wrap"><span aria-hidden="true">©</span><button id="footerWeeklyEditBtn" type="button" class="period-secret-trigger" title="" aria-label="Wochen ändern"></button></span> 2026 Liam Trinh 鄭慶廉</p>
       </div>
     </div>
 
@@ -634,7 +639,6 @@
           <div class="stat-card employee-revenue-paid-total"><span data-i18n="totalRevenue">Gesamt Umsatz</span><strong id="monthlyRevenueTotal">0 €</strong></div>
         </div>
         <div id="monthlyRevenueList" class="period-revenue-list"></div>
-        <p class="hint backup-copyright period-revenue-footer-copyright monthly-revenue-footer-copyright">Copyright <span class="period-secret-c-wrap"><span aria-hidden="true">©</span><button id="footerMonthlyEditBtn" type="button" class="period-secret-trigger" title="" aria-label="Monat ändern"></button></span> 2026 Liam Trinh 鄭慶廉</p>
       </div>
     </div>
 
@@ -693,7 +697,9 @@
     </div>
 
     <menu>
-      <p class="hint backup-copyright employee-revenue-footer-copyright">Copyright <span class="footer-secret-c-wrap"><span aria-hidden="true">©</span><button id="footerRevenue2TabBtn" type="button" class="footer-revenue2-trigger" title="Umsatzjournal öffnen" aria-label="Umsatzjournal öffnen"></button></span> 2026 Liam Trinh 鄭慶廉</p>
+      <p class="hint backup-copyright employee-revenue-footer-copyright">Copyright <span class="footer-secret-c-wrap"><span aria-hidden="true">©</span><button id="footerRevenue2TabBtn" type="button" class="footer-revenue2-trigger" aria-label="Umsatzjournal öffnen"></button></span> 2026 Liam Trinh 鄭慶廉</p>
+      <p class="hint backup-copyright period-revenue-footer-copyright weekly-revenue-footer-copyright">Copyright <span class="period-secret-c-wrap"><span aria-hidden="true">©</span><button id="footerWeeklyEditBtn" type="button" class="period-secret-trigger" aria-label="Wochen ändern"></button></span> 2026 Liam Trinh 鄭慶廉</p>
+      <p class="hint backup-copyright period-revenue-footer-copyright monthly-revenue-footer-copyright">Copyright <span class="period-secret-c-wrap"><span aria-hidden="true">©</span><button id="footerMonthlyEditBtn" type="button" class="period-secret-trigger" aria-label="Monat ändern"></button></span> 2026 Liam Trinh 鄭慶廉</p>
       <button id="closeCashJournalBtn" data-i18n="close">Schließen</button>
     </menu>
   </dialog>
@@ -702,21 +708,21 @@
 
   <dialog id="periodRevenueEditDialog" class="settings-dialog period-revenue-edit-dialog">
     <div class="settings-dialog-header">
-      <h2 id="periodRevenueEditTitle">Wochen ändern</h2>
-      <button id="periodRevenueEditPrintBtn" type="button" class="secondary">Bericht Drucken</button>
+      <h2 id="periodRevenueEditTitle" data-i18n="weekEdit">Wochen ändern</h2>
+      <button id="periodRevenueEditPrintBtn" type="button" class="secondary" data-i18n="printReport">Bericht Drucken</button>
     </div>
     <div class="settings-section wide-section">
       <div class="employee-revenue-summary">
-        <div class="stat-card"><span id="periodRevenueEditRangeLabel">Zeitraum</span><strong id="periodRevenueEditRange">-</strong></div>
-        <div class="stat-card"><span>Tage</span><strong id="periodRevenueEditDays">0</strong></div>
-        <div class="stat-card employee-revenue-paid-total"><span>Gesamt Umsatz</span><strong id="periodRevenueEditTotal">0 €</strong></div>
+        <div class="stat-card"><span id="periodRevenueEditRangeLabel" data-i18n="period">Zeitraum</span><strong id="periodRevenueEditRange">-</strong></div>
+        <div class="stat-card"><span data-i18n="days">Tage</span><strong id="periodRevenueEditDays">0</strong></div>
+        <div class="stat-card employee-revenue-paid-total"><span data-i18n="totalRevenue">Gesamt Umsatz</span><strong id="periodRevenueEditTotal">0 €</strong></div>
       </div>
-      <p class="hint">Manuelle Änderungen in diesem Fenster dienen nur für diesen Bericht. Die automatische Synchronisierung von Bezahlen, Kasse, Mitarbeiter Umsatz, Wochen Umsatz und Monat Umsatz bleibt unverändert.</p>
+      <p class="hint" data-i18n="periodManualHint">Manuelle Änderungen in diesem Fenster dienen nur für diesen Bericht. Die automatische Synchronisierung von Bezahlen, Kasse, Mitarbeiter Umsatz, Wochen Umsatz und Monat Umsatz bleibt unverändert.</p>
       <div id="periodRevenueEditList" class="period-revenue-edit-list"></div>
     </div>
     <menu>
-      <button id="periodRevenueEditResetBtn" type="button" class="secondary">Zurücksetzen</button>
-      <button id="periodRevenueEditSaveBtn" type="button">Speichern</button>
+      <button id="periodRevenueEditResetBtn" type="button" class="secondary" data-i18n="reset">Zurücksetzen</button>
+      <button id="periodRevenueEditSaveBtn" type="button" data-i18n="saveWord">Speichern</button>
       <button id="periodRevenueEditCloseBtn" type="button" class="secondary" data-i18n="close">Schließen</button>
     </menu>
   </dialog>

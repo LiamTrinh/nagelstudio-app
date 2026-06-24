@@ -3053,3 +3053,48 @@ body.app-device-ipad .cash-journal-dialog.employee-revenue-tab-active menu .empl
   .period-revenue-edit-head{display:none;}
   .period-revenue-edit-row input{grid-column:1/3;}
 }
+
+/* Wochen-/Monat-Umsatz: Copyright-Zugang unten rechts auf Höhe von Schließen */
+.cash-journal-dialog.weekly-revenue-tab-active menu,
+.cash-journal-dialog.monthly-revenue-tab-active menu{
+  align-items:center;
+}
+.cash-journal-dialog.weekly-revenue-tab-active menu .weekly-revenue-footer-copyright,
+.cash-journal-dialog.monthly-revenue-tab-active menu .monthly-revenue-footer-copyright{
+  display:block;
+}
+.cash-journal-dialog.weekly-revenue-tab-active menu .weekly-revenue-footer-copyright,
+.cash-journal-dialog.monthly-revenue-tab-active menu .monthly-revenue-footer-copyright{
+  margin:0 14px 0 auto;
+  align-self:center;
+  text-align:right;
+  color:var(--muted);
+  font-size:14px;
+  font-weight:600;
+}
+.cash-journal-dialog.weekly-revenue-tab-active menu .employee-revenue-footer-copyright,
+.cash-journal-dialog.monthly-revenue-tab-active menu .employee-revenue-footer-copyright{
+  display:none;
+}
+.cash-journal-dialog menu .period-revenue-footer-copyright{
+  display:none !important;
+}
+.cash-journal-dialog.weekly-revenue-tab-active menu,
+.cash-journal-dialog.monthly-revenue-tab-active menu{
+  position:sticky;
+  bottom:-18px;
+  z-index:30;
+  background:rgba(255,255,255,.96);
+  backdrop-filter:blur(8px);
+  border-top:1px solid var(--line);
+  padding-top:10px;
+  padding-bottom:6px;
+}
+.cash-journal-dialog.weekly-revenue-tab-active menu .weekly-revenue-footer-copyright,
+.cash-journal-dialog.monthly-revenue-tab-active menu .monthly-revenue-footer-copyright{
+  display:flex !important;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  max-width:calc(100% - 130px);
+}

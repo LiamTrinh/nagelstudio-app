@@ -346,10 +346,79 @@ function getJournalDate(){
 }
 function setJournalDate(day, persist=true){
   state.journalDate = day || todayISO();
-  if($("journalDateInput")) $("journalDateInput").value = state.journalDate;
+  updateJournalDateControl();
   if(persist) saveState();
 }
+function activeCashJournalTab(){
+  const active = document.querySelector("#cashJournalDialog .cash-journal-tab.active");
+  return active?.dataset?.journalTab || "settingsCashTab";
+}
+function isoWeekNumber(dateString){
+  const d = new Date(dateString + "T12:00:00");
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+}
+function journalWeekSelectLabel(monday){
+  const weekYear = new Date(addDaysISO(monday, 3) + "T12:00:00").getFullYear();
+  const kw = String(isoWeekNumber(monday)).padStart(2,"0");
+  const sunday = addDaysISO(monday, 6);
+  return `KW ${kw} / ${weekYear} (${formatDateShort(monday)} - ${formatDateShort(sunday)})`;
+}
+function buildJournalWeekOptions(){
+  const select = $("journalWeekSelect");
+  if(!select) return;
+  const base = getJournalDate();
+  const baseYear = new Date(base + "T12:00:00").getFullYear();
+  const currentValue = startOfWeekISO(base);
+  let html = "";
+  for(let year = baseYear - 1; year <= baseYear + 1; year++){
+    let monday = startOfWeekISO(`${year}-01-04`);
+    while(new Date(monday + "T12:00:00").getFullYear() <= year || isoWeekNumber(monday) === 1){
+      const weekYear = new Date(addDaysISO(monday, 3) + "T12:00:00").getFullYear();
+      if(weekYear === year){
+        html += `<option value="${monday}">${journalWeekSelectLabel(monday)}</option>`;
+      }
+      monday = addDaysISO(monday, 7);
+      if(html.length > 200000) break;
+    }
+  }
+  select.innerHTML = html;
+  select.value = currentValue;
+}
+function journalMonthSelectLabel(monthStart){
+  const d = new Date(monthStart + "T12:00:00");
+  return d.toLocaleDateString("de-DE", {month:"long", year:"numeric"});
+}
+function buildJournalMonthOptions(){
+  const select = $("journalMonthSelect");
+  if(!select) return;
+  const base = getJournalDate();
+  const baseYear = new Date(base + "T12:00:00").getFullYear();
+  const currentValue = startOfMonthISO(base);
+  let html = "";
+  for(let year = baseYear - 1; year <= baseYear + 1; year++){
+    for(let month = 1; month <= 12; month++){
+      const value = `${year}-${String(month).padStart(2,"0")}-01`;
+      html += `<option value="${value}">${journalMonthSelectLabel(value)}</option>`;
+    }
+  }
+  select.innerHTML = html;
+  select.value = currentValue;
+}
+function updateJournalDateControl(target = activeCashJournalTab()){
+  const isWeek = target === "settingsWeeklyRevenueTab";
+  const isMonth = target === "settingsMonthlyRevenueTab";
+  $("journalDateControl")?.classList.toggle("hidden", isWeek || isMonth);
+  $("journalWeekControl")?.classList.toggle("hidden", !isWeek);
+  $("journalMonthControl")?.classList.toggle("hidden", !isMonth);
+  if($("journalDateInput")) $("journalDateInput").value = getJournalDate();
+  if(isWeek) buildJournalWeekOptions();
+  if(isMonth) buildJournalMonthOptions();
+}
 function refreshCashJournalViews(){
+  updateJournalDateControl();
   renderCashTab();
   renderEmployeeDailyRevenue();
   renderPeriodRevenue("week");
@@ -780,15 +849,15 @@ function openAccountingReport(title, subtitle, summaryItems, sections, fileStem)
       </header>
       ${reportSummary(summaryItems)}
       ${sections.join("")}
-      <footer>Bericht automatisch aus dem Umsatzjournal erstellt.</footer>
+      <footer>${escapeHtml(t("reportAutoFooter"))}</footer>
     </main>`;
   const excelDocument = `<!doctype html><html><head><meta charset="utf-8"><style>table{border-collapse:collapse}th,td{border:1px solid #999;padding:6px}th{background:#eee}.amount{text-align:right}</style></head><body>${body}</body></html>`;
   const reportDocument = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${accountingReportStyles(printFormat)}</style></head><body>
     <div class="toolbar">
-      <span>${escapeHtml(formatLabel)} · PDF über den Druckdialog speichern oder an den angeschlossenen Drucker senden.</span>
-      <button onclick="window.print()">Drucken / PDF</button>
-      <button class="secondary" id="excelBtn">Excel herunterladen</button>
-      <button class="secondary" onclick="window.close()">Schließen</button>
+      <span>${escapeHtml(formatLabel)} · ${escapeHtml(t("printPdfHint"))}</span>
+      <button onclick="window.print()">${escapeHtml(t("printPdf"))}</button>
+      <button class="secondary" id="excelBtn">${escapeHtml(t("excelDownload"))}</button>
+      <button class="secondary" onclick="window.close()">${escapeHtml(t("close"))}</button>
     </div>
     ${body}
     <script>
@@ -934,7 +1003,7 @@ function saveJournalDayCorrection(day){
   const input = document.querySelector(`input[data-journal-day-correction="${CSS.escape(day)}"]`);
   const value = Number(input?.value || 0);
   if(!Number.isFinite(value) || value < 0){
-    alert("Bitte einen gültigen Betrag eintragen.");
+    alert(t("validAmountSingleAlert"));
     return;
   }
   state.journalRevenueCorrections = state.journalRevenueCorrections || {};
@@ -984,12 +1053,12 @@ function renderPeriodRevenue(type){
   list.innerHTML = `
     <div class="period-revenue-table period-revenue-table-readonly">
       <div class="period-revenue-row period-revenue-row-readonly period-revenue-head">
-        <span>Datum</span><span>Tagesumsatz</span>
+        <span>${escapeHtml(t("date"))}</span><span>${escapeHtml(t("dailyRevenue"))}</span>
       </div>
       ${displayRows.map(r => `
         <div class="period-revenue-row period-revenue-row-readonly ${r.deleted ? 'period-revenue-deleted' : ''}">
           <strong>${formatDateShort(r.day)}</strong>
-          <strong>${r.deleted ? 'Gelöscht' : money(r.total)}</strong>
+          <strong>${r.deleted ? escapeHtml(t("deletedStatus")) : money(r.total)}</strong>
         </div>`).join("")}
     </div>`;
 }
@@ -1038,8 +1107,8 @@ function renderPeriodRevenueManualEdit(){
   const isMonth = type === "month";
   const {range, rows} = periodRevenueManualRows(type);
   const total = rows.reduce((sum,r)=>sum + Number(r.editTotal || 0), 0);
-  if($("periodRevenueEditTitle")) $("periodRevenueEditTitle").textContent = isMonth ? "Monat ändern" : "Wochen ändern";
-  if($("periodRevenueEditRangeLabel")) $("periodRevenueEditRangeLabel").textContent = isMonth ? "Monat" : "Woche";
+  if($("periodRevenueEditTitle")) $("periodRevenueEditTitle").textContent = isMonth ? t("monthEdit") : t("weekEdit");
+  if($("periodRevenueEditRangeLabel")) $("periodRevenueEditRangeLabel").textContent = isMonth ? t("month") : t("week");
   if($("periodRevenueEditRange")) $("periodRevenueEditRange").textContent = range.label;
   if($("periodRevenueEditDays")) $("periodRevenueEditDays").textContent = String(rows.length);
   if($("periodRevenueEditTotal")) $("periodRevenueEditTotal").textContent = money(total);
@@ -1048,13 +1117,13 @@ function renderPeriodRevenueManualEdit(){
   list.innerHTML = `
     <div class="period-revenue-edit-table">
       <div class="period-revenue-edit-row period-revenue-edit-head">
-        <span>Datum</span><span>Tagesumsatz</span><span>Manuell ändern</span>
+        <span>${escapeHtml(t("date"))}</span><span>${escapeHtml(t("dailyRevenue"))}</span><span>${escapeHtml(t("manualChange"))}</span>
       </div>
       ${rows.map(r => `
         <div class="period-revenue-edit-row">
           <strong>${formatDateShort(r.day)}</strong>
-          <span>${r.deleted ? "Gelöscht" : money(r.total)}</span>
-          <input type="number" min="0" step="0.01" inputmode="decimal" value="${Number(r.editTotal || 0).toFixed(2)}" data-period-manual-day="${escapeHtml(r.day)}" aria-label="Umsatz ${formatDateShort(r.day)}">
+          <span>${r.deleted ? escapeHtml(t("deletedStatus")) : money(r.total)}</span>
+          <input type="number" min="0" step="0.01" inputmode="decimal" value="${Number(r.editTotal || 0).toFixed(2)}" data-period-manual-day="${escapeHtml(r.day)}" aria-label="${escapeHtml(t("revenueWord"))} ${formatDateShort(r.day)}">
         </div>`).join("")}
     </div>`;
   list.querySelectorAll("input[data-period-manual-day]").forEach(input => {
@@ -1080,18 +1149,18 @@ function savePeriodRevenueManualEdit(){
     if(!Number.isFinite(val) || val < 0) valid = false;
     values[input.dataset.periodManualDay] = val;
   });
-  if(!valid){ alert("Bitte gültige Beträge eintragen."); return; }
+  if(!valid){ alert(t("validAmountAlert")); return; }
   state.periodRevenueManualEdits = state.periodRevenueManualEdits || {week:{}, month:{}};
   state.periodRevenueManualEdits[type] = state.periodRevenueManualEdits[type] || {};
   const {range} = periodRevenueBaseRows(type);
   state.periodRevenueManualEdits[type][key] = {range, values, updatedAt:new Date().toISOString()};
   saveState();
   renderPeriodRevenueManualEdit();
-  alert("Änderung gespeichert.");
+  alert(t("changeSaved"));
 }
 function resetPeriodRevenueManualEdit(){
   const type = periodRevenueEditType === "month" ? "month" : "week";
-  if(!confirm(type === "month" ? "Manuelle Monatsänderung zurücksetzen?" : "Manuelle Wochenänderung zurücksetzen?")) return;
+  if(!confirm(type === "month" ? t("resetMonthManualConfirm") : t("resetWeekManualConfirm"))) return;
   const key = periodRevenueEditKey(type);
   state.periodRevenueManualEdits = state.periodRevenueManualEdits || {week:{}, month:{}};
   state.periodRevenueManualEdits[type] = state.periodRevenueManualEdits[type] || {};
@@ -1109,12 +1178,12 @@ function printPeriodRevenueManualEdit(){
     `<span class="amount">${money(r.total)}</span>`,
     `<span class="amount">${money(r.editTotal)}</span>`
   ]);
-  openAccountingReport(isMonth ? "Monat ändern" : "Wochen ändern", range.label, [
-    {label: isMonth ? "Monat" : "Woche", value: range.label},
-    {label: "Tage", value: String(rows.length)},
-    {label: "Gesamt Umsatz", value: money(total)}
+  openAccountingReport(isMonth ? t("monthEdit") : t("weekEdit"), range.label, [
+    {label: isMonth ? t("month") : t("week"), value: range.label},
+    {label: t("days"), value: String(rows.length)},
+    {label: t("totalRevenue"), value: money(total)}
   ], [
-    reportSection("Manuell geänderter Bericht", reportTable(["Datum", "Tagesumsatz", "Manuell"], tableRows))
+    reportSection(t("manualReport"), reportTable([t("date"), t("dailyRevenue"), t("manual")], tableRows))
   ]);
 }
 
@@ -1148,7 +1217,7 @@ function printPeriodRevenueReport(type){
     {label: t("days"), value: String(dayCount)},
     {label: t("totalRevenue"), value: money(total)}
   ], [
-    reportSection("Tages-Gesamtsummen", reportTable(["Datum", "Gesamt Umsatz"], tableRows))
+    reportSection(t("dailyTotals"), reportTable([t("date"), t("totalRevenue")], tableRows))
   ], `${isMonth ? "monat_umsatz" : "wochen_umsatz"}_${reportFileDate(range.from)}_${reportFileDate(range.to)}`);
 }
 
@@ -1170,17 +1239,17 @@ function printAccountingReport(type){
     const balance = employeeTotal + depositTotal - withdrawalTotal;
     const employeeRows = employeeSummaryRowsForCashReport(paid);
     if(journalDayHasManualTotal(day)){
-      employeeRows.push(["Wochen-/Monatsumsatz", journalDayDeleted(day) ? "Tag gelöscht" : "Korrektur", `<span class="amount">${money(manualAdjustment)}</span>`]);
+      employeeRows.push([`${t("weeklyRevenue")} / ${t("monthlyRevenue")}`, journalDayDeleted(day) ? t("deletedDay") : t("correction"), `<span class="amount">${money(manualAdjustment)}</span>`]);
     }
     openAccountingReport(t("cashReport"), `${t("date")}: ${formatDateShort(day)}`, [
       {label:t("totalRevenue"), value:money(employeeTotal)},
-      {label:"Einzahlungen", value:money(depositTotal)},
-      {label:"Entnahmen", value:money(withdrawalTotal)},
+      {label:t("deposits"), value:money(depositTotal)},
+      {label:t("withdrawals"), value:money(withdrawalTotal)},
       {label:t("cashBalance"), value:money(balance)}
     ], [
-      reportSection("Umsatz Mitarbeiter", reportTable(["Mitarbeiter","Anzahl","Summe"], employeeRows)),
-      reportSection("Einzahlungen / Wechselgeld", reportTable(["Bezeichnung","Betrag"], deposits.map(x=>[escapeHtml(x.reason||"Einzahlung"), `<span class="amount">${money(x.amount||0)}</span>`]))),
-      reportSection("Geldentnahmen", reportTable(["Bezeichnung","Betrag"], withdrawals.map(x=>[escapeHtml(x.reason||"Entnahme"), `<span class="amount">${money(x.amount||0)}</span>`])))
+      reportSection(t("employeeRevenueSection"), reportTable([t("employee"),t("employeeCount"),t("sum")], employeeRows)),
+      reportSection(t("cashDepositsReport"), reportTable([t("description"),t("labelAmount")], deposits.map(x=>[escapeHtml(x.reason||t("deposits")), `<span class="amount">${money(x.amount||0)}</span>`]))),
+      reportSection(t("cashWithdrawalsReport"), reportTable([t("description"),t("labelAmount")], withdrawals.map(x=>[escapeHtml(x.reason||t("withdrawals")), `<span class="amount">${money(x.amount||0)}</span>`])))
     ], `kassenbericht_${reportFileDate(day)}`);
     return;
   }
@@ -1192,10 +1261,10 @@ function printAccountingReport(type){
     openAccountingReport(t("employeeRevenue"), `${t("date")}: ${formatDateShort(day)}`, [
       {label:t("sumPaid"), value:money(paidTotal)},
       {label:t("openAmount"), value:money(openTotal)},
-      {label:"Nicht erschienen", value:String(noShowCount)},
-      {label:"Kunden Gesamt", value:String(employeeRecords.length)}
+      {label:t("noShowStatus"), value:String(noShowCount)},
+      {label:t("customersTotal"), value:String(employeeRecords.length)}
     ], [
-      reportSection("Alle Kunden nach Mitarbeiter", reportTable(["Mitarbeiter","Zeit",t("customerFallback"),"Leistung","Status","Betrag"], employeeRecords.map(r=>[
+      reportSection(t("allCustomersByEmployee"), reportTable([t("employee"),t("timeShort"),t("customerFallback"),t("service"),t("status"),t("labelAmount")], employeeRecords.map(r=>[
         escapeHtml(r.employeeName||t("withoutEmployee")),
         escapeHtml(r.startTime||""),
         escapeHtml(r.customerName||t("customerFallback")),
@@ -1203,15 +1272,15 @@ function printAccountingReport(type){
         escapeHtml(employeeDailyRevenueStatusLabel(r.status||"Gebucht")),
         `<span class="amount">${money(r.price||0)}</span>`
       ]))),
-      reportSection("Gesamtsumme einzelne Mitarbeiter", reportTable(["Mitarbeiter","Summe Bezahlt"], employeePaidSummaryRowsForEmployeeReport(employeeRecords)))
+      reportSection(t("totalSingleEmployees"), reportTable([t("employee"),t("sumPaid")], employeePaidSummaryRowsForEmployeeReport(employeeRecords)))
     ], `mitarbeiter_umsatz_${reportFileDate(day)}`);
     return;
   }
   renderRevenue2();
   const employeeEntries = revenue2Sorted(revenue2EntriesForDay(day));
-  openAccountingReport("Einnahme", `Datum: ${formatDateShort(day)}`, [], [
-    reportSection("Einnahme Mitarbeiter", reportTable(["Mitarbeiter","Summe"], revenue2EmployeeTotalRows(employeeEntries))),
-    reportSection("Einzelne Kunden nach Mitarbeiter", reportTable(["Mitarbeiter",t("customerFallback"),"Betrag"], revenue2EmployeeDetailRows(employeeEntries)))
+  openAccountingReport(t("income"), `${t("date")}: ${formatDateShort(day)}`, [], [
+    reportSection(t("employeeIncome"), reportTable([t("employee"),t("sum")], revenue2EmployeeTotalRows(employeeEntries))),
+    reportSection(t("employeeIncomeDetails"), reportTable([t("employee"),t("customerFallback"),t("labelAmount")], revenue2EmployeeDetailRows(employeeEntries)))
   ], `einnahme_${reportFileDate(day)}`);
 }
 
@@ -1303,6 +1372,8 @@ function bindEvents(){
   $("addCashWithdrawalBtn") && ($("addCashWithdrawalBtn").onclick = addCashWithdrawal);
   $("addCashDepositBtn") && ($("addCashDepositBtn").onclick = addCashDeposit);
   $("journalDateInput") && ($("journalDateInput").onchange = () => { setJournalDate($("journalDateInput").value || todayISO()); refreshCashJournalViews(); });
+  $("journalWeekSelect") && ($("journalWeekSelect").onchange = () => { setJournalDate($("journalWeekSelect").value || startOfWeekISO(todayISO())); refreshCashJournalViews(); });
+  $("journalMonthSelect") && ($("journalMonthSelect").onchange = () => { setJournalDate($("journalMonthSelect").value || startOfMonthISO(todayISO())); refreshCashJournalViews(); });
   $("closeHiddenRevenueBtn") && ($("closeHiddenRevenueBtn").onclick = () => $("hiddenRevenueDialog").close());
   $("revenueEditDate") && ($("revenueEditDate").onchange = renderRevenueEditor);
   $("addManualRevenueBtn") && ($("addManualRevenueBtn").onclick = addManualRevenueItem);
@@ -1313,7 +1384,7 @@ function bindEvents(){
   $("cloudBackupEnabled") && ($("cloudBackupEnabled").onchange = saveCloudBackupSettings);
   $("dashboardPaymentBtn") && ($("dashboardPaymentBtn").onclick = openPaymentSystem);
   $("dashboardCashJournalBtn") && ($("dashboardCashJournalBtn").onclick = openCashJournal);
-  $("languageSelect") && ($("languageSelect").onchange = () => { state.language = $("languageSelect").value; saveState(); renderAll(); updateCleanupPreview(); renderPaymentSystem(); applyLanguage(); });
+  $("languageSelect") && ($("languageSelect").onchange = () => { state.language = $("languageSelect").value; saveState(); renderAll(); updateCleanupPreview(); renderPaymentSystem(); renderPeriodRevenue("week"); renderPeriodRevenue("month"); if($("periodRevenueEditDialog")?.open) renderPeriodRevenueManualEdit(); renderRevenue2(); applyLanguage(); });
   $("closeSettingsBtn") && ($("closeSettingsBtn").onclick = closeSettingsWithSave);
   $("closePaymentBtn") && ($("closePaymentBtn").onclick = () => $("paymentDialog").close());
   $("paymentSearchInput") && ($("paymentSearchInput").oninput = renderPaymentSystem);
@@ -1618,6 +1689,7 @@ function switchCashJournalTab(id){
   const target = id || "settingsCashTab";
   const dialog = $("cashJournalDialog");
   if(!dialog) return;
+  updateJournalDateControl(target);
   dialog.querySelectorAll(".cash-journal-tab").forEach(btn=>{
     btn.classList.toggle("active", btn.dataset.journalTab === target);
   });
@@ -1625,6 +1697,8 @@ function switchCashJournalTab(id){
     panel.classList.toggle("active", panel.id === target);
   });
   dialog.classList.toggle("employee-revenue-tab-active", target === "settingsEmployeeDailyRevenueTab");
+  dialog.classList.toggle("weekly-revenue-tab-active", target === "settingsWeeklyRevenueTab");
+  dialog.classList.toggle("monthly-revenue-tab-active", target === "settingsMonthlyRevenueTab");
   if(target === "settingsCashTab") renderCashTab();
   if(target === "settingsEmployeeDailyRevenueTab") renderEmployeeDailyRevenue();
   if(target === "settingsWeeklyRevenueTab") renderPeriodRevenue("week");
@@ -1676,7 +1750,7 @@ Object.assign(I18N.de, {
   initialSetup:"Ersteinrichtung", setupHint:"Die App läuft lokal auf diesem Gerät. Cloud-Backup nutzt aktuell Export oder Teilen-Menü.", opensAt:"Öffnet um", closesAt:"Schließt um", initialEmployees:"Erste Mitarbeiter, getrennt mit Komma", startApp:"App starten", dailySchedule:"Tagesplan", revenueReport:"Umsatzbericht", from:"Von", to:"Bis", refreshReport:"Bericht aktualisieren", period:"Zeitraum", appointmentsPeriod:"Termine Zeitraum", deletedFromRevenue:"Aus Umsatz gelöscht", daysInReport:"Tage im Bericht", deleteRevenueHint:"Mit „Aus Umsatz löschen“ wird der komplette Tag nicht mehr im Umsatzbericht gezählt. Die Termine bleiben im Kalender erhalten.", deletedRevenueDays:"Gelöschte Tage für Umsatzbericht", employeeHint:"Mitarbeiter hier anlegen, verändern oder deaktivieren.", calendarFontColor:"Schriftfarbe im Kalender", customerHint:"Kunden hier anlegen, bearbeiten oder löschen. Beim Eintippen im Terminformular werden Kundendaten vorgeschlagen.", serviceHint:"Leistungen mit Preisen und Dauer selbst gestalten und speichern.", deleteAppointmentsPermanently:"Termine endgültig löschen", deleteAppointmentsHint:"Achtung: Diese Funktion löscht Termine endgültig. Es gibt keine Wiederherstellung in der App. Vorher am besten ein Backup exportieren.", wholeDay:"Ganzer Tag", wholeWeek:"Ganze Woche", wholeMonth:"Ganzer Monat", appointment:"Termin", markDonePaid:"Bezahlen", markNoShow:"Nicht erschienen", localBackup:"💾 Lokal Backup", localBackupHint:"Exportiert und importiert lokale JSON-Backups. „Bereinigung + Backup“ löscht zuerst alle Termine von heute und Vergangenheit sowie Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz. Danach wird ein Backup erstellt. Nur Zukunft-Termine bleiben erhalten.", cleanupAndBackup:"Bereinigung + Backup", cloudBackupNow:"Cloud Backup jetzt erstellen", autoAfterCleanup:"Automatisch nach „Bereinigung + Backup“", enableRevenueArea:"Umsatzbereich aktivieren", revenueVisibilityHint:"Wenn deaktiviert, werden Umsatzbericht, Umsatzbutton und Umsatzfunktionen ausgeblendet.", noLocalBackup:"Noch kein lokales Backup erstellt.", lastLocalBackup:"Letztes lokales Backup", noCloudBackup:"Noch kein Cloud Backup erstellt.", lastCloudBackup:"Letztes Cloud Backup", cloudDisabled:"Cloud Backup ist deaktiviert.", cloudStatusHint:"Bei aktivem Cloud Backup wird das Teilen/Speichern-Menü genutzt.", importSuccess:"Backup wurde erfolgreich wiederhergestellt.", importFailed:"Backup konnte nicht gelesen werden. Datei ist ungültig oder beschädigt.", backupManualDownload:"Backup-Datei manuell herunterladen", noCleanupData:"Keine alten Daten zum Bereinigen gefunden.", cleanupConfirm:"Alle Termine von heute und Vergangenheit sowie alle Umsätze aus Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz werden gelöscht. Danach wird ein Backup erstellt. Nur Zukunft-Termine bleiben erhalten. Fortfahren?", cleanupRunning:"Bereinige und erstelle Backup...", cleanupDone:"Bereinigung abgeschlossen. Nur Zukunft-Termine bleiben erhalten. Backup wurde erstellt: {filename}.", serviceFallback:"Leistung", employeeLabel:"Mitarbeiter", phoneLabel:"Telefon", internalStatus:"Status intern", priceLabel:"Preis", noteLabel:"Notiz", noAppointmentsInRange:"Keine Termine im Zeitraum.", noDeletedDays:"Keine Tage gelöscht.", appointmentsWord:"Termine", revenueDeletedPermanently:"Umsatz endgültig gelöscht", notRecoverable:"Nicht wiederherstellbar", revenueWord:"Umsatz", deleteRevenuePermanently:"Umsatz endgültig löschen", noAppointmentsInRange:"Keine Termine im Zeitraum.", noDeletedDays:"Keine Tage gelöscht.", days:"Tage"
 });
 Object.assign(I18N.vi, {
-  initialSetup:"Thiết lập ban đầu", setupHint:"Ứng dụng lưu dữ liệu cục bộ trên thiết bị này. Sao lưu Cloud hiện dùng xuất file hoặc menu chia sẻ.", opensAt:"Mở cửa lúc", closesAt:"Đóng cửa lúc", initialEmployees:"Nhân viên ban đầu, cách nhau bằng dấu phẩy", startApp:"Bắt đầu ứng dụng", dailySchedule:"Lịch trong ngày", revenueReport:"Báo cáo doanh thu", from:"Từ", to:"Đến", refreshReport:"Cập nhật báo cáo", period:"Khoảng thời gian", appointmentsPeriod:"Lịch hẹn trong khoảng", deletedFromRevenue:"Đã xóa khỏi doanh thu", daysInReport:"Ngày trong báo cáo", deleteRevenueHint:"Khi dùng “Xóa khỏi doanh thu”, cả ngày sẽ không còn được tính trong báo cáo. Lịch hẹn vẫn ở trong lịch.", deletedRevenueDays:"Ngày đã xóa khỏi báo cáo doanh thu", employeeHint:"Tạo, sửa hoặc tắt nhân viên tại đây.", calendarFontColor:"Màu chữ trong lịch", customerHint:"Tạo, sửa hoặc xóa khách hàng. Khi nhập lịch hẹn, dữ liệu khách sẽ được gợi ý.", serviceHint:"Tự tạo dịch vụ với giá và thời lượng.", deleteAppointmentsPermanently:"Xóa lịch hẹn vĩnh viễn", deleteAppointmentsHint:"Chú ý: Chức năng này xóa lịch hẹn vĩnh viễn. Không thể khôi phục trong ứng dụng. Nên xuất sao lưu trước.", wholeDay:"Cả ngày", wholeWeek:"Cả tuần", wholeMonth:"Cả tháng", appointment:"Lịch hẹn", markDonePaid:"Thanh toán", localBackup:"💾 Sao lưu cục bộ", localBackupHint:"Xuất và nhập file sao lưu JSON cục bộ. “Dọn dẹp + Sao lưu” xóa tất cả lịch hẹn hôm nay và quá khứ cùng doanh thu nhân viên, thu nhập, kassa, doanh thu tuần và doanh thu tháng. Sau đó tạo sao lưu. Chỉ lịch hẹn tương lai được giữ lại.", cleanupAndBackup:"Dọn dẹp + Sao lưu", cloudBackupNow:"Tạo sao lưu Cloud ngay", autoAfterCleanup:"Tự động sau “Dọn dẹp + sao lưu”", enableRevenueArea:"Bật khu vực doanh thu", revenueVisibilityHint:"Khi tắt, báo cáo doanh thu, nút doanh thu và chức năng doanh thu sẽ bị ẩn.", noLocalBackup:"Chưa tạo sao lưu cục bộ.", lastLocalBackup:"Sao lưu cục bộ gần nhất", noCloudBackup:"Chưa tạo sao lưu Cloud.", lastCloudBackup:"Sao lưu Cloud gần nhất", cloudDisabled:"Sao lưu Cloud đang tắt.", cloudStatusHint:"Khi bật Cloud Backup, ứng dụng dùng menu chia sẻ/lưu.", importSuccess:"Đã khôi phục sao lưu thành công.", importFailed:"Không đọc được sao lưu. File không hợp lệ hoặc bị hỏng.", backupManualDownload:"Tải file sao lưu thủ công", noCleanupData:"Không có dữ liệu cũ để dọn dẹp.", cleanupConfirm:"Tất cả lịch hẹn hôm nay và quá khứ cùng doanh thu nhân viên, thu nhập, kassa, doanh thu tuần và doanh thu tháng sẽ bị xóa. Sau đó sẽ tạo sao lưu. Chỉ lịch hẹn tương lai được giữ lại. Tiếp tục?", cleanupRunning:"Đang dọn dẹp và tạo sao lưu...", cleanupDone:"Dọn dẹp xong. Chỉ lịch hẹn tương lai được giữ lại. Đã tạo file sao lưu: {filename}.", serviceFallback:"Dịch vụ", employeeLabel:"Nhân viên", phoneLabel:"Số điện thoại", internalStatus:"Trạng thái nội bộ", priceLabel:"Giá", noteLabel:"Ghi chú", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", appointmentsWord:"lịch hẹn", revenueDeletedPermanently:"Doanh thu đã xóa vĩnh viễn", notRecoverable:"Không thể khôi phục", revenueWord:"Doanh thu", deleteRevenuePermanently:"Xóa doanh thu vĩnh viễn", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", days:"ngày"
+  initialSetup:"Thiết lập ban đầu", setupHint:"Ứng dụng lưu dữ liệu cục bộ trên thiết bị này. Sao lưu Cloud hiện dùng xuất file hoặc menu chia sẻ.", opensAt:"Mở cửa lúc", closesAt:"Đóng cửa lúc", initialEmployees:"Nhân viên ban đầu, cách nhau bằng dấu phẩy", startApp:"Bắt đầu ứng dụng", dailySchedule:"Lịch trong ngày", revenueReport:"Báo cáo doanh thu", from:"Từ", to:"Đến", refreshReport:"Cập nhật báo cáo", period:"Khoảng thời gian", appointmentsPeriod:"Lịch hẹn trong khoảng", deletedFromRevenue:"Đã xóa khỏi doanh thu", daysInReport:"Ngày trong báo cáo", deleteRevenueHint:"Khi dùng “Xóa khỏi doanh thu”, cả ngày sẽ không còn được tính trong báo cáo. Lịch hẹn vẫn ở trong lịch.", deletedRevenueDays:"Ngày đã xóa khỏi báo cáo doanh thu", employeeHint:"Tạo, sửa hoặc tắt nhân viên tại đây.", calendarFontColor:"Màu chữ trong lịch", customerHint:"Tạo, sửa hoặc xóa khách hàng. Khi nhập lịch hẹn, dữ liệu khách sẽ được gợi ý.", serviceHint:"Tự tạo dịch vụ với giá và thời lượng.", deleteAppointmentsPermanently:"Xóa lịch hẹn vĩnh viễn", deleteAppointmentsHint:"Chú ý: Chức năng này xóa lịch hẹn vĩnh viễn. Không thể khôi phục trong ứng dụng. Nên xuất sao lưu trước.", wholeDay:"Cả ngày", wholeWeek:"Cả tuần", wholeMonth:"Cả tháng", appointment:"Lịch hẹn", markDonePaid:"Thanh toán", markNoShow:"Không đến", localBackup:"💾 Sao lưu cục bộ", localBackupHint:"Xuất và nhập file sao lưu JSON cục bộ. “Dọn dẹp + Sao lưu” xóa tất cả lịch hẹn hôm nay và quá khứ cùng doanh thu nhân viên, thu nhập, kassa, doanh thu tuần và doanh thu tháng. Sau đó tạo sao lưu. Chỉ lịch hẹn tương lai được giữ lại.", cleanupAndBackup:"Dọn dẹp + Sao lưu", cloudBackupNow:"Tạo sao lưu Cloud ngay", autoAfterCleanup:"Tự động sau “Dọn dẹp + sao lưu”", enableRevenueArea:"Bật khu vực doanh thu", revenueVisibilityHint:"Khi tắt, báo cáo doanh thu, nút doanh thu và chức năng doanh thu sẽ bị ẩn.", noLocalBackup:"Chưa tạo sao lưu cục bộ.", lastLocalBackup:"Sao lưu cục bộ gần nhất", noCloudBackup:"Chưa tạo sao lưu Cloud.", lastCloudBackup:"Sao lưu Cloud gần nhất", cloudDisabled:"Sao lưu Cloud đang tắt.", cloudStatusHint:"Khi bật Cloud Backup, ứng dụng dùng menu chia sẻ/lưu.", importSuccess:"Đã khôi phục sao lưu thành công.", importFailed:"Không đọc được sao lưu. File không hợp lệ hoặc bị hỏng.", backupManualDownload:"Tải file sao lưu thủ công", noCleanupData:"Không có dữ liệu cũ để dọn dẹp.", cleanupConfirm:"Tất cả lịch hẹn hôm nay và quá khứ cùng doanh thu nhân viên, thu nhập, kassa, doanh thu tuần và doanh thu tháng sẽ bị xóa. Sau đó sẽ tạo sao lưu. Chỉ lịch hẹn tương lai được giữ lại. Tiếp tục?", cleanupRunning:"Đang dọn dẹp và tạo sao lưu...", cleanupDone:"Dọn dẹp xong. Chỉ lịch hẹn tương lai được giữ lại. Đã tạo file sao lưu: {filename}.", serviceFallback:"Dịch vụ", employeeLabel:"Nhân viên", phoneLabel:"Số điện thoại", internalStatus:"Trạng thái nội bộ", priceLabel:"Giá", noteLabel:"Ghi chú", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", appointmentsWord:"lịch hẹn", revenueDeletedPermanently:"Doanh thu đã xóa vĩnh viễn", notRecoverable:"Không thể khôi phục", revenueWord:"Doanh thu", deleteRevenuePermanently:"Xóa doanh thu vĩnh viễn", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", days:"ngày"
 });
 Object.assign(I18N.en, {
   initialSetup:"Initial setup", setupHint:"The app stores data locally on this device. Cloud backup currently uses export or the share menu.", opensAt:"Opens at", closesAt:"Closes at", initialEmployees:"Initial employees, separated by commas", startApp:"Start app", dailySchedule:"Daily schedule", revenueReport:"Revenue report", from:"From", to:"To", refreshReport:"Refresh report", period:"Period", appointmentsPeriod:"Appointments period", deletedFromRevenue:"Deleted from revenue", daysInReport:"Days in report", deleteRevenueHint:"When “Delete from revenue” is used, the whole day is no longer counted in the revenue report. Appointments stay in the calendar.", deletedRevenueDays:"Deleted days for revenue report", employeeHint:"Create, edit or deactivate employees here.", calendarFontColor:"Calendar font color", customerHint:"Create, edit or delete customers here. Customer data is suggested when typing in the appointment form.", serviceHint:"Create services with custom prices and durations.", deleteAppointmentsPermanently:"Permanently delete appointments", deleteAppointmentsHint:"Warning: This permanently deletes appointments. There is no restore function in the app. Export a backup first if needed.", wholeDay:"Whole day", wholeWeek:"Whole week", wholeMonth:"Whole month", appointment:"Appointment", markDonePaid:"Pay", markNoShow:"No-show", localBackup:"💾 Local Backup", localBackupHint:"Exports and imports local JSON backups. “Cleanup + Backup” deletes all appointments from today and the past plus Employee Revenue, Income, Cash Register, Weekly Revenue and Monthly Revenue. Then it creates the backup. Only future appointments remain.", cleanupAndBackup:"Cleanup + Backup", cloudBackupNow:"Create cloud backup now", autoAfterCleanup:"Automatically after “Cleanup + Backup”", enableRevenueArea:"Enable revenue area", revenueVisibilityHint:"When disabled, the revenue report, revenue button and revenue functions are hidden.", noLocalBackup:"No local backup created yet.", lastLocalBackup:"Last local backup", noCloudBackup:"No cloud backup created yet.", lastCloudBackup:"Last cloud backup", cloudDisabled:"Cloud backup is disabled.", cloudStatusHint:"When cloud backup is active, the share/save menu is used.", importSuccess:"Backup restored successfully.", importFailed:"Backup could not be read. The file is invalid or damaged.", backupManualDownload:"Download backup file manually", noCleanupData:"No old data found for cleanup.", cleanupConfirm:"All appointments from today and the past plus all revenue data from Employee Revenue, Income, Cash Register, Weekly Revenue and Monthly Revenue will be deleted. Then a backup will be created. Only future appointments remain. Continue?", cleanupRunning:"Cleaning and creating backup...", cleanupDone:"Cleanup completed. Only future appointments remain. Backup file created: {filename}.", serviceFallback:"Service", employeeLabel:"Employee", phoneLabel:"Phone", internalStatus:"Internal status", priceLabel:"Price", noteLabel:"Note", noAppointmentsInRange:"No appointments in this period.", noDeletedDays:"No days deleted.", appointmentsWord:"appointments", revenueDeletedPermanently:"Revenue permanently deleted", notRecoverable:"Not recoverable", revenueWord:"Revenue", deleteRevenuePermanently:"Permanently delete revenue", noAppointmentsInRange:"No appointments in this period.", noDeletedDays:"No days deleted.", days:"days"
@@ -1770,10 +1844,85 @@ Object.assign(I18N.vi, {
   paymentTitle:"💳 Thanh toán", paymentTitlePlain:"Thanh toán", paymentProducts:"Dịch vụ / sản phẩm", searchPlaceholder:"Tìm kiếm...", cart:"Giỏ hàng", clear:"Xóa", todayAppointmentCustomer:"Lịch hẹn/khách hôm nay", subtotal:"Tạm tính", discountEuro:"Giảm giá €", tipEuro:"Tiền tip €", cashPayment:"Tiền mặt", cardPayment:"Thẻ", voucherPayment:"Phiếu quà tặng", completePayment:"Hoàn tất thanh toán", paymentLocalHint:"Ghi chú: Kassa này lưu doanh thu cục bộ và đánh dấu lịch hẹn đã chọn là đã thanh toán. Để dùng như kassa chính thức tại Đức, cần kết nối TSE, DSFinV-K và GoBD.", noAppointmentFreeSale:"Không có lịch hẹn / bán tự do", noServiceFound:"Không tìm thấy dịch vụ.", emptyCart:"Chưa có mục nào trong giỏ hàng.", selectServiceOrAppointmentFirst:"Vui lòng chọn dịch vụ hoặc lịch hẹn trước.", paymentSavedToCash:"Thanh toán đã lưu và chuyển vào kassa", discountTipCorrection:"Giảm giá / tip / điều chỉnh"
 });
 
+
+Object.assign(I18N.de, {
+  appointmentBlockCustomer:"Kundendaten", appointmentBlockService:"Leistung", appointmentBlockTime:"Termin", employeeAny:"Beliebig",
+  displaySettings:"Darstellung / Geräteansicht", displaySettingsHint:"Optimiert die App für iPhone, iPad oder PC. „Automatisch“ erkennt die passende Ansicht selbst.", optimizeForDevice:"Darstellung optimieren für", deviceAuto:"Automatisch", deviceIphone:"iPhone", deviceIpad:"iPad", devicePc:"PC / Windows", scheduleZoom:"Tagesplan-Zoom", zoomSmall:"Klein", zoomNormal:"Normal", zoomLarge:"Groß", scheduleInterval:"Tagesplan-Takt", interval15:"15 Minuten", interval30:"30 Minuten",
+  selectWeek:"KW auswählen", selectMonth:"Monat auswählen", weekEdit:"Wochen ändern", monthEdit:"Monat ändern", manualChange:"Manuell ändern", reset:"Zurücksetzen", periodManualHint:"Manuelle Änderungen in diesem Fenster dienen nur für diesen Bericht. Die automatische Synchronisierung von Bezahlen, Kasse, Mitarbeiter Umsatz, Wochen Umsatz und Monat Umsatz bleibt unverändert.", manualReport:"Manuell geänderter Bericht", manual:"Manuell", dailyTotals:"Tages-Gesamtsummen", deletedStatus:"Gelöscht", validAmountAlert:"Bitte gültige Beträge eintragen.", validAmountSingleAlert:"Bitte einen gültigen Betrag eintragen.", changeSaved:"Änderung gespeichert.", resetWeekManualConfirm:"Manuelle Wochenänderung zurücksetzen?", resetMonthManualConfirm:"Manuelle Monatsänderung zurücksetzen?",
+  employeeRevenueNote:"Anmerkung: aktuell haben die Button E und A keine Funktion. „E“ soll später für „Eintragung Bonus“ und „A“ für „Aufteilung Leistung / Mitarbeiter“ sein.", reportAutoFooter:"Bericht automatisch aus dem Umsatzjournal erstellt.", printPdfHint:"PDF über den Druckdialog speichern oder an den angeschlossenen Drucker senden.", printPdf:"Drucken / PDF", excelDownload:"Excel herunterladen", deposits:"Einzahlungen", withdrawals:"Entnahmen", employeeRevenueSection:"Umsatz Mitarbeiter", employeeCount:"Anzahl", sum:"Summe", cashDepositsReport:"Einzahlungen / Wechselgeld", cashWithdrawalsReport:"Geldentnahmen", labelAmount:"Betrag", noShowStatus:"Nicht erschienen", customersTotal:"Kunden Gesamt", allCustomersByEmployee:"Alle Kunden nach Mitarbeiter", timeShort:"Zeit", status:"Status", totalSingleEmployees:"Gesamtsumme einzelne Mitarbeiter", sumPaid:"Summe Bezahlt", employeeIncomeDetails:"Einzelne Kunden nach Mitarbeiter", amount:"Betrag", deletedDay:"Tag gelöscht", correction:"Korrektur"
+});
+Object.assign(I18N.vi, {
+  appointmentBlockCustomer:"Thông tin khách hàng", appointmentBlockService:"Dịch vụ", appointmentBlockTime:"Lịch hẹn", employeeAny:"Bất kỳ",
+  displaySettings:"Hiển thị / thiết bị", displaySettingsHint:"Tối ưu ứng dụng cho iPhone, iPad hoặc PC. “Tự động” sẽ nhận diện chế độ phù hợp.", optimizeForDevice:"Tối ưu hiển thị cho", deviceAuto:"Tự động", deviceIphone:"iPhone", deviceIpad:"iPad", devicePc:"PC / Windows", scheduleZoom:"Phóng to lịch ngày", zoomSmall:"Nhỏ", zoomNormal:"Bình thường", zoomLarge:"Lớn", scheduleInterval:"Khoảng thời gian lịch", interval15:"15 phút", interval30:"30 phút",
+  selectWeek:"Chọn tuần/KW", selectMonth:"Chọn tháng", weekEdit:"Sửa tuần", monthEdit:"Sửa tháng", manualChange:"Sửa thủ công", reset:"Đặt lại", periodManualHint:"Các thay đổi thủ công trong cửa sổ này chỉ dùng cho báo cáo này. Đồng bộ tự động từ Thanh toán, Sổ quỹ, Doanh thu nhân viên, Doanh thu tuần và Doanh thu tháng vẫn giữ nguyên.", manualReport:"Báo cáo đã sửa thủ công", manual:"Thủ công", dailyTotals:"Tổng doanh thu theo ngày", deletedStatus:"Đã xóa", validAmountAlert:"Vui lòng nhập số tiền hợp lệ.", validAmountSingleAlert:"Vui lòng nhập một số tiền hợp lệ.", changeSaved:"Đã lưu thay đổi.", resetWeekManualConfirm:"Đặt lại thay đổi thủ công của tuần?", resetMonthManualConfirm:"Đặt lại thay đổi thủ công của tháng?",
+  employeeRevenueNote:"Ghi chú: hiện tại các nút E và A chưa có chức năng. Sau này “E” dùng cho “nhập thưởng” và “A” dùng cho “chia dịch vụ / nhân viên”", reportAutoFooter:"Báo cáo được tạo tự động từ nhật ký doanh thu.", printPdfHint:"Lưu PDF qua hộp thoại in hoặc gửi đến máy in đã kết nối.", printPdf:"In / PDF", excelDownload:"Tải Excel", deposits:"Tiền nạp", withdrawals:"Tiền rút", employeeRevenueSection:"Doanh thu nhân viên", employeeCount:"Số lượng", sum:"Tổng", cashDepositsReport:"Nạp tiền / tiền lẻ", cashWithdrawalsReport:"Rút tiền", labelAmount:"Số tiền", noShowStatus:"Không đến", customersTotal:"Tổng khách", allCustomersByEmployee:"Tất cả khách theo nhân viên", timeShort:"Giờ", status:"Trạng thái", totalSingleEmployees:"Tổng từng nhân viên", sumPaid:"Tổng đã trả", employeeIncomeDetails:"Từng khách theo nhân viên", amount:"Số tiền", deletedDay:"Ngày đã xóa", correction:"Điều chỉnh",
+  cashRegister:"Sổ quỹ", currentCash:"Hiện có trong quỹ", cashReport:"Báo cáo sổ quỹ", cashBalance:"Số dư quỹ", cashWithdrawal:"Rút tiền khỏi quỹ", fromCashRegister:"Từ sổ quỹ", remainingCash:"Còn trong quỹ", noRevenue2CashEntries:"Chưa có mục nào. Nhấn nút “A” màu xanh trong tab Doanh thu nhân viên."
+});
+Object.assign(I18N.en, {
+  appointmentBlockCustomer:"Customer data", appointmentBlockService:"Service", appointmentBlockTime:"Appointment", employeeAny:"Any",
+  displaySettings:"Display / device view", displaySettingsHint:"Optimizes the app for iPhone, iPad or PC. “Automatic” detects the matching view.", optimizeForDevice:"Optimize display for", deviceAuto:"Automatic", deviceIphone:"iPhone", deviceIpad:"iPad", devicePc:"PC / Windows", scheduleZoom:"Schedule zoom", zoomSmall:"Small", zoomNormal:"Normal", zoomLarge:"Large", scheduleInterval:"Schedule interval", interval15:"15 minutes", interval30:"30 minutes",
+  selectWeek:"Select week/KW", selectMonth:"Select month", weekEdit:"Edit week", monthEdit:"Edit month", manualChange:"Manual edit", reset:"Reset", periodManualHint:"Manual changes in this window are only used for this report. Automatic sync from Payment, Cash register, Employee revenue, Weekly revenue and Monthly revenue remains unchanged.", manualReport:"Manually changed report", manual:"Manual", dailyTotals:"Daily totals", deletedStatus:"Deleted", validAmountAlert:"Please enter valid amounts.", validAmountSingleAlert:"Please enter a valid amount.", changeSaved:"Change saved.", resetWeekManualConfirm:"Reset manual weekly change?", resetMonthManualConfirm:"Reset manual monthly change?",
+  employeeRevenueNote:"Note: the E and A buttons currently have no function. Later, “E” is intended for bonus entry and “A” for splitting service / employee.", reportAutoFooter:"Report automatically created from the revenue journal.", printPdfHint:"Save PDF via the print dialog or send it to the connected printer.", printPdf:"Print / PDF", excelDownload:"Download Excel", deposits:"Deposits", withdrawals:"Withdrawals", employeeRevenueSection:"Employee revenue", employeeCount:"Count", sum:"Sum", cashDepositsReport:"Deposits / change", cashWithdrawalsReport:"Cash withdrawals", labelAmount:"Amount", noShowStatus:"No-show", customersTotal:"Customers total", allCustomersByEmployee:"All customers by employee", timeShort:"Time", status:"Status", totalSingleEmployees:"Total per employee", sumPaid:"Sum paid", employeeIncomeDetails:"Individual customers by employee", amount:"Amount", deletedDay:"Day deleted", correction:"Correction"
+});
+
 function t(key){
   const lang = state.language || "de";
   return (I18N[lang] && I18N[lang][key]) || I18N.de[key] || key;
 }
+
+const STATIC_TEXT_I18N = {
+  vi: {
+    "Noch keine Mitarbeiter vorhanden.": "Chưa có nhân viên.",
+    "Arbeitszeiten": "Giờ làm việc",
+    "Arbeitsmodell, normale Zeiten, Wochentage und Sonder-Arbeitstage": "Mô hình làm việc, giờ thường, ngày trong tuần và ngày làm đặc biệt",
+    "Arbeitszeiten nach Wochentagen aktivieren": "Bật giờ làm theo ngày trong tuần",
+    "Wenn aktiviert, sind nur angehakte Wochentage im Terminplaner freigegeben. Nicht angehakte Tage werden gesperrt. Sonntag ist geschlossen und kann hier nicht aktiviert werden.": "Khi bật, chỉ những ngày trong tuần được chọn mới có thể đặt lịch. Ngày không chọn sẽ bị khóa. Chủ nhật đóng cửa và không thể bật ở đây.",
+    "Sonder-Arbeitstage nach Datum": "Ngày làm đặc biệt theo ngày",
+    "Hier kannst du für einzelne Mitarbeiter ein bestimmtes Datum mit eigener Arbeitszeit freigeben. Diese Freigabe gilt nur an diesem Datum und überschreibt den normalen Wochenplan.": "Tại đây có thể mở một ngày cụ thể với giờ làm riêng cho từng nhân viên. Thiết lập này chỉ áp dụng cho ngày đó và ghi đè lịch tuần thông thường.",
+    "Datum": "Ngày", "Arbeitstag hinzufügen": "Thêm ngày làm", "Einzelnen Urlaubstag hinzufügen": "Thêm một ngày nghỉ", "Urlaubstag hinzufügen": "Thêm ngày nghỉ", "Urlaub / Sperrtage entfernen": "Xóa nghỉ phép / ngày khóa", "Der Terminplaner zeigt Zeiten außerhalb der Freigabe, Sonntage und aktiv gespeicherte Urlaubstage automatisch gesperrt an.": "Lịch hẹn tự động khóa thời gian ngoài giờ cho phép, Chủ nhật và ngày nghỉ đã lưu.",
+    "Kunde": "Khách hàng", "Mitarbeiter": "Nhân viên", "Termin im Tagesplan gelb markieren": "Đánh dấu lịch hẹn màu vàng trong lịch ngày", "Uhrzeit": "Giờ", "Änderungen speichern": "Lưu thay đổi", "Abbrechen": "Hủy", "Schließen": "Đóng", "Speichern": "Lưu", "Löschen": "Xóa", "Bearbeiten": "Sửa", "Aktiv": "Đang bật", "Inaktiv": "Tắt", "Vollzeit": "Toàn thời gian", "Aushilfe / Teilzeit": "Phụ / bán thời gian", "Minijob": "Mini-job", "Individuell": "Tùy chỉnh",
+    "Mo": "T2", "Di": "T3", "Mi": "T4", "Do": "T5", "Fr": "T6", "Sa": "T7", "Montag": "Thứ Hai", "Dienstag": "Thứ Ba", "Mittwoch": "Thứ Tư", "Donnerstag": "Thứ Năm", "Freitag": "Thứ Sáu", "Samstag": "Thứ Bảy",
+    "Noch keine Eintragung eingetragen.": "Chưa có khoản nạp nào.", "Noch keine Geldentnahme eingetragen.": "Chưa có khoản rút nào.", "Keine Einträge vorhanden.": "Chưa có mục nào.", "Noch keine manuellen Umsatzpositionen für diesen Tag.": "Chưa có mục doanh thu thủ công cho ngày này.", "Keine Termine an diesem Tag.": "Không có lịch hẹn trong ngày này.", "Keine bezahlten Kundentermine.": "Không có lịch hẹn khách đã trả.", "Offen": "Mở", "Bezahlt": "Đã trả", "Gebucht": "Đã đặt", "Nicht erschienen": "Không đến", "Leistung": "Dịch vụ", "Status": "Trạng thái", "Betrag": "Số tiền", "Preis": "Giá", "Notiz": "Ghi chú", "Telefon": "Số điện thoại", "Name": "Tên", "Gesamt": "Tổng", "Tagesumsatz": "Doanh thu ngày", "Gesamt Umsatz": "Tổng doanh thu", "Bericht Drucken": "In báo cáo", "Wochen ändern": "Sửa tuần", "Monat ändern": "Sửa tháng", "Zurücksetzen": "Đặt lại", "Manuell ändern": "Sửa thủ công", "Manuell": "Thủ công"
+  },
+  en: {
+    "Noch keine Mitarbeiter vorhanden.": "No employees available yet.",
+    "Arbeitszeiten": "Working hours",
+    "Arbeitsmodell, normale Zeiten, Wochentage und Sonder-Arbeitstage": "Work model, normal hours, weekdays and special working days",
+    "Arbeitszeiten nach Wochentagen aktivieren": "Enable working hours by weekday",
+    "Wenn aktiviert, sind nur angehakte Wochentage im Terminplaner freigegeben. Nicht angehakte Tage werden gesperrt. Sonntag ist geschlossen und kann hier nicht aktiviert werden.": "When enabled, only checked weekdays are available in the appointment planner. Unchecked days are blocked. Sunday is closed and cannot be enabled here.",
+    "Sonder-Arbeitstage nach Datum": "Special working days by date",
+    "Hier kannst du für einzelne Mitarbeiter ein bestimmtes Datum mit eigener Arbeitszeit freigeben. Diese Freigabe gilt nur an diesem Datum und überschreibt den normalen Wochenplan.": "Here you can open a specific date with custom working hours for individual employees. This only applies to that date and overrides the normal weekly schedule.",
+    "Datum": "Date", "Arbeitstag hinzufügen": "Add working day", "Einzelnen Urlaubstag hinzufügen": "Add single vacation day", "Urlaubstag hinzufügen": "Add vacation day", "Urlaub / Sperrtage entfernen": "Remove vacation / blocked days", "Der Terminplaner zeigt Zeiten außerhalb der Freigabe, Sonntage und aktiv gespeicherte Urlaubstage automatisch gesperrt an.": "The appointment planner automatically blocks times outside availability, Sundays and saved vacation days.",
+    "Kunde": "Customer", "Mitarbeiter": "Employee", "Termin im Tagesplan gelb markieren": "Mark appointment yellow in schedule", "Uhrzeit": "Time", "Änderungen speichern": "Save changes", "Abbrechen": "Cancel", "Schließen": "Close", "Speichern": "Save", "Löschen": "Delete", "Bearbeiten": "Edit", "Aktiv": "Active", "Inaktiv": "Inactive", "Vollzeit": "Full-time", "Aushilfe / Teilzeit": "Assistant / part-time", "Minijob": "Mini job", "Individuell": "Custom",
+    "Mo": "Mon", "Di": "Tue", "Mi": "Wed", "Do": "Thu", "Fr": "Fri", "Sa": "Sat", "Montag": "Monday", "Dienstag": "Tuesday", "Mittwoch": "Wednesday", "Donnerstag": "Thursday", "Freitag": "Friday", "Samstag": "Saturday",
+    "Noch keine Eintragung eingetragen.": "No deposit entered yet.", "Noch keine Geldentnahme eingetragen.": "No withdrawal entered yet.", "Keine Einträge vorhanden.": "No entries available.", "Noch keine manuellen Umsatzpositionen für diesen Tag.": "No manual revenue items for this day yet.", "Keine Termine an diesem Tag.": "No appointments on this day.", "Keine bezahlten Kundentermine.": "No paid customer appointments.", "Offen": "Open", "Bezahlt": "Paid", "Gebucht": "Booked", "Nicht erschienen": "No-show", "Leistung": "Service", "Status": "Status", "Betrag": "Amount", "Preis": "Price", "Notiz": "Note", "Telefon": "Phone", "Name": "Name", "Gesamt": "Total", "Tagesumsatz": "Daily revenue", "Gesamt Umsatz": "Total revenue", "Bericht Drucken": "Print report", "Wochen ändern": "Edit week", "Monat ändern": "Edit month", "Zurücksetzen": "Reset", "Manuell ändern": "Manual edit", "Manuell": "Manual"
+  }
+};
+function translateStaticTextNodes(root = document.body){
+  const lang = state.language || "de";
+  if(lang === "de" || !STATIC_TEXT_I18N[lang] || !root) return;
+  const dict = STATIC_TEXT_I18N[lang];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node){
+      const parent = node.parentElement;
+      if(!parent) return NodeFilter.FILTER_REJECT;
+      if(["SCRIPT","STYLE","TEXTAREA"].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
+      if(parent.closest("input,select,option")) return NodeFilter.FILTER_REJECT;
+      const text = node.nodeValue.trim();
+      return text && dict[text] ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+    }
+  });
+  const nodes = [];
+  while(walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(node => {
+    const original = node.nodeValue;
+    const trimmed = original.trim();
+    const before = original.slice(0, original.indexOf(trimmed));
+    const after = original.slice(original.indexOf(trimmed) + trimmed.length);
+    node.nodeValue = before + dict[trimmed] + after;
+  });
+}
+
 function applyLanguage(){
   document.documentElement.lang = state.language || "de";
   document.querySelectorAll("[data-i18n]").forEach(el => {
@@ -3437,7 +3586,7 @@ function markEmployeeDailyRevenueActionAUsed(id){
   const input = document.querySelector(`input[data-employee-daily-price="${CSS.escape(id)}"]`);
   const transferAmount = Number(input?.value ?? record.price ?? 0);
   if(!Number.isFinite(transferAmount) || transferAmount < 0){
-    alert("Bitte einen gültigen Betrag eintragen.");
+    alert(t("validAmountSingleAlert"));
     return;
   }
 
@@ -3503,7 +3652,7 @@ function saveEmployeeDailyRevenuePrice(id){
   const input = document.querySelector(`input[data-employee-daily-price="${CSS.escape(id)}"]`);
   const price = Number(input?.value || 0);
   if(!Number.isFinite(price) || price < 0){
-    alert("Bitte einen gültigen Betrag eintragen.");
+    alert(t("validAmountSingleAlert"));
     return;
   }
   record.price = price;
@@ -3646,7 +3795,7 @@ function addCashWithdrawal(){
   const reason = (reasonInput?.value || "").trim();
   const amount = Number(amountInput?.value || 0);
   if(!reason){ alert("Bitte eintragen, wofür Geld entnommen wurde."); return; }
-  if(!Number.isFinite(amount) || amount <= 0){ alert("Bitte einen gültigen Betrag eintragen."); return; }
+  if(!Number.isFinite(amount) || amount <= 0){ alert(t("validAmountSingleAlert")); return; }
   state.cashWithdrawals = state.cashWithdrawals || [];
   state.cashWithdrawals.push({ id: uid(), date: getJournalDate(), reason, amount, createdAt: new Date().toISOString() });
   saveState();
@@ -3661,7 +3810,7 @@ function addCashDeposit(){
   const reason = (reasonInput?.value || "").trim();
   const amount = Number(amountInput?.value || 0);
   if(!reason){ alert("Bitte eine Bezeichnung für die Einzahlung eintragen."); return; }
-  if(!Number.isFinite(amount) || amount <= 0){ alert("Bitte einen gültigen Betrag eintragen."); return; }
+  if(!Number.isFinite(amount) || amount <= 0){ alert(t("validAmountSingleAlert")); return; }
   state.cashDeposits = state.cashDeposits || [];
   state.cashDeposits.push({ id: uid(), date: getJournalDate(), reason, amount, createdAt: new Date().toISOString() });
   saveState();
@@ -3767,7 +3916,7 @@ function saveRevenue2Price(id, kind = "employee"){
   const input = document.querySelector(`input[data-revenue2-price="${CSS.escape(id)}"][data-revenue2-kind="${CSS.escape(kind)}"]`);
   const price = Number(input?.value || 0);
   if(!Number.isFinite(price) || price < 0){
-    alert("Bitte einen gültigen Betrag eintragen.");
+    alert(t("validAmountSingleAlert"));
     return;
   }
   entry.price = price;
