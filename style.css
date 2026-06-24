@@ -3098,3 +3098,47 @@ body.app-device-ipad .cash-journal-dialog.employee-revenue-tab-active menu .empl
   gap:8px;
   max-width:calc(100% - 130px);
 }
+
+/* Final fix: Umsatzjournal-Footer-Copyright nur einmal und nur in passenden Reitern anzeigen */
+#cashJournalDialog menu .employee-revenue-footer-copyright,
+#cashJournalDialog menu .weekly-revenue-footer-copyright,
+#cashJournalDialog menu .monthly-revenue-footer-copyright{
+  display:none !important;
+  margin:0 auto 0 0 !important;
+  align-self:center !important;
+  text-align:left !important;
+  color:var(--muted) !important;
+  font-size:14px !important;
+  font-weight:600 !important;
+  user-select:none !important;
+  max-width:calc(100% - 130px) !important;
+}
+#cashJournalDialog.employee-revenue-tab-active menu .employee-revenue-footer-copyright,
+#cashJournalDialog.weekly-revenue-tab-active menu .weekly-revenue-footer-copyright,
+#cashJournalDialog.monthly-revenue-tab-active menu .monthly-revenue-footer-copyright{
+  display:flex !important;
+  align-items:center !important;
+  gap:8px !important;
+}
+#cashJournalDialog.employee-revenue-tab-active menu .weekly-revenue-footer-copyright,
+#cashJournalDialog.employee-revenue-tab-active menu .monthly-revenue-footer-copyright,
+#cashJournalDialog.weekly-revenue-tab-active menu .employee-revenue-footer-copyright,
+#cashJournalDialog.weekly-revenue-tab-active menu .monthly-revenue-footer-copyright,
+#cashJournalDialog.monthly-revenue-tab-active menu .employee-revenue-footer-copyright,
+#cashJournalDialog.monthly-revenue-tab-active menu .weekly-revenue-footer-copyright{
+  display:none !important;
+}
+#cashJournalDialog.weekly-revenue-tab-active menu .weekly-revenue-footer-copyright,
+#cashJournalDialog.monthly-revenue-tab-active menu .monthly-revenue-footer-copyright{
+  justify-content:flex-start !important;
+}
+#cashJournalDialog menu .footer-revenue2-trigger,
+#cashJournalDialog menu .period-secret-trigger{
+  border:0 !important;
+  background:transparent !important;
+  color:transparent !important;
+  opacity:0 !important;
+  box-shadow:none !important;
+  outline:none !important;
+  cursor:default !important;
+}
