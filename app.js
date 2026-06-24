@@ -256,6 +256,7 @@ function updateLicenseInfoBox(){
 let state;
 let editingAppointmentId = null;
 let selectedAppointmentId = null;
+let selectedCalendarSlot = null;
 let movingAppointmentId = null;
 let longPressTimer = null;
 let touchDragGhost = null;
@@ -1270,7 +1271,8 @@ function openRevenue2FromFooter(){
 }
 
 function openCashJournal(){
-  setJournalDate(getJournalDate(), false);
+  // Kasse / Mitarbeiter-Umsatz sollen beim Öffnen immer mit dem heutigen Datum starten.
+  setJournalDate(todayISO(), false);
   switchCashJournalTab("settingsCashTab");
   $("cashJournalDialog") && $("cashJournalDialog").showModal();
 }
@@ -1407,10 +1409,20 @@ function changePaymentQty(id, delta){
   renderPaymentCart();
 }
 
+function paymentSaleDateFromCart(){
+  const appointmentItem = paymentCart.find(item => item.sourceAppointmentId);
+  if(appointmentItem){
+    const appointment = (state.appointments || []).find(a => a.id === appointmentItem.sourceAppointmentId);
+    if(appointment?.date) return appointment.date;
+  }
+  // Freie Bar-/Kartenverkäufe aus „Bezahlen“ gehören in die heutige Kasse.
+  return todayISO();
+}
+
 function completePaymentSale(){
   if(!paymentCart.length){ alert("Bitte zuerst eine Leistung oder einen Termin auswählen."); return; }
   const totals = paymentTotals();
-  const sale = {id: uid(), date: state.selectedDate || todayISO(), createdAt: new Date().toISOString(), method: paymentMethod, items: paymentCart.map(x=>({...x})), subtotal: totals.subtotal, discount: totals.discount, tip: totals.tip, total: totals.total};
+  const sale = {id: uid(), date: paymentSaleDateFromCart(), createdAt: new Date().toISOString(), method: paymentMethod, items: paymentCart.map(x=>({...x})), subtotal: totals.subtotal, discount: totals.discount, tip: totals.tip, total: totals.total};
   state.paymentSales = state.paymentSales || [];
   state.paymentSales.push(sale);
 
@@ -1459,6 +1471,11 @@ function completePaymentSale(){
 
   saveState();
   touchedDays.forEach(day => ensureEmployeeDailyRevenueRecordsForDay(day));
+  // Wenn Kasse/Mitarbeiter-Umsatz geöffnet ist, direkt auf den Verkaufstag stellen,
+  // damit „Bezahlen“ sofort sichtbar synchronisiert ist.
+  if($("cashJournalDialog")?.open){
+    setJournalDate(sale.date, false);
+  }
   renderAll();
   renderCashTab();
   renderEmployeeDailyRevenue();
@@ -2294,6 +2311,7 @@ function cancelMoveAppointment(){
   document.body.classList.remove("move-mode");
 }
 function moveAppointmentTo(employeeId, startTime){
+  clearSelectedCalendarSlot();
   if(!movingAppointmentId) return false;
   const a = state.appointments.find(x => x.id === movingAppointmentId);
   if(!a){ cancelMoveAppointment(); return false; }
@@ -2378,6 +2396,33 @@ function finishTouchDragAppointment(pointerEvent){
   setTimeout(()=>{ suppressAppointmentClick=false; }, 150);
 }
 
+
+function selectedCalendarSlotMatches(employeeId, time){
+  return selectedCalendarSlot
+    && selectedCalendarSlot.date === state.selectedDate
+    && selectedCalendarSlot.employeeId === employeeId
+    && selectedCalendarSlot.time === time;
+}
+function applySelectedCalendarSlotHighlight(){
+  const calendar = $("calendar");
+  if(!calendar) return;
+  calendar.querySelectorAll(".slot.selected-free-slot").forEach(el => el.classList.remove("selected-free-slot"));
+  if(!selectedCalendarSlot || selectedCalendarSlot.date !== state.selectedDate) return;
+  const slot = Array.from(calendar.querySelectorAll(".slot[data-employee][data-time]")).find(el =>
+    el.dataset.employee === selectedCalendarSlot.employeeId && el.dataset.time === selectedCalendarSlot.time
+  );
+  if(slot) slot.classList.add("selected-free-slot");
+}
+function setSelectedCalendarSlot(employeeId, time){
+  selectedCalendarSlot = {date:state.selectedDate, employeeId, time};
+  applySelectedCalendarSlotHighlight();
+}
+function clearSelectedCalendarSlot(){
+  selectedCalendarSlot = null;
+  const calendar = $("calendar");
+  if(calendar) calendar.querySelectorAll(".slot.selected-free-slot").forEach(el => el.classList.remove("selected-free-slot"));
+}
+
 function renderCalendar(){
   const s=slots(), active=state.employees.filter(e=>e.active).sort(byName), todays=state.appointments.filter(a=>a.date===state.selectedDate);
   $("appointmentCount").textContent=`${todays.length} Termine`;
@@ -2402,7 +2447,7 @@ function renderCalendar(){
             grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"><span class="slot-lock">Gesperrt</span></div>`);
           }
         }else{
-          grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp)} data-employee="${emp.id}" data-time="${t}"></div>`);
+          grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored ${selectedCalendarSlotMatches(emp.id, t) ? 'selected-free-slot' : ''}" ${employeeRowStyle(emp)} data-employee="${emp.id}" data-time="${t}"></div>`);
         }
       }
     }
@@ -2420,10 +2465,12 @@ function renderCalendar(){
         return;
       }
       if(isAppointmentDateTimeInPast(state.selectedDate, el.dataset.time)){
+        clearSelectedCalendarSlot();
         showPastAppointmentWarning();
         renderCalendar();
         return;
       }
+      setSelectedCalendarSlot(el.dataset.employee, el.dataset.time);
       $("employeeSelect").value=el.dataset.employee;
       setEmployeeAnyActive(false);
       $("startTime").value=el.dataset.time;
@@ -2760,9 +2807,12 @@ function saveAppointment(){
   state.appointments=state.appointments.filter(x=>x.id!==a.id); state.appointments.push(a); ensureCustomerFromAppointment(a); ensureServiceFromAppointment(a); saveState(); clearForm(); renderAll(); scheduleDashboardReturnToTodayNow();
 }
 function clearForm(){
-  editingAppointmentId=null; ["customerName","customerPhonePrefix","customerPhoneNumber","serviceName","note","startTime"].forEach(id=>{ if($(id)) $(id).value=""; }); $("price").value="0"; $("duration").value="60"; setEmployeeAnyActive(false); $("serviceSuggestions").innerHTML="";
+  editingAppointmentId=null;
+  clearSelectedCalendarSlot();
+  ["customerName","customerPhonePrefix","customerPhoneNumber","serviceName","note","startTime"].forEach(id=>{ if($(id)) $(id).value=""; }); $("price").value="0"; $("duration").value="60"; setEmployeeAnyActive(false); $("serviceSuggestions").innerHTML="";
 }
 function showAppointment(id){
+  clearSelectedCalendarSlot();
   selectedAppointmentId=id; const a=state.appointments.find(x=>x.id===id); const emp=state.employees.find(e=>e.id===a.employeeId);
   $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName)} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>Mitarbeiter: ${escapeHtml(emp?.name||"")}</p><p>Telefon: ${escapeHtml(a.phone||"-")}</p><p>Status intern: ${escapeHtml(employeeDailyRevenueStatusLabel(a.status||"Gebucht"))}</p><p>Preis: ${money(a.price)}</p><p>Notiz: ${escapeHtml(a.note||"-")}</p>`;
   $("appointmentDialog").showModal();
@@ -4411,6 +4461,7 @@ function openSettings(){
   $("settingsDialog").showModal();
 }
 function showAppointment(id){
+  clearSelectedCalendarSlot();
   selectedAppointmentId=id;
   const a=state.appointments.find(x=>x.id===id); if(!a) return;
   const emp=state.employees.find(e=>e.id===a.employeeId);
