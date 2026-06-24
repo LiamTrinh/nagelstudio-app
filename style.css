@@ -2779,3 +2779,83 @@ body.app-device-ipad .appointment{
   pointer-events:none;
 }
 .slot.selected-free-slot:hover{background:#e3f2ff !important;}
+
+/* Version 3.29: Kasse-Dialog auf iPad/responsiv vollständig sichtbar */
+.cash-journal-dialog{
+  box-sizing:border-box;
+  max-width:96vw;
+  overflow-x:hidden;
+}
+.cash-journal-dialog .settings-dialog-header,
+.cash-journal-dialog .settings-section,
+.cash-journal-dialog .settings-tab-panel,
+.cash-journal-dialog .cash-section,
+.cash-journal-dialog .cash-grid,
+.cash-journal-dialog .cash-box{
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+}
+.cash-journal-dialog .cash-journal-tabs{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.cash-journal-dialog .cash-balance-top strong{
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+.cash-journal-dialog .cash-employee-row,
+.cash-journal-dialog .cash-withdrawal-row{
+  min-width:0;
+}
+body.app-device-ipad .cash-journal-dialog{
+  width:min(980px,96vw) !important;
+  padding:18px !important;
+  overflow-x:hidden !important;
+}
+body.app-device-ipad .cash-journal-dialog .settings-tab-panel.active,
+body.app-device-ipad .cash-section,
+body.app-device-ipad #settingsCashTab.active{
+  width:100% !important;
+  max-width:100% !important;
+}
+body.app-device-ipad .cash-grid{
+  grid-template-columns:1fr !important;
+  gap:14px !important;
+}
+body.app-device-ipad .cash-withdrawal-form{
+  grid-template-columns:minmax(0,1fr) 140px !important;
+}
+body.app-device-ipad .cash-withdrawal-form button{
+  grid-column:1 / -1 !important;
+  width:100% !important;
+}
+body.app-device-ipad .cash-balance-top{
+  gap:12px;
+}
+@media (max-width:1200px){
+  .cash-journal-dialog .cash-grid{
+    grid-template-columns:1fr !important;
+  }
+  .cash-journal-dialog .cash-withdrawal-form{
+    grid-template-columns:minmax(0,1fr) 130px !important;
+  }
+  .cash-journal-dialog .cash-withdrawal-form button{
+    grid-column:1 / -1 !important;
+    width:100% !important;
+  }
+}
+@media (max-width:720px){
+  .cash-journal-dialog{
+    width:96vw !important;
+    padding:16px !important;
+  }
+  .cash-journal-dialog .cash-balance-top{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  .cash-journal-dialog .cash-withdrawal-form{
+    grid-template-columns:1fr !important;
+  }
+}

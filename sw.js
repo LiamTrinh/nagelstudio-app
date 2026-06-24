@@ -1,4 +1,4 @@
-const CACHE = "nail-studio-pwa-v124-slot-blue-highlight";
+const CACHE = "nail-studio-pwa-v125-kasse-ipad-layout";
 const FILES = ["./","./index.html","./style.css","./app.js","./studio-licenses.json","./manifest.json","./icon.svg","./logo-192.png","./logo-512.png","./logo-header.png","./lotus-lt-system-logo.png","./backup-modern-icon.png"];
 self.addEventListener("install", e => {
   self.skipWaiting();
