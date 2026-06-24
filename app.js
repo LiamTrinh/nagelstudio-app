@@ -369,22 +369,25 @@ function journalWeekSelectLabel(monday){
 function buildJournalWeekOptions(){
   const select = $("journalWeekSelect");
   if(!select) return;
+  const currentYear = new Date(todayISO() + "T12:00:00").getFullYear();
   const base = getJournalDate();
-  const baseYear = new Date(base + "T12:00:00").getFullYear();
-  const currentValue = startOfWeekISO(base);
+  let currentValue = startOfWeekISO(base);
   let html = "";
-  for(let year = baseYear - 1; year <= baseYear + 1; year++){
-    let monday = startOfWeekISO(`${year}-01-04`);
-    while(new Date(monday + "T12:00:00").getFullYear() <= year || isoWeekNumber(monday) === 1){
-      const weekYear = new Date(addDaysISO(monday, 3) + "T12:00:00").getFullYear();
-      if(weekYear === year){
-        html += `<option value="${monday}">${journalWeekSelectLabel(monday)}</option>`;
-      }
-      monday = addDaysISO(monday, 7);
-      if(html.length > 200000) break;
+  let monday = startOfWeekISO(`${currentYear}-01-04`);
+  while(new Date(monday + "T12:00:00").getFullYear() <= currentYear || isoWeekNumber(monday) === 1){
+    const weekYear = new Date(addDaysISO(monday, 3) + "T12:00:00").getFullYear();
+    if(weekYear === currentYear){
+      html += `<option value="${monday}">${journalWeekSelectLabel(monday)}</option>`;
     }
+    monday = addDaysISO(monday, 7);
+    if(html.length > 200000) break;
   }
   select.innerHTML = html;
+  const hasCurrentValue = Array.from(select.options).some(option => option.value === currentValue);
+  if(!hasCurrentValue){
+    currentValue = startOfWeekISO(todayISO());
+    state.journalDate = currentValue;
+  }
   select.value = currentValue;
 }
 function journalMonthSelectLabel(monthStart){
@@ -394,17 +397,20 @@ function journalMonthSelectLabel(monthStart){
 function buildJournalMonthOptions(){
   const select = $("journalMonthSelect");
   if(!select) return;
+  const currentYear = new Date(todayISO() + "T12:00:00").getFullYear();
   const base = getJournalDate();
-  const baseYear = new Date(base + "T12:00:00").getFullYear();
-  const currentValue = startOfMonthISO(base);
+  let currentValue = startOfMonthISO(base);
   let html = "";
-  for(let year = baseYear - 1; year <= baseYear + 1; year++){
-    for(let month = 1; month <= 12; month++){
-      const value = `${year}-${String(month).padStart(2,"0")}-01`;
-      html += `<option value="${value}">${journalMonthSelectLabel(value)}</option>`;
-    }
+  for(let month = 1; month <= 12; month++){
+    const value = `${currentYear}-${String(month).padStart(2,"0")}-01`;
+    html += `<option value="${value}">${journalMonthSelectLabel(value)}</option>`;
   }
   select.innerHTML = html;
+  const hasCurrentValue = Array.from(select.options).some(option => option.value === currentValue);
+  if(!hasCurrentValue){
+    currentValue = startOfMonthISO(todayISO());
+    state.journalDate = currentValue;
+  }
   select.value = currentValue;
 }
 function updateJournalDateControl(target = activeCashJournalTab()){
