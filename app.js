@@ -278,7 +278,7 @@ function defaultServices(){ return [
 ];}
 function defaultState(){ return {
 	  version:"3.0", configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", scheduleIntervalMinutes:15, cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
-  employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[], employeeDailyRevenueRecords:[], revenue2Entries:[], revenue2DeletedAppointmentIds:[], revenue2CashEntries:[], revenue2CashDeletedAppointmentIds:[], cashWithdrawals:[], cashDeposits:[], journalRevenueCorrections:{}, journalRevenueDeletedDays:[], paymentSales:[],
+  employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[], employeeDailyRevenueRecords:[], revenue2Entries:[], revenue2DeletedAppointmentIds:[], revenue2CashEntries:[], revenue2CashDeletedAppointmentIds:[], cashWithdrawals:[], cashDeposits:[], journalRevenueCorrections:{}, journalRevenueDeletedDays:[], periodRevenueManualEdits:{week:{},month:{}}, paymentSales:[],
   selectedDate:todayISO(), journalDate:todayISO(), storageMode:"local"
 };}
 function loadState(){
@@ -302,6 +302,9 @@ function loadState(){
     data.revenue2CashDeletedAppointmentIds = data.revenue2CashDeletedAppointmentIds || [];
     data.cashWithdrawals = data.cashWithdrawals || [];
     data.cashDeposits = data.cashDeposits || [];
+    data.periodRevenueManualEdits = data.periodRevenueManualEdits || {week:{}, month:{}};
+    data.periodRevenueManualEdits.week = data.periodRevenueManualEdits.week || {};
+    data.periodRevenueManualEdits.month = data.periodRevenueManualEdits.month || {};
     data.journalRevenueCorrections = data.journalRevenueCorrections || {};
     data.journalRevenueDeletedDays = data.journalRevenueDeletedDays || [];
     data.paymentSales = data.paymentSales || [];
@@ -981,15 +984,138 @@ function renderPeriodRevenue(type){
   list.innerHTML = `
     <div class="period-revenue-table period-revenue-table-readonly">
       <div class="period-revenue-row period-revenue-row-readonly period-revenue-head">
-        <span>Datum</span><span>Einträge</span><span>Tagesumsatz</span>
+        <span>Datum</span><span>Tagesumsatz</span>
       </div>
       ${displayRows.map(r => `
         <div class="period-revenue-row period-revenue-row-readonly ${r.deleted ? 'period-revenue-deleted' : ''}">
           <strong>${formatDateShort(r.day)}</strong>
-          <span>${r.deleted ? '-' : String(r.count)}</span>
           <strong>${r.deleted ? 'Gelöscht' : money(r.total)}</strong>
         </div>`).join("")}
     </div>`;
+}
+
+
+let periodRevenueEditType = "week";
+
+function periodRevenueEditKey(type){
+  const range = journalPeriodRange(type === "month" ? "month" : "week");
+  return `${range.from}_${range.to}`;
+}
+function periodRevenueBaseRows(type){
+  const normalizedType = type === "month" ? "month" : "week";
+  const range = journalPeriodRange(normalizedType);
+  const rows = eachDayISO(range.from, range.to).map(day => {
+    const corrected = state.journalRevenueCorrections?.[day];
+    const deleted = journalDayDeleted(day);
+    const total = journalDayTotal(day);
+    const count = deleted ? 0 : journalDayCustomerCount(day);
+    return {day, corrected, deleted, total, count};
+  });
+  return {range, rows};
+}
+function getPeriodRevenueManualMap(type){
+  state.periodRevenueManualEdits = state.periodRevenueManualEdits || {week:{}, month:{}};
+  state.periodRevenueManualEdits.week = state.periodRevenueManualEdits.week || {};
+  state.periodRevenueManualEdits.month = state.periodRevenueManualEdits.month || {};
+  const normalizedType = type === "month" ? "month" : "week";
+  const key = periodRevenueEditKey(normalizedType);
+  return state.periodRevenueManualEdits[normalizedType][key] || null;
+}
+function periodRevenueManualRows(type){
+  const normalizedType = type === "month" ? "month" : "week";
+  const {range, rows} = periodRevenueBaseRows(normalizedType);
+  const manual = getPeriodRevenueManualMap(normalizedType);
+  const values = manual && manual.values ? manual.values : {};
+  const mergedRows = rows.map(r => {
+    const manualValue = values[r.day];
+    const hasManual = manualValue !== undefined && manualValue !== null && manualValue !== "";
+    return {...r, manual: hasManual, editTotal: hasManual ? Number(manualValue || 0) : Number(r.total || 0)};
+  });
+  return {range, rows:mergedRows};
+}
+function renderPeriodRevenueManualEdit(){
+  const type = periodRevenueEditType === "month" ? "month" : "week";
+  const isMonth = type === "month";
+  const {range, rows} = periodRevenueManualRows(type);
+  const total = rows.reduce((sum,r)=>sum + Number(r.editTotal || 0), 0);
+  if($("periodRevenueEditTitle")) $("periodRevenueEditTitle").textContent = isMonth ? "Monat ändern" : "Wochen ändern";
+  if($("periodRevenueEditRangeLabel")) $("periodRevenueEditRangeLabel").textContent = isMonth ? "Monat" : "Woche";
+  if($("periodRevenueEditRange")) $("periodRevenueEditRange").textContent = range.label;
+  if($("periodRevenueEditDays")) $("periodRevenueEditDays").textContent = String(rows.length);
+  if($("periodRevenueEditTotal")) $("periodRevenueEditTotal").textContent = money(total);
+  const list = $("periodRevenueEditList");
+  if(!list) return;
+  list.innerHTML = `
+    <div class="period-revenue-edit-table">
+      <div class="period-revenue-edit-row period-revenue-edit-head">
+        <span>Datum</span><span>Tagesumsatz</span><span>Manuell ändern</span>
+      </div>
+      ${rows.map(r => `
+        <div class="period-revenue-edit-row">
+          <strong>${formatDateShort(r.day)}</strong>
+          <span>${r.deleted ? "Gelöscht" : money(r.total)}</span>
+          <input type="number" min="0" step="0.01" inputmode="decimal" value="${Number(r.editTotal || 0).toFixed(2)}" data-period-manual-day="${escapeHtml(r.day)}" aria-label="Umsatz ${formatDateShort(r.day)}">
+        </div>`).join("")}
+    </div>`;
+  list.querySelectorAll("input[data-period-manual-day]").forEach(input => {
+    input.oninput = () => {
+      const sum = Array.from(list.querySelectorAll("input[data-period-manual-day]")).reduce((acc, el) => acc + Number(el.value || 0), 0);
+      if($("periodRevenueEditTotal")) $("periodRevenueEditTotal").textContent = money(sum);
+    };
+  });
+}
+function openPeriodRevenueEdit(type){
+  periodRevenueEditType = type === "month" ? "month" : "week";
+  renderPeriodRevenueManualEdit();
+  const dialog = $("periodRevenueEditDialog");
+  if(dialog) dialog.showModal();
+}
+function savePeriodRevenueManualEdit(){
+  const type = periodRevenueEditType === "month" ? "month" : "week";
+  const key = periodRevenueEditKey(type);
+  const values = {};
+  let valid = true;
+  document.querySelectorAll("#periodRevenueEditList input[data-period-manual-day]").forEach(input => {
+    const val = Number(input.value || 0);
+    if(!Number.isFinite(val) || val < 0) valid = false;
+    values[input.dataset.periodManualDay] = val;
+  });
+  if(!valid){ alert("Bitte gültige Beträge eintragen."); return; }
+  state.periodRevenueManualEdits = state.periodRevenueManualEdits || {week:{}, month:{}};
+  state.periodRevenueManualEdits[type] = state.periodRevenueManualEdits[type] || {};
+  const {range} = periodRevenueBaseRows(type);
+  state.periodRevenueManualEdits[type][key] = {range, values, updatedAt:new Date().toISOString()};
+  saveState();
+  renderPeriodRevenueManualEdit();
+  alert("Änderung gespeichert.");
+}
+function resetPeriodRevenueManualEdit(){
+  const type = periodRevenueEditType === "month" ? "month" : "week";
+  if(!confirm(type === "month" ? "Manuelle Monatsänderung zurücksetzen?" : "Manuelle Wochenänderung zurücksetzen?")) return;
+  const key = periodRevenueEditKey(type);
+  state.periodRevenueManualEdits = state.periodRevenueManualEdits || {week:{}, month:{}};
+  state.periodRevenueManualEdits[type] = state.periodRevenueManualEdits[type] || {};
+  delete state.periodRevenueManualEdits[type][key];
+  saveState();
+  renderPeriodRevenueManualEdit();
+}
+function printPeriodRevenueManualEdit(){
+  const type = periodRevenueEditType === "month" ? "month" : "week";
+  const isMonth = type === "month";
+  const {range, rows} = periodRevenueManualRows(type);
+  const total = rows.reduce((sum,r)=>sum + Number(r.editTotal || 0), 0);
+  const tableRows = rows.map(r => [
+    escapeHtml(formatDateShort(r.day)),
+    `<span class="amount">${money(r.total)}</span>`,
+    `<span class="amount">${money(r.editTotal)}</span>`
+  ]);
+  openAccountingReport(isMonth ? "Monat ändern" : "Wochen ändern", range.label, [
+    {label: isMonth ? "Monat" : "Woche", value: range.label},
+    {label: "Tage", value: String(rows.length)},
+    {label: "Gesamt Umsatz", value: money(total)}
+  ], [
+    reportSection("Manuell geänderter Bericht", reportTable(["Datum", "Tagesumsatz", "Manuell"], tableRows))
+  ]);
 }
 
 
@@ -1165,6 +1291,12 @@ function bindEvents(){
   $("hiddenRevenueOpenBtn") && ($("hiddenRevenueOpenBtn").onclick = openHiddenRevenue);
   $("hiddenRevenueFooterBtn") && ($("hiddenRevenueFooterBtn").onclick = openHiddenRevenue);
   $("footerRevenue2TabBtn") && ($("footerRevenue2TabBtn").onclick = openRevenue2FromFooter);
+  $("footerWeeklyEditBtn") && ($("footerWeeklyEditBtn").onclick = () => openPeriodRevenueEdit("week"));
+  $("footerMonthlyEditBtn") && ($("footerMonthlyEditBtn").onclick = () => openPeriodRevenueEdit("month"));
+  $("periodRevenueEditCloseBtn") && ($("periodRevenueEditCloseBtn").onclick = () => $("periodRevenueEditDialog").close());
+  $("periodRevenueEditSaveBtn") && ($("periodRevenueEditSaveBtn").onclick = savePeriodRevenueManualEdit);
+  $("periodRevenueEditResetBtn") && ($("periodRevenueEditResetBtn").onclick = resetPeriodRevenueManualEdit);
+  $("periodRevenueEditPrintBtn") && ($("periodRevenueEditPrintBtn").onclick = printPeriodRevenueManualEdit);
   $("printCashReportBtn") && ($("printCashReportBtn").onclick = () => printAccountingReport("cash"));
   $("printWeeklyRevenueReportBtn") && ($("printWeeklyRevenueReportBtn").onclick = () => printPeriodRevenueReport("week"));
   $("printMonthlyRevenueReportBtn") && ($("printMonthlyRevenueReportBtn").onclick = () => printPeriodRevenueReport("month"));

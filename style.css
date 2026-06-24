@@ -2942,9 +2942,114 @@ body.app-device-ipad .cash-journal-dialog.employee-revenue-tab-active menu .empl
 }
 
 /* Wochen Umsatz / Monat Umsatz: nur Tagesumsatz anzeigen, ohne Korrekturaktionen */
-.period-revenue-row.period-revenue-row-readonly{grid-template-columns:1fr .7fr 1fr;}
-.period-revenue-table-readonly .period-revenue-row strong:last-child{text-align:right;}
+.period-revenue-row.period-revenue-row-readonly{
+  grid-template-columns:minmax(0,1fr) minmax(120px,190px);
+  align-items:center;
+}
+.period-revenue-table-readonly .period-revenue-head span:last-child,
+.period-revenue-table-readonly .period-revenue-row strong:last-child{
+  text-align:right;
+  justify-self:end;
+  white-space:nowrap;
+}
+.period-revenue-table-readonly .period-revenue-row strong:first-child{
+  min-width:0;
+}
 @media (max-width:760px){
-  .period-revenue-row.period-revenue-row-readonly{grid-template-columns:1fr 1fr;}
-  .period-revenue-row.period-revenue-row-readonly strong:last-child{grid-column:1/3;text-align:left;}
+  .period-revenue-row.period-revenue-row-readonly{
+    grid-template-columns:minmax(0,1fr) minmax(105px,150px);
+  }
+}
+
+/* Wochen-/Monat-Umsatz: versteckter Copyright-Zugang zu manuellen Änderungsfenstern */
+.period-revenue-footer-copyright{
+  margin:16px 0 0;
+  color:var(--muted);
+  font-size:12px;
+  text-align:center;
+  user-select:none;
+}
+.period-secret-c-wrap{
+  position:relative;
+  display:inline-block;
+  line-height:1;
+}
+.period-secret-trigger{
+  position:absolute !important;
+  left:50%;
+  top:50%;
+  width:32px;
+  height:32px;
+  transform:translate(-50%, -50%);
+  margin:0 !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  color:transparent !important;
+  opacity:0 !important;
+  appearance:none;
+  cursor:default;
+  box-shadow:none !important;
+  outline:none !important;
+  z-index:2;
+}
+.period-secret-trigger:hover,
+.period-secret-trigger:focus,
+.period-secret-trigger:active{
+  background:transparent !important;
+  color:transparent !important;
+  opacity:0 !important;
+  box-shadow:none !important;
+  outline:none !important;
+  text-decoration:none !important;
+}
+.period-revenue-edit-dialog{
+  width:min(920px,96vw);
+}
+.period-revenue-edit-list{
+  margin-top:14px;
+}
+.period-revenue-edit-table{
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:#fff;
+  overflow:hidden;
+  box-shadow:0 8px 22px rgba(30,20,30,.05);
+}
+.period-revenue-edit-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(115px,170px) minmax(130px,190px);
+  gap:10px;
+  align-items:center;
+  padding:10px 12px;
+  border-top:1px solid #f5e3ec;
+}
+.period-revenue-edit-row:first-child{border-top:0;}
+.period-revenue-edit-head{
+  background:#fff1f7;
+  font-weight:1000;
+  color:var(--muted);
+}
+.period-revenue-edit-head span:nth-child(2),
+.period-revenue-edit-head span:nth-child(3),
+.period-revenue-edit-row span:nth-child(2){
+  text-align:right;
+}
+.period-revenue-edit-row span:nth-child(2){
+  font-weight:900;
+  white-space:nowrap;
+}
+.period-revenue-edit-row input{
+  width:100%;
+  padding:9px 10px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  text-align:right;
+  font-weight:900;
+}
+@media (max-width:760px){
+  .period-revenue-edit-row{grid-template-columns:minmax(0,1fr) minmax(115px,150px);}
+  .period-revenue-edit-head{display:none;}
+  .period-revenue-edit-row input{grid-column:1/3;}
 }
