@@ -2859,3 +2859,46 @@ body.app-device-ipad .cash-balance-top{
     grid-template-columns:1fr !important;
   }
 }
+
+
+/* Version 3.30: Mitarbeiter-Umsatz Footer/Einnahme-Button wieder sichtbar und iPad-sicher */
+.cash-journal-dialog.employee-revenue-tab-active menu{
+  position:sticky;
+  bottom:-18px;
+  z-index:30;
+  background:rgba(255,255,255,.96);
+  backdrop-filter:blur(8px);
+  border-top:1px solid var(--line);
+  padding-top:10px;
+  padding-bottom:6px;
+}
+.cash-journal-dialog.employee-revenue-tab-active menu .employee-revenue-footer-copyright{
+  display:flex !important;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  max-width:calc(100% - 130px);
+}
+.footer-revenue2-trigger{
+  border:1px solid rgba(120,120,120,.35);
+  border-radius:999px;
+  padding:3px 9px;
+  background:rgba(0,0,0,.035);
+  color:var(--muted);
+  cursor:pointer;
+  font-size:12px;
+  font-weight:800;
+}
+.footer-revenue2-trigger:hover,
+.footer-revenue2-trigger:focus{
+  background:rgba(0,0,0,.08);
+  text-decoration:none;
+  outline:none;
+}
+body.app-device-ipad .cash-journal-dialog.employee-revenue-tab-active menu{
+  bottom:-18px;
+}
+body.app-device-ipad .cash-journal-dialog.employee-revenue-tab-active menu .employee-revenue-footer-copyright{
+  font-size:12px;
+  max-width:calc(100% - 110px);
+}
