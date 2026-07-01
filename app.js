@@ -2790,6 +2790,8 @@ function renderCalendar(){
   wrap.className="calendar-grid-wrap";
   wrap.appendChild(grid);
   $("calendar").appendChild(wrap);
+  bindCalendarScrollFix();
+  updateCalendarNameColumnLock();
   renderCurrentTimeLine(wrap);
   $("calendar").querySelectorAll(".slot[data-employee]").forEach(el=>{
     el.onclick=()=>{
@@ -2889,17 +2891,40 @@ function renderCalendar(){
   });
 }
 
+
+function updateCalendarNameColumnLock(){
+  const calendar = $("calendar");
+  if(!calendar) return;
+  const wrap = calendar.querySelector(".calendar-grid-wrap");
+  if(!wrap) return;
+  // iPad/iPhone Safari kann position:sticky in sehr breiten CSS-Grids beim
+  // horizontalen Scrollen falsch berechnen. Darum wird die Namensspalte hier
+  // per Scrollwert sauber links im sichtbaren Tagesplan gehalten.
+  const x = Math.max(0, Math.round(calendar.scrollLeft || 0));
+  wrap.style.setProperty("--calendar-scroll-x", x + "px");
+}
+
+function bindCalendarScrollFix(){
+  const calendar = $("calendar");
+  if(!calendar || calendar.dataset.nameColumnScrollFixBound === "1") return;
+  calendar.dataset.nameColumnScrollFixBound = "1";
+  calendar.addEventListener("scroll", updateCalendarNameColumnLock, {passive:true});
+  window.addEventListener("resize", updateCalendarNameColumnLock, {passive:true});
+}
+
 function renderCurrentTimeLine(wrap){
   if(state.selectedDate !== todayISO()) return;
-  const pos = getCurrentTimeLinePosition();
+  const pos = getCurrentTimeLinePosition({wrap});
   if(!pos) return;
   const left = pos.left;
   const line=document.createElement("div");
   line.className="current-time-line";
   line.style.left=left+"px";
+  if(pos.headerHeight) line.style.top=pos.headerHeight+"px";
   const label=document.createElement("div");
   label.className="current-time-label";
   label.style.left=left+"px";
+  if(pos.headerHeight) label.style.top=Math.max(4, Math.round((pos.headerHeight - 24) / 2))+"px";
   label.textContent=minutesToTime(pos.nowMin);
   wrap.appendChild(line);
   wrap.appendChild(label);
@@ -2913,13 +2938,35 @@ function getCurrentTimeLinePosition(options={}){
   const realNowMin=now.getHours()*60+now.getMinutes();
   if(!options.clamp && (realNowMin < start || realNowMin > end)) return null;
   const nowMin = options.clamp ? Math.max(start, Math.min(end, realNowMin)) : realNowMin;
-  const styles=getComputedStyle(document.documentElement);
-  const employeeCol=parseFloat(styles.getPropertyValue("--employee-col")) || 190;
-  const timeCol=parseFloat(styles.getPropertyValue("--time-col")) || 200;
+
+  // Wichtig: Die Breite der Mitarbeiter-/Zeitspalten kann je nach Gerät,
+  // Zoom und Ausrichtung über CSS am body überschrieben werden. Darum nicht
+  // die :root-Variablen verwenden, sondern die tatsächlich gerenderten Spalten messen.
+  const calendar = options.calendar || $("calendar");
+  const scope = options.wrap || calendar || document;
+  const grid = scope.querySelector ? scope.querySelector(".grid") : null;
+  const firstHeader = grid ? grid.querySelector(".time-header") : null;
+  const secondHeader = firstHeader ? firstHeader.nextElementSibling : null;
+  let employeeCol = firstHeader ? firstHeader.offsetLeft : 0;
+  let timeCol = firstHeader ? firstHeader.getBoundingClientRect().width : 0;
+  if(firstHeader && secondHeader && secondHeader.classList.contains("time-header")){
+    const measuredGap = secondHeader.offsetLeft - firstHeader.offsetLeft;
+    if(measuredGap > 0) timeCol = measuredGap;
+  }
+  let headerHeight = firstHeader ? firstHeader.getBoundingClientRect().height : 0;
+
+  if(!employeeCol || !timeCol){
+    const styles=getComputedStyle(grid || document.documentElement);
+    employeeCol=parseFloat(styles.getPropertyValue("--employee-col")) || 190;
+    timeCol=parseFloat(styles.getPropertyValue("--time-col")) || 200;
+  }
+  if(!headerHeight) headerHeight = 56;
+
   return {
     left: employeeCol + ((nowMin-start)/getSlotIntervalMinutes())*timeCol,
     nowMin: realNowMin,
-    scrollMin: nowMin
+    scrollMin: nowMin,
+    headerHeight
   };
 }
 
@@ -2937,6 +2984,8 @@ function scrollCalendarToCurrentTime(options={}){
     calendar.scrollLeft = targetLeft;
     calendar.scrollTop = 0;
   }
+  updateCalendarNameColumnLock();
+  setTimeout(updateCalendarNameColumnLock, 80);
 }
 
 function cancelDashboardReturnTimer(){

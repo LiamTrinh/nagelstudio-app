@@ -3182,3 +3182,42 @@ body.app-device-ipad .cash-journal-dialog.employee-revenue-tab-active menu .empl
   outline:none !important;
   cursor:default !important;
 }
+
+
+/* V137: Tagesplan-Darstellung stabilisieren
+   Die Mitarbeiter-Spalte wird nicht mehr nur mit horizontalem CSS-sticky gehalten,
+   weil iPad/iPhone Safari sie bei breiten Tagesplänen gelegentlich rechts einblendet.
+   JS setzt --calendar-scroll-x passend zum horizontalen Scrollwert. */
+.calendar-grid-wrap{
+  --calendar-scroll-x:0px;
+}
+.corner,
+.employee-cell{
+  left:auto !important;
+  right:auto !important;
+  transform:translateX(var(--calendar-scroll-x, 0px));
+  will-change:transform;
+}
+.corner{
+  z-index:30 !important;
+}
+.employee-cell{
+  z-index:25 !important;
+}
+.time-header{
+  z-index:12 !important;
+}
+.current-time-line{
+  z-index:18 !important;
+}
+.current-time-label{
+  z-index:35 !important;
+  top:4px !important;
+  box-shadow:0 2px 8px rgba(0,0,0,.12);
+}
+body.app-device-ipad .corner,
+body.app-device-ipad .employee-cell,
+body.app-device-iphone .corner,
+body.app-device-iphone .employee-cell{
+  transform:translateX(var(--calendar-scroll-x, 0px)) translateZ(0);
+}
