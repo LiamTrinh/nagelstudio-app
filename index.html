@@ -230,6 +230,7 @@
         <button type="button" class="settings-tab" data-settings-tab="settingsBackupTab" data-i18n="backup">Backup</button>
         <button type="button" class="settings-tab" data-settings-tab="settingsServicesTab" data-i18n="serviceDatabase">Leistungsdatenbank</button>
         <button type="button" class="settings-tab" data-settings-tab="settingsCustomersTab" data-i18n="customerFile">Kundendatenbank</button>
+        <button type="button" class="settings-tab" data-settings-tab="settingsEmployeesTab" data-i18n="employee">Mitarbeiter</button>
         <button type="button" class="settings-tab" data-settings-tab="settingsWorkTimeTab" data-i18n="workTimeVacation">Arbeitszeit / Urlaub</button>
         <button type="button" class="settings-tab" data-settings-tab="settingsSystemTab" data-i18n="systemInfo">System Info</button>
       </div>
@@ -306,20 +307,6 @@
           <button id="settingsChangeStudioIdBtn" type="button" class="secondary">Studio-ID ändern</button>
           <button id="settingsRecheckLicenseBtn" type="button" class="secondary">Lizenz erneut prüfen</button>
         </div>
-        <div class="settings-section">
-          <h3 data-i18n="employeeDatabase">Mitarbeiter-Datenbank</h3>
-          <p class="hint" data-i18n="employeeHint">Mitarbeiter hier anlegen, verändern oder deaktivieren.</p>
-          <label><span data-i18n="name">Name</span>
-            <input id="settingsEmployeeName" placeholder="Mitarbeitername">
-          </label>
-          <label><span data-i18n="calendarFontColor">Schriftfarbe im Kalender</span>
-            <input id="settingsEmployeeColor" type="color" value="#2d1b25">
-          </label>
-          <button id="saveEmployeeBtn" data-i18n="saveEmployee">Mitarbeiter speichern</button>
-          <button id="cancelEmployeeEditBtn" class="secondary" data-i18n="cancelEdit">Bearbeiten abbrechen</button>
-          <div id="settingsEmployeeList" class="employee-list"></div>
-        </div>
-
         <div class="settings-section danger-section">
           <h3 data-i18n="deleteAppointmentsPermanently">Termine endgültig löschen</h3>
           <p class="hint" data-i18n="deleteAppointmentsHint">Achtung: Diese Funktion löscht Termine endgültig. Es gibt keine Wiederherstellung in der App. Vorher am besten ein Backup exportieren.</p>
@@ -380,6 +367,25 @@
         <div id="settingsCustomerList" class="customer-list"></div>
       </div>
     </div>
+
+    <div id="settingsEmployeesTab" class="settings-tab-panel">
+      <div class="settings-grid">
+        <div class="settings-section">
+          <h3 data-i18n="employeeDatabase">Mitarbeiter-Datenbank</h3>
+          <p class="hint" data-i18n="employeeHint">Mitarbeiter hier anlegen, verändern oder deaktivieren.</p>
+          <label><span data-i18n="name">Name</span>
+            <input id="settingsEmployeeName" placeholder="Mitarbeitername">
+          </label>
+          <label><span data-i18n="calendarFontColor">Schriftfarbe im Kalender</span>
+            <input id="settingsEmployeeColor" type="color" value="#2d1b25">
+          </label>
+          <button id="saveEmployeeBtn" data-i18n="saveEmployee">Mitarbeiter speichern</button>
+          <button id="cancelEmployeeEditBtn" class="secondary" data-i18n="cancelEdit">Bearbeiten abbrechen</button>
+          <div id="settingsEmployeeList" class="employee-list"></div>
+        </div>
+      </div>
+    </div>
+
 
     <div id="settingsBackupTab" class="settings-tab-panel">
       <div class="settings-grid">

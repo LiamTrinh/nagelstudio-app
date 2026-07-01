@@ -6,9 +6,6 @@ const LICENSE_STUDIO_ID_KEY = "nail_studio_license_studio_id";
 const LICENSE_FILE = "studio-licenses.json";
 let currentLicense = null;
 let currentLicenseResult = {valid:false, reason:"Lizenz wurde noch nicht geprüft."};
-// TESTVERSION: Studio-ID-/Lizenzprüfung vorerst deaktiviert, damit die App lokal am PC ohne GitHub/Server gestartet werden kann.
-const LICENSE_CHECK_DISABLED_FOR_LOCAL_TEST = true;
-const LOCAL_TEST_LICENSE = {id:"LOCAL-TEST", name:"Lokaler Testmodus", plan:"full", expiresAt:null, active:true};
 
 function normalizeStudioId(id){
   return String(id || "").trim().toUpperCase();
@@ -93,12 +90,7 @@ function validateStudioLicense(data, studioId){
 }
 
 async function checkLicense(studioId){
-  const cleanStudioId = normalizeStudioId(studioId || getStoredStudioId()) || LOCAL_TEST_LICENSE.id;
-  if(LICENSE_CHECK_DISABLED_FOR_LOCAL_TEST){
-    currentLicense = LOCAL_TEST_LICENSE;
-    currentLicenseResult = {valid:true, reason:"Studio-ID-Prüfung für lokalen Test deaktiviert.", studio:LOCAL_TEST_LICENSE, studioId:cleanStudioId};
-    return currentLicenseResult;
-  }
+  const cleanStudioId = normalizeStudioId(studioId || getStoredStudioId());
   try{
     const data = await loadLicenseFile();
     const result = validateStudioLicense(data, cleanStudioId);
@@ -143,12 +135,6 @@ function continueAfterValidLicense(){
 }
 
 async function verifyLicenseAndContinue(){
-  if(LICENSE_CHECK_DISABLED_FOR_LOCAL_TEST){
-    currentLicense = LOCAL_TEST_LICENSE;
-    currentLicenseResult = {valid:true, reason:"Studio-ID-Prüfung für lokalen Test deaktiviert.", studio:LOCAL_TEST_LICENSE, studioId:LOCAL_TEST_LICENSE.id};
-    continueAfterValidLicense();
-    return true;
-  }
   const stored = getStoredStudioId();
   if(!stored){
     currentLicenseResult = {valid:false, reason:"Bitte geben Sie eine Studio-ID ein.", studioId:""};
@@ -165,12 +151,6 @@ async function verifyLicenseAndContinue(){
 }
 
 async function submitLicenseFromScreen(){
-  if(LICENSE_CHECK_DISABLED_FOR_LOCAL_TEST){
-    currentLicense = LOCAL_TEST_LICENSE;
-    currentLicenseResult = {valid:true, reason:"Studio-ID-Prüfung für lokalen Test deaktiviert.", studio:LOCAL_TEST_LICENSE, studioId:LOCAL_TEST_LICENSE.id};
-    continueAfterValidLicense();
-    return;
-  }
   const input = normalizeStudioId($("licenseStudioIdInput")?.value || "");
   setStoredStudioId(input);
   const result = await checkLicense(input);
@@ -182,11 +162,6 @@ async function submitLicenseFromScreen(){
 }
 
 async function changeStudioId(){
-  if(LICENSE_CHECK_DISABLED_FOR_LOCAL_TEST){
-    alert("Studio-ID-Prüfung ist in dieser lokalen Testversion deaktiviert.");
-    updateLicenseInfoBox();
-    return;
-  }
   const current = getStoredStudioId();
   const next = prompt("Neue Studio-ID eingeben:", current || "");
   if(next === null) return;
@@ -1379,6 +1354,7 @@ function bindEvents(){
   $("customerSearchInput").oninput = () => { renderCustomerSearch(); scheduleDashboardReturnToTodayNow(); };
   $("customerName").oninput = renderCustomerNameSuggestions;
   $("customerName").onchange = applyExactCustomer;
+  bindDashboardReturnCancelOnAppointmentInput();
   $("customerPhonePrefix") && ($("customerPhonePrefix").onchange = () => { $("customerPhoneNumber") && $("customerPhoneNumber").focus(); });
   $("currentDateInput").onchange = e => { state.selectedDate=e.target.value; saveState(); renderCalendar(); renderReport(); if(state.selectedDate===todayISO()) setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 50); };
   $("todayBtn").onclick = () => { state.selectedDate=todayISO(); $("currentDateInput").value=state.selectedDate; saveState(); switchTab("calendarTab"); renderCalendar(); renderReport(); setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 50); };
@@ -1651,8 +1627,44 @@ function paymentSaleDateFromCart(){
   return todayISO();
 }
 
+function showPaymentNotice(message, options = {}){
+  const type = options.type || "success";
+  let note = document.getElementById("paymentSuccessNotice");
+  if(!note){
+    note = document.createElement("div");
+    note.id = "paymentSuccessNotice";
+    note.setAttribute("role", "status");
+    note.style.position = "fixed";
+    note.style.left = "50%";
+    note.style.top = "22px";
+    note.style.transform = "translateX(-50%)";
+    note.style.zIndex = "20000";
+    note.style.borderRadius = "18px";
+    note.style.padding = "16px 22px";
+    note.style.fontWeight = "900";
+    note.style.boxShadow = "0 18px 40px rgba(0,0,0,.22)";
+    note.style.maxWidth = "min(92vw, 620px)";
+    note.style.textAlign = "center";
+    note.style.pointerEvents = "none";
+    document.body.appendChild(note);
+  }
+  if(type === "success"){
+    note.style.background = "#f0fff4";
+    note.style.border = "3px solid #2fb344";
+    note.style.color = "#166534";
+  }else{
+    note.style.background = "#fff7ed";
+    note.style.border = "3px solid #f97316";
+    note.style.color = "#9a3412";
+  }
+  note.textContent = message || "";
+  note.style.display = "block";
+  clearTimeout(showPaymentNotice.timer);
+  showPaymentNotice.timer = setTimeout(() => { if(note) note.style.display = "none"; }, options.duration || 3000);
+}
+
 function completePaymentSale(){
-  if(!paymentCart.length){ alert(t("selectServiceOrAppointmentFirst")); return; }
+  if(!paymentCart.length){ showPaymentNotice(t("selectServiceOrAppointmentFirst"), {type:"warning", duration:3000}); return; }
   const totals = paymentTotals();
   const sale = {id: uid(), date: paymentSaleDateFromCart(), createdAt: new Date().toISOString(), method: paymentMethod, items: paymentCart.map(x=>({...x})), subtotal: totals.subtotal, discount: totals.discount, tip: totals.tip, total: totals.total};
   state.paymentSales = state.paymentSales || [];
@@ -1713,7 +1725,8 @@ function completePaymentSale(){
   renderEmployeeDailyRevenue();
   renderReport();
   paymentClearCart();
-  alert(`${t("paymentSavedToCash")}: ${money(totals.total)} (${localizedPaymentMethod(paymentMethod)})`);
+  showPaymentNotice(t("paymentSavedToCash"), {type:"success", duration:3000});
+  scheduleDashboardReturnToTodayNow();
 }
 
 function switchCashJournalTab(id){
@@ -2926,6 +2939,53 @@ function scrollCalendarToCurrentTime(options={}){
   }
 }
 
+function cancelDashboardReturnTimer(){
+  if(dashboardReturnTimer){
+    clearTimeout(dashboardReturnTimer);
+    dashboardReturnTimer = null;
+  }
+}
+
+function appointmentFormHasInput(){
+  const ids = ["customerName","customerPhonePrefix","customerPhoneNumber","serviceName","note","startTime"];
+  const hasText = ids.some(id => {
+    const el = $(id);
+    if(!el) return false;
+    return String(el.value || "").trim() !== "";
+  });
+  const priceChanged = $("price") && Number($("price").value || 0) > 0;
+  const durationChanged = $("duration") && String($("duration").value || "60") !== "60";
+  const employeeAny = isEmployeeAnyActive();
+  return hasText || priceChanged || durationChanged || employeeAny || !!editingAppointmentId;
+}
+
+function isUserWorkingOnAppointment(){
+  const active = document.activeElement;
+  const formPanel = document.querySelector(".appointment-form-panel");
+  const inlineEdit = document.querySelector(".appointment-edit-form");
+  const appointmentDialog = $("appointmentDialog");
+  const paymentDialog = $("paymentDialog");
+  return !!(
+    appointmentFormHasInput() ||
+    (formPanel && active && formPanel.contains(active)) ||
+    (inlineEdit && active && inlineEdit.contains(active)) ||
+    (appointmentDialog && appointmentDialog.open) ||
+    (paymentDialog && paymentDialog.open)
+  );
+}
+
+function bindDashboardReturnCancelOnAppointmentInput(){
+  const ids = ["customerName","customerPhonePrefix","customerPhoneNumber","serviceName","price","duration","employeeSelect","startTime","note"];
+  ids.forEach(id => {
+    const el = $(id);
+    if(!el || el.dataset.dashboardReturnCancelBound === "1") return;
+    el.dataset.dashboardReturnCancelBound = "1";
+    ["focus","input","change"].forEach(eventName => {
+      el.addEventListener(eventName, cancelDashboardReturnTimer);
+    });
+  });
+}
+
 function closeDashboardOverlayDialogs(){
   ["appointmentDialog","paymentDialog"].forEach(id => {
     const dlg = $(id);
@@ -2942,6 +3002,8 @@ function clearCustomerSearchView(){
 }
 
 function returnDashboardToTodayNow(){
+  dashboardReturnTimer = null;
+  if(isUserWorkingOnAppointment()) return;
   closeDashboardOverlayDialogs();
   state.selectedDate = todayISO();
   if($("currentDateInput")) $("currentDateInput").value = state.selectedDate;
@@ -2955,8 +3017,8 @@ function returnDashboardToTodayNow(){
   setTimeout(() => scrollCalendarToCurrentTime({smooth:false}), 350);
 }
 
-function scheduleDashboardReturnToTodayNow(delay=5000){
-  clearTimeout(dashboardReturnTimer);
+function scheduleDashboardReturnToTodayNow(delay=60000){
+  cancelDashboardReturnTimer();
   dashboardReturnTimer = setTimeout(returnDashboardToTodayNow, delay);
 }
 function startCurrentTimeTicker(){
@@ -3127,6 +3189,7 @@ function saveAppointment(){
   state.appointments=state.appointments.filter(x=>x.id!==a.id); state.appointments.push(a); ensureCustomerFromAppointment(a); ensureServiceFromAppointment(a); saveState(); clearForm(); renderAll(); scheduleDashboardReturnToTodayNow();
 }
 function clearForm(){
+  cancelDashboardReturnTimer();
   editingAppointmentId=null;
   clearSelectedCalendarSlot();
   ["customerName","customerPhonePrefix","customerPhoneNumber","serviceName","note","startTime"].forEach(id=>{ if($(id)) $(id).value=""; }); $("price").value="0"; $("duration").value="60"; setEmployeeAnyActive(false); $("serviceSuggestions").innerHTML="";
