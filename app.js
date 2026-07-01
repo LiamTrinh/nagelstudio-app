@@ -581,6 +581,38 @@ function normalizeEmployeeRecord(emp, index=0){
     workSettings:work
   };
 }
+
+// Wenn die Studio-Öffnungszeiten geändert werden, sollen Mitarbeiter mit
+// unveränderten Standard-Arbeitszeiten automatisch mitgehen. Sonst bleibt bei
+// alten Installationen intern weiter "20:00" gespeichert und der Tagesplan
+// zeigt ab 20 Uhr fälschlich "Gesperrt", obwohl das Studio z. B. bis 22 Uhr offen ist.
+function syncDefaultEmployeeWorkTimesWithStudioHours(oldOpen="08:00", oldClose="20:00", newOpen=state?.openTime || "08:00", newClose=state?.closeTime || "20:00"){
+  if(!Array.isArray(state?.employees)) return false;
+  let changed = false;
+  const validNewOpen = /^\d{2}:\d{2}$/.test(newOpen || "") ? newOpen : "08:00";
+  const validNewClose = /^\d{2}:\d{2}$/.test(newClose || "") ? newClose : "20:00";
+  const defaultStartCandidates = new Set(["", "08:00", oldOpen].filter(Boolean));
+  const defaultEndCandidates = new Set(["", "20:00", oldClose].filter(Boolean));
+  state.employees.forEach((emp, index) => {
+    emp.workSettings = normalizeEmployeeRecord(emp, index).workSettings;
+    const w = emp.workSettings;
+    // Nur Standard/Vollzeit-Arbeitszeiten automatisch anpassen. Individuelle
+    // Arbeitszeiten, Wochenpläne und Sonder-Arbeitstage bleiben unverändert.
+    const weeklyEnabled = !!normalizeWeeklyWork(w.weeklyWork).enabled;
+    const hasSpecialDates = Array.isArray(w.specialWorkDates) && w.specialWorkDates.length > 0;
+    const isDefaultLike = normalizeEmploymentType(w.employmentType) === "fulltime" && !weeklyEnabled && !hasSpecialDates;
+    if(!isDefaultLike) return;
+    if(defaultStartCandidates.has(w.workStart || "") && w.workStart !== validNewOpen){
+      w.workStart = validNewOpen;
+      changed = true;
+    }
+    if(defaultEndCandidates.has(w.workEnd || "") && w.workEnd !== validNewClose){
+      w.workEnd = validNewClose;
+      changed = true;
+    }
+  });
+  return changed;
+}
 function employmentTypeLabel(type){
   const labels = {
     fulltime:"Vollzeit",
@@ -638,6 +670,9 @@ function isEmployeeAvailableForAppointment(emp, date, startTime, duration){
 }
 
 state = loadState();
+if(syncDefaultEmployeeWorkTimesWithStudioHours("08:00", "20:00", state.openTime, state.closeTime)){
+  saveState();
+}
 
 
 function normalizeNamePhone(name, phone){
@@ -4563,6 +4598,8 @@ function closeSettingsWithSave(){
   $("settingsDialog") && $("settingsDialog").close();
 }
 function saveSettings(silent=false){
+  const previousOpenTime = state.openTime || "08:00";
+  const previousCloseTime = state.closeTime || "20:00";
   state.studioName=$("settingsStudioName").value.trim()||state.studioName;
   state.studioPhone=$("settingsStudioPhone").value.trim();
   state.studioAddress=$("settingsStudioAddress").value.trim();
@@ -4573,6 +4610,7 @@ function saveSettings(silent=false){
   state.reportPrintFormat = $("reportPrintFormat") ? normalizeReportPrintFormat($("reportPrintFormat").value) : normalizeReportPrintFormat(state.reportPrintFormat || "a4");
   state.openTime=$("settingsOpen").value||state.openTime;
   state.closeTime=$("settingsClose").value||state.closeTime;
+  syncDefaultEmployeeWorkTimesWithStudioHours(previousOpenTime, previousCloseTime, state.openTime, state.closeTime);
   saveState(); applyDeviceView(); renderAll(); applyRevenueVisibility();
   if(!silent) alert("Studio-Einstellungen gespeichert.");
 }
