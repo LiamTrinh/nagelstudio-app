@@ -291,7 +291,7 @@ function loadState(){
       }
     }
     data = data || defaultState();
-    data.version = 69;
+    data.version = 70;
     data.services = data.services && data.services.length ? data.services : defaultServices();
     data.excludedRevenueDays = data.excludedRevenueDays || [];
     data.manualRevenueItems = data.manualRevenueItems || [];
@@ -593,23 +593,35 @@ function syncDefaultEmployeeWorkTimesWithStudioHours(oldOpen="08:00", oldClose="
   const validNewClose = /^\d{2}:\d{2}$/.test(newClose || "") ? newClose : "20:00";
   const defaultStartCandidates = new Set(["", "08:00", oldOpen].filter(Boolean));
   const defaultEndCandidates = new Set(["", "20:00", oldClose].filter(Boolean));
+  const updateDefaultRange = (obj) => {
+    if(!obj) return;
+    if(defaultStartCandidates.has(obj.start || obj.workStart || "")){
+      if(Object.prototype.hasOwnProperty.call(obj, "start") && obj.start !== validNewOpen){ obj.start = validNewOpen; changed = true; }
+      if(Object.prototype.hasOwnProperty.call(obj, "workStart") && obj.workStart !== validNewOpen){ obj.workStart = validNewOpen; changed = true; }
+    }
+    if(defaultEndCandidates.has(obj.end || obj.workEnd || "")){
+      if(Object.prototype.hasOwnProperty.call(obj, "end") && obj.end !== validNewClose){ obj.end = validNewClose; changed = true; }
+      if(Object.prototype.hasOwnProperty.call(obj, "workEnd") && obj.workEnd !== validNewClose){ obj.workEnd = validNewClose; changed = true; }
+    }
+  };
   state.employees.forEach((emp, index) => {
     emp.workSettings = normalizeEmployeeRecord(emp, index).workSettings;
     const w = emp.workSettings;
-    // Nur Standard/Vollzeit-Arbeitszeiten automatisch anpassen. Individuelle
-    // Arbeitszeiten, Wochenpläne und Sonder-Arbeitstage bleiben unverändert.
-    const weeklyEnabled = !!normalizeWeeklyWork(w.weeklyWork).enabled;
-    const hasSpecialDates = Array.isArray(w.specialWorkDates) && w.specialWorkDates.length > 0;
-    const isDefaultLike = normalizeEmploymentType(w.employmentType) === "fulltime" && !weeklyEnabled && !hasSpecialDates;
-    if(!isDefaultLike) return;
-    if(defaultStartCandidates.has(w.workStart || "") && w.workStart !== validNewOpen){
-      w.workStart = validNewOpen;
-      changed = true;
-    }
-    if(defaultEndCandidates.has(w.workEnd || "") && w.workEnd !== validNewClose){
-      w.workEnd = validNewClose;
-      changed = true;
-    }
+
+    // Wichtig: Der Tagesplan prüft nicht nur die Studio-Öffnungszeiten,
+    // sondern auch die Arbeitszeiten jedes Mitarbeiters. Bei bestehenden
+    // Installationen standen diese oft noch auf 20:00. Deshalb werden alle
+    // Standard-Endzeiten 20:00 bzw. die vorherige Studio-Schließzeit auf die
+    // neue Studio-Schließzeit mitgezogen. Individuelle Zeiten wie 18:00 oder
+    // spezielle Sonder-Arbeitstage bleiben unverändert.
+    updateDefaultRange(w);
+
+    const weekly = normalizeWeeklyWork(w.weeklyWork);
+    Object.keys(weekly.days || {}).forEach(dayKey => {
+      const day = weekly.days[dayKey];
+      if(day && day.enabled) updateDefaultRange(day);
+    });
+    w.weeklyWork = weekly;
   });
   return changed;
 }
