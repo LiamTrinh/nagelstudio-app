@@ -14,6 +14,13 @@
       "expiresAt": "2026-08-01",
       "active": true
     },
+ {
+      "id": "123456789",
+      "name": "Nagelstudio Test",
+      "plan": "trial",
+      "expiresAt": "2026-06-30",
+      "active": true
+    },
     {
       "id": "310366",
       "name": "Tam Nagelstudio",

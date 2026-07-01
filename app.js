@@ -2,19 +2,13 @@ const KEY = "nail_studio_pwa_v63";
 const OLD_KEYS = ["nail_studio_pwa_v62", "nail_studio_pwa_v61", "nail_studio_pwa_v60", "nail_studio_pwa_v59", "nail_studio_pwa_v58", "nail_studio_pwa_v57", "nail_studio_pwa_v56", "nail_studio_pwa_v55", "nail_studio_pwa_v54", "nail_studio_pwa_v53", "nail_studio_pwa_v52", "nail_studio_pwa_v51", "nail_studio_pwa_v50", "nail_studio_pwa_v49", "nail_studio_pwa_v48", "nail_studio_pwa_v47", "nail_studio_pwa_v46", "nail_studio_pwa_v45", "nail_studio_pwa_v44", "nail_studio_pwa_v43", "nail_studio_pwa_v42", "nail_studio_pwa_v41", "nail_studio_pwa_v40", "nail_studio_pwa_v39", "nail_studio_pwa_v38", "nail_studio_pwa_v37", "nail_studio_pwa_v36", "nail_studio_pwa_v35", "nail_studio_pwa_v34", "nail_studio_pwa_v33", "nail_studio_pwa_v32", "nail_studio_pwa_v31", "nail_studio_pwa_v30", "nail_studio_pwa_v29", "nail_studio_pwa_v28", "nail_studio_pwa_v27", "nail_studio_pwa_v26", "nail_studio_pwa_v25", "nail_studio_pwa_v24", "nail_studio_pwa_v23", "nail_studio_pwa_v22", "nail_studio_pwa_v21", "nail_studio_pwa_v20", "nail_studio_pwa_v19", "nail_studio_pwa_v18", "nail_studio_pwa_v17", "nail_studio_pwa_v16", "nail_studio_pwa_v15", "nail_studio_pwa_v14", "nail_studio_pwa_v13", "nail_studio_pwa_v12", "nail_studio_pwa_v11", "nail_studio_pwa_v10", "nail_studio_pwa_v9", "nail_studio_pwa_v8", "nail_studio_pwa_v7", "nail_studio_pwa_v6", "nail_studio_pwa_v5", "nail_studio_pwa_v4", "nail_studio_pwa_v3", "nail_studio_pwa_v2", "nail_studio_pwa_v1"];
 const $ = id => document.getElementById(id);
 
-
-
-// -----------------------------------------------------------------------------
-// Studio-ID / Lizenzprüfung für GitHub Pages
-// -----------------------------------------------------------------------------
-// Hinweis: Diese Prüfung läuft bewusst vollständig clientseitig. Sie schützt nicht
-// vor Manipulation, ist aber für eine benutzerfreundliche Testphase ohne Backend
-// ausreichend und hält die bestehenden lokalen App-Daten unverändert.
 const LICENSE_STUDIO_ID_KEY = "nail_studio_license_studio_id";
 const LICENSE_FILE = "studio-licenses.json";
 let currentLicense = null;
 let currentLicenseResult = {valid:false, reason:"Lizenz wurde noch nicht geprüft."};
-let licenseReadyContinuation = null;
+// TESTVERSION: Studio-ID-/Lizenzprüfung vorerst deaktiviert, damit die App lokal am PC ohne GitHub/Server gestartet werden kann.
+const LICENSE_CHECK_DISABLED_FOR_LOCAL_TEST = true;
+const LOCAL_TEST_LICENSE = {id:"LOCAL-TEST", name:"Lokaler Testmodus", plan:"full", expiresAt:null, active:true};
 
 function normalizeStudioId(id){
   return String(id || "").trim().toUpperCase();
@@ -73,12 +67,10 @@ function validateStudioLicense(data, studioId){
   if(!studioId){
     return {valid:false, reason:"Bitte geben Sie eine Studio-ID ein.", studio:null};
   }
-
   const studio = data.studios.find(item => normalizeStudioId(item.id) === studioId);
   if(!studio){
     return {valid:false, reason:"Diese Studio-ID wurde in studio-licenses.json nicht gefunden.", studio:null};
   }
-
   const plan = String(studio.plan || "").toLowerCase();
   if(studio.active !== true){
     return {valid:false, reason:"Diese Lizenz ist deaktiviert.", studio};
@@ -89,7 +81,6 @@ function validateStudioLicense(data, studioId){
   if(!["trial", "full"].includes(plan)){
     return {valid:false, reason:"Der Lizenzplan ist ungültig. Erlaubt sind trial oder full.", studio};
   }
-
   if(plan === "trial"){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(studio.expiresAt || "")){
       return {valid:false, reason:"Für die Testversion fehlt ein gültiges Ablaufdatum.", studio};
@@ -98,12 +89,16 @@ function validateStudioLicense(data, studioId){
       return {valid:false, reason:`Die Testversion ist am ${formatLicenseDate(studio.expiresAt)} abgelaufen.`, studio};
     }
   }
-
   return {valid:true, reason:"Lizenz gültig.", studio};
 }
 
 async function checkLicense(studioId){
-  const cleanStudioId = normalizeStudioId(studioId || getStoredStudioId());
+  const cleanStudioId = normalizeStudioId(studioId || getStoredStudioId()) || LOCAL_TEST_LICENSE.id;
+  if(LICENSE_CHECK_DISABLED_FOR_LOCAL_TEST){
+    currentLicense = LOCAL_TEST_LICENSE;
+    currentLicenseResult = {valid:true, reason:"Studio-ID-Prüfung für lokalen Test deaktiviert.", studio:LOCAL_TEST_LICENSE, studioId:cleanStudioId};
+    return currentLicenseResult;
+  }
   try{
     const data = await loadLicenseFile();
     const result = validateStudioLicense(data, cleanStudioId);
@@ -129,9 +124,9 @@ function showLicenseScreen(result, mode="blocked"){
   $("setupScreen") && $("setupScreen").classList.add("hidden");
   $("mainScreen") && $("mainScreen").classList.add("hidden");
   screen.classList.remove("hidden");
-  if($('licenseStudioIdInput')) $('licenseStudioIdInput').value = studioId;
-  if($('licenseTitle')) $('licenseTitle').textContent = mode === "first" ? "Studio-ID eingeben" : "App gesperrt";
-  if($('licenseMessage')) $('licenseMessage').textContent = mode === "first" ? "Bitte geben Sie beim ersten Start Ihre Studio-ID ein." : "Die Lizenz konnte nicht gültig geprüft werden.";
+  if($("licenseStudioIdInput")) $("licenseStudioIdInput").value = studioId;
+  if($("licenseTitle")) $("licenseTitle").textContent = mode === "first" ? "Studio-ID eingeben" : "App gesperrt";
+  if($("licenseMessage")) $("licenseMessage").textContent = mode === "first" ? "Bitte geben Sie beim ersten Start Ihre Studio-ID ein." : "Die Lizenz konnte nicht gültig geprüft werden.";
   const box = $("licenseStatusBox");
   if(box){
     box.classList.remove("hidden", "license-ok", "license-error");
@@ -148,6 +143,12 @@ function continueAfterValidLicense(){
 }
 
 async function verifyLicenseAndContinue(){
+  if(LICENSE_CHECK_DISABLED_FOR_LOCAL_TEST){
+    currentLicense = LOCAL_TEST_LICENSE;
+    currentLicenseResult = {valid:true, reason:"Studio-ID-Prüfung für lokalen Test deaktiviert.", studio:LOCAL_TEST_LICENSE, studioId:LOCAL_TEST_LICENSE.id};
+    continueAfterValidLicense();
+    return true;
+  }
   const stored = getStoredStudioId();
   if(!stored){
     currentLicenseResult = {valid:false, reason:"Bitte geben Sie eine Studio-ID ein.", studioId:""};
@@ -164,6 +165,12 @@ async function verifyLicenseAndContinue(){
 }
 
 async function submitLicenseFromScreen(){
+  if(LICENSE_CHECK_DISABLED_FOR_LOCAL_TEST){
+    currentLicense = LOCAL_TEST_LICENSE;
+    currentLicenseResult = {valid:true, reason:"Studio-ID-Prüfung für lokalen Test deaktiviert.", studio:LOCAL_TEST_LICENSE, studioId:LOCAL_TEST_LICENSE.id};
+    continueAfterValidLicense();
+    return;
+  }
   const input = normalizeStudioId($("licenseStudioIdInput")?.value || "");
   setStoredStudioId(input);
   const result = await checkLicense(input);
@@ -175,6 +182,11 @@ async function submitLicenseFromScreen(){
 }
 
 async function changeStudioId(){
+  if(LICENSE_CHECK_DISABLED_FOR_LOCAL_TEST){
+    alert("Studio-ID-Prüfung ist in dieser lokalen Testversion deaktiviert.");
+    updateLicenseInfoBox();
+    return;
+  }
   const current = getStoredStudioId();
   const next = prompt("Neue Studio-ID eingeben:", current || "");
   if(next === null) return;
@@ -209,18 +221,34 @@ function licenseValidityLine(studio){
   return "Lizenzstatus unbekannt";
 }
 
+function licenseDaysUntilExpiry(studio){
+  const expiresAt = studio?.expiresAt;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(expiresAt || "")) return null;
+  const today = new Date(`${todayISO()}T00:00:00`);
+  const expiry = new Date(`${expiresAt}T00:00:00`);
+  if(Number.isNaN(today.getTime()) || Number.isNaN(expiry.getTime())) return null;
+  return Math.ceil((expiry - today) / 86400000);
+}
+
+function licenseExpiryCountdownText(daysLeft){
+  if(daysLeft === 0) return "heute";
+  if(daysLeft === 1) return "morgen";
+  return `in ${daysLeft} Tagen`;
+}
+
 function updateLicenseFooterBar(){
   const footer = $("licenseFooterBar");
   if(!footer) return;
   const result = currentLicenseResult || {};
   const studio = currentLicense || result.studio;
   const plan = String(studio?.plan || "").toLowerCase();
+  const daysLeft = result.valid && studio && plan === "trial" ? licenseDaysUntilExpiry(studio) : null;
 
-  // Die feste Lizenz-Fußleiste soll nur bei Testversionen sichtbar sein.
-  // Bei Vollversion bleibt die App unten frei; Details stehen weiterhin im Einstellungsbereich.
-  if(result.valid && studio && plan === "trial"){
-    const studioId = result.studioId || getStoredStudioId() || "-";
-    footer.textContent = `${studio.name || "Studio"} · ${studioId} · ${planLabel(studio.plan)} · ${licenseValidityLine(studio)}`;
+  // Standardmäßig bleibt die Lizenz-Leiste im Dashboard ausgeblendet.
+  // Sie erscheint nur als Erinnerung ab 7 Tage vor Ablauf der Testlizenz.
+  if(result.valid && studio && plan === "trial" && daysLeft !== null && daysLeft >= 0 && daysLeft <= 7){
+    const date = formatLicenseDate(studio.expiresAt);
+    footer.textContent = `Erinnerung: Lizenz läuft ${licenseExpiryCountdownText(daysLeft)} ab · Ablaufdatum: ${date}`;
     footer.classList.remove("hidden");
   }else{
     footer.classList.add("hidden");
@@ -253,6 +281,7 @@ function updateLicenseInfoBox(){
 let state;
 let editingAppointmentId = null;
 let selectedAppointmentId = null;
+let selectedCalendarSlot = null;
 let movingAppointmentId = null;
 let longPressTimer = null;
 let touchDragGhost = null;
@@ -261,6 +290,7 @@ let touchDragPointerId = null;
 let suppressAppointmentClick = false;
 let editingEmployeeId = null;
 let editingCustomerId = null;
+let dashboardReturnTimer = null;
 
 function uid(){ return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()); }
 function todayISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
@@ -273,7 +303,7 @@ function defaultServices(){ return [
 ];}
 function defaultState(){ return {
 	  version:"3.0", configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", scheduleIntervalMinutes:15, cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
-  employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[], employeeDailyRevenueRecords:[], revenue2Entries:[], revenue2DeletedAppointmentIds:[], revenue2CashEntries:[], revenue2CashDeletedAppointmentIds:[], cashWithdrawals:[], cashDeposits:[], journalRevenueCorrections:{}, journalRevenueDeletedDays:[],
+  employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[], employeeDailyRevenueRecords:[], revenue2Entries:[], revenue2DeletedAppointmentIds:[], revenue2CashEntries:[], revenue2CashDeletedAppointmentIds:[], cashWithdrawals:[], cashDeposits:[], journalRevenueCorrections:{}, journalRevenueDeletedDays:[], periodRevenueManualEdits:{week:{},month:{}}, paymentSales:[],
   selectedDate:todayISO(), journalDate:todayISO(), storageMode:"local"
 };}
 function loadState(){
@@ -297,8 +327,12 @@ function loadState(){
     data.revenue2CashDeletedAppointmentIds = data.revenue2CashDeletedAppointmentIds || [];
     data.cashWithdrawals = data.cashWithdrawals || [];
     data.cashDeposits = data.cashDeposits || [];
+    data.periodRevenueManualEdits = data.periodRevenueManualEdits || {week:{}, month:{}};
+    data.periodRevenueManualEdits.week = data.periodRevenueManualEdits.week || {};
+    data.periodRevenueManualEdits.month = data.periodRevenueManualEdits.month || {};
     data.journalRevenueCorrections = data.journalRevenueCorrections || {};
     data.journalRevenueDeletedDays = data.journalRevenueDeletedDays || [];
+    data.paymentSales = data.paymentSales || [];
     data.journalDate = data.journalDate || data.selectedDate || todayISO();
     data.customers = data.customers || [];
     data.appointments = (data.appointments || []).map(a => ({...a, status:a.status || "Gebucht", employeeAny: !!a.employeeAny}));
@@ -337,10 +371,85 @@ function getJournalDate(){
 }
 function setJournalDate(day, persist=true){
   state.journalDate = day || todayISO();
-  if($("journalDateInput")) $("journalDateInput").value = state.journalDate;
+  updateJournalDateControl();
   if(persist) saveState();
 }
+function activeCashJournalTab(){
+  const active = document.querySelector("#cashJournalDialog .cash-journal-tab.active");
+  return active?.dataset?.journalTab || "settingsCashTab";
+}
+function isoWeekNumber(dateString){
+  const d = new Date(dateString + "T12:00:00");
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+}
+function journalWeekSelectLabel(monday){
+  const weekYear = new Date(addDaysISO(monday, 3) + "T12:00:00").getFullYear();
+  const kw = String(isoWeekNumber(monday)).padStart(2,"0");
+  const sunday = addDaysISO(monday, 6);
+  return `KW ${kw} / ${weekYear} (${formatDateShort(monday)} - ${formatDateShort(sunday)})`;
+}
+function buildJournalWeekOptions(){
+  const select = $("journalWeekSelect");
+  if(!select) return;
+  const currentYear = new Date(todayISO() + "T12:00:00").getFullYear();
+  const base = getJournalDate();
+  let currentValue = startOfWeekISO(base);
+  let html = "";
+  let monday = startOfWeekISO(`${currentYear}-01-04`);
+  while(new Date(monday + "T12:00:00").getFullYear() <= currentYear || isoWeekNumber(monday) === 1){
+    const weekYear = new Date(addDaysISO(monday, 3) + "T12:00:00").getFullYear();
+    if(weekYear === currentYear){
+      html += `<option value="${monday}">${journalWeekSelectLabel(monday)}</option>`;
+    }
+    monday = addDaysISO(monday, 7);
+    if(html.length > 200000) break;
+  }
+  select.innerHTML = html;
+  const hasCurrentValue = Array.from(select.options).some(option => option.value === currentValue);
+  if(!hasCurrentValue){
+    currentValue = startOfWeekISO(todayISO());
+    state.journalDate = currentValue;
+  }
+  select.value = currentValue;
+}
+function journalMonthSelectLabel(monthStart){
+  const d = new Date(monthStart + "T12:00:00");
+  return d.toLocaleDateString("de-DE", {month:"long", year:"numeric"});
+}
+function buildJournalMonthOptions(){
+  const select = $("journalMonthSelect");
+  if(!select) return;
+  const currentYear = new Date(todayISO() + "T12:00:00").getFullYear();
+  const base = getJournalDate();
+  let currentValue = startOfMonthISO(base);
+  let html = "";
+  for(let month = 1; month <= 12; month++){
+    const value = `${currentYear}-${String(month).padStart(2,"0")}-01`;
+    html += `<option value="${value}">${journalMonthSelectLabel(value)}</option>`;
+  }
+  select.innerHTML = html;
+  const hasCurrentValue = Array.from(select.options).some(option => option.value === currentValue);
+  if(!hasCurrentValue){
+    currentValue = startOfMonthISO(todayISO());
+    state.journalDate = currentValue;
+  }
+  select.value = currentValue;
+}
+function updateJournalDateControl(target = activeCashJournalTab()){
+  const isWeek = target === "settingsWeeklyRevenueTab";
+  const isMonth = target === "settingsMonthlyRevenueTab";
+  $("journalDateControl")?.classList.toggle("hidden", isWeek || isMonth);
+  $("journalWeekControl")?.classList.toggle("hidden", !isWeek);
+  $("journalMonthControl")?.classList.toggle("hidden", !isMonth);
+  if($("journalDateInput")) $("journalDateInput").value = getJournalDate();
+  if(isWeek) buildJournalWeekOptions();
+  if(isMonth) buildJournalMonthOptions();
+}
 function refreshCashJournalViews(){
+  updateJournalDateControl();
   renderCashTab();
   renderEmployeeDailyRevenue();
   renderPeriodRevenue("week");
@@ -771,15 +880,15 @@ function openAccountingReport(title, subtitle, summaryItems, sections, fileStem)
       </header>
       ${reportSummary(summaryItems)}
       ${sections.join("")}
-      <footer>Bericht automatisch aus dem Umsatzjournal erstellt.</footer>
+      <footer>${escapeHtml(t("reportAutoFooter"))}</footer>
     </main>`;
   const excelDocument = `<!doctype html><html><head><meta charset="utf-8"><style>table{border-collapse:collapse}th,td{border:1px solid #999;padding:6px}th{background:#eee}.amount{text-align:right}</style></head><body>${body}</body></html>`;
   const reportDocument = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${accountingReportStyles(printFormat)}</style></head><body>
     <div class="toolbar">
-      <span>${escapeHtml(formatLabel)} · PDF über den Druckdialog speichern oder an den angeschlossenen Drucker senden.</span>
-      <button onclick="window.print()">Drucken / PDF</button>
-      <button class="secondary" id="excelBtn">Excel herunterladen</button>
-      <button class="secondary" onclick="window.close()">Schließen</button>
+      <span>${escapeHtml(formatLabel)} · ${escapeHtml(t("printPdfHint"))}</span>
+      <button onclick="window.print()">${escapeHtml(t("printPdf"))}</button>
+      <button class="secondary" id="excelBtn">${escapeHtml(t("excelDownload"))}</button>
+      <button class="secondary" onclick="window.close()">${escapeHtml(t("close"))}</button>
     </div>
     ${body}
     <script>
@@ -889,9 +998,13 @@ function journalDayDeleted(day){
 }
 function journalDayRawTotal(day){
   ensureEmployeeDailyRevenueRecordsForDay(day);
-  return employeeDailyRevenueRecordsForDay(day)
+  const appointmentTotal = employeeDailyRevenueRecordsForDay(day)
     .filter(r => r.status === "Erledigt")
     .reduce((sum,r)=>sum + Number(r.price || 0), 0);
+  const manualTotal = (state.manualRevenueItems || [])
+    .filter(x => x.date === day)
+    .reduce((sum,x)=>sum + Number(x.amount || 0), 0);
+  return appointmentTotal + manualTotal;
 }
 function journalDayCustomerCount(day){
   ensureEmployeeDailyRevenueRecordsForDay(day);
@@ -921,7 +1034,7 @@ function saveJournalDayCorrection(day){
   const input = document.querySelector(`input[data-journal-day-correction="${CSS.escape(day)}"]`);
   const value = Number(input?.value || 0);
   if(!Number.isFinite(value) || value < 0){
-    alert("Bitte einen gültigen Betrag eintragen.");
+    alert(t("validAmountSingleAlert"));
     return;
   }
   state.journalRevenueCorrections = state.journalRevenueCorrections || {};
@@ -949,12 +1062,11 @@ function renderPeriodRevenue(type){
   const range = journalPeriodRange(isMonth ? "month" : "week");
   const days = eachDayISO(range.from, range.to);
   const rows = days.map(day => {
-    const raw = journalDayRawTotal(day);
     const corrected = state.journalRevenueCorrections?.[day];
     const deleted = journalDayDeleted(day);
     const total = journalDayTotal(day);
     const count = deleted ? 0 : journalDayCustomerCount(day);
-    return {day, raw, corrected, deleted, total, count};
+    return {day, corrected, deleted, total, count};
   });
   const activeRows = rows.filter(r => !r.deleted && (r.total > 0 || r.count > 0 || r.corrected !== undefined));
   const displayRows = activeRows.length ? activeRows : rows;
@@ -963,32 +1075,147 @@ function renderPeriodRevenue(type){
   const daysCountEl = $(isMonth ? "monthlyRevenueDaysCount" : "weeklyRevenueDaysCount");
   const totalEl = $(isMonth ? "monthlyRevenueTotal" : "weeklyRevenueTotal");
   if(rangeEl) rangeEl.textContent = range.label;
-  if(daysCountEl) daysCountEl.textContent = String(rows.filter(r => !r.deleted && (r.total > 0 || r.count > 0 || r.corrected !== undefined)).length);
+  if(daysCountEl) daysCountEl.textContent = String(activeRows.length);
   if(totalEl) totalEl.textContent = money(total);
+
+  // Wochen Umsatz und Monat Umsatz sind reine Tagesumsatz-Übersichten.
+  // Korrektur-, Speichern- und Löschen-Funktionen bleiben hier bewusst ausgeblendet,
+  // damit die Synchronisierung aus Bezahlen/Kasse unverändert als Quelle dient.
   list.innerHTML = `
-    <div class="period-revenue-table">
-      <div class="period-revenue-row period-revenue-head">
-        <span>Datum</span><span>Einträge</span><span>Gesamt Umsatz</span><span>Korrigieren</span><span>Aktion</span>
+    <div class="period-revenue-table period-revenue-table-readonly">
+      <div class="period-revenue-row period-revenue-row-readonly period-revenue-head">
+        <span>${escapeHtml(t("date"))}</span><span>${escapeHtml(t("dailyRevenue"))}</span>
       </div>
       ${displayRows.map(r => `
-        <div class="period-revenue-row ${r.deleted ? 'period-revenue-deleted' : ''}">
+        <div class="period-revenue-row period-revenue-row-readonly ${r.deleted ? 'period-revenue-deleted' : ''}">
           <strong>${formatDateShort(r.day)}</strong>
-          <span>${r.deleted ? '-' : String(r.count)}</span>
-          <strong>${r.deleted ? 'Gelöscht' : money(r.total)}</strong>
-          <input type="number" min="0" step="0.01" value="${r.deleted ? 0 : Number(r.total || 0)}" data-journal-day-correction="${escapeHtml(r.day)}" aria-label="Umsatz ${formatDateShort(r.day)} korrigieren">
-          <span class="period-revenue-actions">
-            ${r.deleted
-              ? `<button type="button" class="secondary" data-journal-day-restore="${escapeHtml(r.day)}">Wiederherstellen</button>`
-              : `<button type="button" data-journal-day-save="${escapeHtml(r.day)}">${t("saveWord")}</button><button type="button" class="danger" data-journal-day-delete="${escapeHtml(r.day)}">${t("delete")}</button>`}
-          </span>
+          <strong>${r.deleted ? escapeHtml(t("deletedStatus")) : money(r.total)}</strong>
         </div>`).join("")}
     </div>`;
-  list.querySelectorAll('button[data-journal-day-save]').forEach(btn => btn.onclick = () => saveJournalDayCorrection(btn.dataset.journalDaySave));
-  list.querySelectorAll('button[data-journal-day-delete]').forEach(btn => btn.onclick = () => deleteJournalDayFromPeriod(btn.dataset.journalDayDelete));
-  list.querySelectorAll('button[data-journal-day-restore]').forEach(btn => btn.onclick = () => restoreJournalDayInPeriod(btn.dataset.journalDayRestore));
-  list.querySelectorAll('input[data-journal-day-correction]').forEach(input => {
-    input.onkeydown = e => { if(e.key === 'Enter') saveJournalDayCorrection(input.dataset.journalDayCorrection); };
+}
+
+
+let periodRevenueEditType = "week";
+
+function periodRevenueEditKey(type){
+  const range = journalPeriodRange(type === "month" ? "month" : "week");
+  return `${range.from}_${range.to}`;
+}
+function periodRevenueBaseRows(type){
+  const normalizedType = type === "month" ? "month" : "week";
+  const range = journalPeriodRange(normalizedType);
+  const rows = eachDayISO(range.from, range.to).map(day => {
+    const corrected = state.journalRevenueCorrections?.[day];
+    const deleted = journalDayDeleted(day);
+    const total = journalDayTotal(day);
+    const count = deleted ? 0 : journalDayCustomerCount(day);
+    return {day, corrected, deleted, total, count};
   });
+  return {range, rows};
+}
+function getPeriodRevenueManualMap(type){
+  state.periodRevenueManualEdits = state.periodRevenueManualEdits || {week:{}, month:{}};
+  state.periodRevenueManualEdits.week = state.periodRevenueManualEdits.week || {};
+  state.periodRevenueManualEdits.month = state.periodRevenueManualEdits.month || {};
+  const normalizedType = type === "month" ? "month" : "week";
+  const key = periodRevenueEditKey(normalizedType);
+  return state.periodRevenueManualEdits[normalizedType][key] || null;
+}
+function periodRevenueManualRows(type){
+  const normalizedType = type === "month" ? "month" : "week";
+  const {range, rows} = periodRevenueBaseRows(normalizedType);
+  const manual = getPeriodRevenueManualMap(normalizedType);
+  const values = manual && manual.values ? manual.values : {};
+  const mergedRows = rows.map(r => {
+    const manualValue = values[r.day];
+    const hasManual = manualValue !== undefined && manualValue !== null && manualValue !== "";
+    return {...r, manual: hasManual, editTotal: hasManual ? Number(manualValue || 0) : Number(r.total || 0)};
+  });
+  return {range, rows:mergedRows};
+}
+function renderPeriodRevenueManualEdit(){
+  const type = periodRevenueEditType === "month" ? "month" : "week";
+  const isMonth = type === "month";
+  const {range, rows} = periodRevenueManualRows(type);
+  const total = rows.reduce((sum,r)=>sum + Number(r.editTotal || 0), 0);
+  if($("periodRevenueEditTitle")) $("periodRevenueEditTitle").textContent = isMonth ? t("monthEdit") : t("weekEdit");
+  if($("periodRevenueEditRangeLabel")) $("periodRevenueEditRangeLabel").textContent = isMonth ? t("month") : t("week");
+  if($("periodRevenueEditRange")) $("periodRevenueEditRange").textContent = range.label;
+  if($("periodRevenueEditDays")) $("periodRevenueEditDays").textContent = String(rows.length);
+  if($("periodRevenueEditTotal")) $("periodRevenueEditTotal").textContent = money(total);
+  const list = $("periodRevenueEditList");
+  if(!list) return;
+  list.innerHTML = `
+    <div class="period-revenue-edit-table">
+      <div class="period-revenue-edit-row period-revenue-edit-head">
+        <span>${escapeHtml(t("date"))}</span><span>${escapeHtml(t("dailyRevenue"))}</span><span>${escapeHtml(t("manualChange"))}</span>
+      </div>
+      ${rows.map(r => `
+        <div class="period-revenue-edit-row">
+          <strong>${formatDateShort(r.day)}</strong>
+          <span>${r.deleted ? escapeHtml(t("deletedStatus")) : money(r.total)}</span>
+          <input type="number" min="0" step="0.01" inputmode="decimal" value="${Number(r.editTotal || 0).toFixed(2)}" data-period-manual-day="${escapeHtml(r.day)}" aria-label="${escapeHtml(t("revenueWord"))} ${formatDateShort(r.day)}">
+        </div>`).join("")}
+    </div>`;
+  list.querySelectorAll("input[data-period-manual-day]").forEach(input => {
+    input.oninput = () => {
+      const sum = Array.from(list.querySelectorAll("input[data-period-manual-day]")).reduce((acc, el) => acc + Number(el.value || 0), 0);
+      if($("periodRevenueEditTotal")) $("periodRevenueEditTotal").textContent = money(sum);
+    };
+  });
+}
+function openPeriodRevenueEdit(type){
+  periodRevenueEditType = type === "month" ? "month" : "week";
+  renderPeriodRevenueManualEdit();
+  const dialog = $("periodRevenueEditDialog");
+  if(dialog) dialog.showModal();
+}
+function savePeriodRevenueManualEdit(){
+  const type = periodRevenueEditType === "month" ? "month" : "week";
+  const key = periodRevenueEditKey(type);
+  const values = {};
+  let valid = true;
+  document.querySelectorAll("#periodRevenueEditList input[data-period-manual-day]").forEach(input => {
+    const val = Number(input.value || 0);
+    if(!Number.isFinite(val) || val < 0) valid = false;
+    values[input.dataset.periodManualDay] = val;
+  });
+  if(!valid){ alert(t("validAmountAlert")); return; }
+  state.periodRevenueManualEdits = state.periodRevenueManualEdits || {week:{}, month:{}};
+  state.periodRevenueManualEdits[type] = state.periodRevenueManualEdits[type] || {};
+  const {range} = periodRevenueBaseRows(type);
+  state.periodRevenueManualEdits[type][key] = {range, values, updatedAt:new Date().toISOString()};
+  saveState();
+  renderPeriodRevenueManualEdit();
+  alert(t("changeSaved"));
+}
+function resetPeriodRevenueManualEdit(){
+  const type = periodRevenueEditType === "month" ? "month" : "week";
+  if(!confirm(type === "month" ? t("resetMonthManualConfirm") : t("resetWeekManualConfirm"))) return;
+  const key = periodRevenueEditKey(type);
+  state.periodRevenueManualEdits = state.periodRevenueManualEdits || {week:{}, month:{}};
+  state.periodRevenueManualEdits[type] = state.periodRevenueManualEdits[type] || {};
+  delete state.periodRevenueManualEdits[type][key];
+  saveState();
+  renderPeriodRevenueManualEdit();
+}
+function printPeriodRevenueManualEdit(){
+  const type = periodRevenueEditType === "month" ? "month" : "week";
+  const isMonth = type === "month";
+  const {range, rows} = periodRevenueManualRows(type);
+  const total = rows.reduce((sum,r)=>sum + Number(r.editTotal || 0), 0);
+  const tableRows = rows.map(r => [
+    escapeHtml(formatDateShort(r.day)),
+    `<span class="amount">${money(r.total)}</span>`,
+    `<span class="amount">${money(r.editTotal)}</span>`
+  ]);
+  openAccountingReport(isMonth ? t("monthEdit") : t("weekEdit"), range.label, [
+    {label: isMonth ? t("month") : t("week"), value: range.label},
+    {label: t("days"), value: String(rows.length)},
+    {label: t("totalRevenue"), value: money(total)}
+  ], [
+    reportSection(t("manualReport"), reportTable([t("date"), t("dailyRevenue"), t("manual")], tableRows))
+  ]);
 }
 
 
@@ -1021,7 +1248,7 @@ function printPeriodRevenueReport(type){
     {label: t("days"), value: String(dayCount)},
     {label: t("totalRevenue"), value: money(total)}
   ], [
-    reportSection("Tages-Gesamtsummen", reportTable(["Datum", "Gesamt Umsatz"], tableRows))
+    reportSection(t("dailyTotals"), reportTable([t("date"), t("totalRevenue")], tableRows))
   ], `${isMonth ? "monat_umsatz" : "wochen_umsatz"}_${reportFileDate(range.from)}_${reportFileDate(range.to)}`);
 }
 
@@ -1043,17 +1270,17 @@ function printAccountingReport(type){
     const balance = employeeTotal + depositTotal - withdrawalTotal;
     const employeeRows = employeeSummaryRowsForCashReport(paid);
     if(journalDayHasManualTotal(day)){
-      employeeRows.push(["Wochen-/Monatsumsatz", journalDayDeleted(day) ? "Tag gelöscht" : "Korrektur", `<span class="amount">${money(manualAdjustment)}</span>`]);
+      employeeRows.push([`${t("weeklyRevenue")} / ${t("monthlyRevenue")}`, journalDayDeleted(day) ? t("deletedDay") : t("correction"), `<span class="amount">${money(manualAdjustment)}</span>`]);
     }
     openAccountingReport(t("cashReport"), `${t("date")}: ${formatDateShort(day)}`, [
       {label:t("totalRevenue"), value:money(employeeTotal)},
-      {label:"Einzahlungen", value:money(depositTotal)},
-      {label:"Entnahmen", value:money(withdrawalTotal)},
+      {label:t("deposits"), value:money(depositTotal)},
+      {label:t("withdrawals"), value:money(withdrawalTotal)},
       {label:t("cashBalance"), value:money(balance)}
     ], [
-      reportSection("Umsatz Mitarbeiter", reportTable(["Mitarbeiter","Anzahl","Summe"], employeeRows)),
-      reportSection("Einzahlungen / Wechselgeld", reportTable(["Bezeichnung","Betrag"], deposits.map(x=>[escapeHtml(x.reason||"Einzahlung"), `<span class="amount">${money(x.amount||0)}</span>`]))),
-      reportSection("Geldentnahmen", reportTable(["Bezeichnung","Betrag"], withdrawals.map(x=>[escapeHtml(x.reason||"Entnahme"), `<span class="amount">${money(x.amount||0)}</span>`])))
+      reportSection(t("employeeRevenueSection"), reportTable([t("employee"),t("employeeCount"),t("sum")], employeeRows)),
+      reportSection(t("cashDepositsReport"), reportTable([t("description"),t("labelAmount")], deposits.map(x=>[escapeHtml(x.reason||t("deposits")), `<span class="amount">${money(x.amount||0)}</span>`]))),
+      reportSection(t("cashWithdrawalsReport"), reportTable([t("description"),t("labelAmount")], withdrawals.map(x=>[escapeHtml(x.reason||t("withdrawals")), `<span class="amount">${money(x.amount||0)}</span>`])))
     ], `kassenbericht_${reportFileDate(day)}`);
     return;
   }
@@ -1065,10 +1292,10 @@ function printAccountingReport(type){
     openAccountingReport(t("employeeRevenue"), `${t("date")}: ${formatDateShort(day)}`, [
       {label:t("sumPaid"), value:money(paidTotal)},
       {label:t("openAmount"), value:money(openTotal)},
-      {label:"Nicht erschienen", value:String(noShowCount)},
-      {label:"Kunden Gesamt", value:String(employeeRecords.length)}
+      {label:t("noShowStatus"), value:String(noShowCount)},
+      {label:t("customersTotal"), value:String(employeeRecords.length)}
     ], [
-      reportSection("Alle Kunden nach Mitarbeiter", reportTable(["Mitarbeiter","Zeit",t("customerFallback"),"Leistung","Status","Betrag"], employeeRecords.map(r=>[
+      reportSection(t("allCustomersByEmployee"), reportTable([t("employee"),t("timeShort"),t("customerFallback"),t("service"),t("status"),t("labelAmount")], employeeRecords.map(r=>[
         escapeHtml(r.employeeName||t("withoutEmployee")),
         escapeHtml(r.startTime||""),
         escapeHtml(r.customerName||t("customerFallback")),
@@ -1076,21 +1303,19 @@ function printAccountingReport(type){
         escapeHtml(employeeDailyRevenueStatusLabel(r.status||"Gebucht")),
         `<span class="amount">${money(r.price||0)}</span>`
       ]))),
-      reportSection("Gesamtsumme einzelne Mitarbeiter", reportTable(["Mitarbeiter","Summe Bezahlt"], employeePaidSummaryRowsForEmployeeReport(employeeRecords)))
+      reportSection(t("totalSingleEmployees"), reportTable([t("employee"),t("sumPaid")], employeePaidSummaryRowsForEmployeeReport(employeeRecords)))
     ], `mitarbeiter_umsatz_${reportFileDate(day)}`);
     return;
   }
   renderRevenue2();
   const employeeEntries = revenue2Sorted(revenue2EntriesForDay(day));
-  openAccountingReport("Einnahme", `Datum: ${formatDateShort(day)}`, [], [
-    reportSection("Einnahme Mitarbeiter", reportTable(["Mitarbeiter","Summe"], revenue2EmployeeTotalRows(employeeEntries))),
-    reportSection("Einzelne Kunden nach Mitarbeiter", reportTable(["Mitarbeiter",t("customerFallback"),"Betrag"], revenue2EmployeeDetailRows(employeeEntries)))
+  openAccountingReport(t("income"), `${t("date")}: ${formatDateShort(day)}`, [], [
+    reportSection(t("employeeIncome"), reportTable([t("employee"),t("sum")], revenue2EmployeeTotalRows(employeeEntries))),
+    reportSection(t("employeeIncomeDetails"), reportTable([t("employee"),t("customerFallback"),t("labelAmount")], revenue2EmployeeDetailRows(employeeEntries)))
   ], `einnahme_${reportFileDate(day)}`);
 }
 
 async function boot(){
-  // Robuster Start: Die Lizenz-/Studio-ID-Seite wird zuerst vorbereitet.
-  // So bleibt die App nicht leer, falls danach beim Initialisieren ein Fehler auftritt.
   try{
     const currentDateInput = $("currentDateInput");
     if(currentDateInput) currentDateInput.value = state.selectedDate || todayISO();
@@ -1112,8 +1337,6 @@ async function boot(){
 
     await verifyLicenseAndContinue();
 
-    // Bestehende App-Buttons erst nach der Lizenzprüfung verbinden.
-    // Dadurch kann ein Fehler in der Haupt-App die Studio-ID-Seite nicht mehr unsichtbar lassen.
     try{
       bindEvents();
     }catch(err){
@@ -1134,8 +1357,8 @@ function showStartupError(err){
     studioId:getStoredStudioId(),
   }, "blocked");
 }
-function showSetup(){ $("setupScreen").classList.remove("hidden"); $("mainScreen").classList.add("hidden"); }
-function showMain(){ $("setupScreen").classList.add("hidden"); $("mainScreen").classList.remove("hidden"); renderAll(); }
+function showSetup(){ hideLicenseScreen(); $("setupScreen").classList.remove("hidden"); $("mainScreen").classList.add("hidden"); }
+function showMain(){ hideLicenseScreen(); $("setupScreen").classList.add("hidden"); $("mainScreen").classList.remove("hidden"); renderAll(); setTimeout(() => scrollCalendarToCurrentTime({smooth:false}), 50); }
 
 function bindEvents(){
   $("finishSetupBtn").onclick = () => {
@@ -1153,12 +1376,12 @@ function bindEvents(){
   $("employeeAnyBtn") && ($("employeeAnyBtn").onclick = () => setEmployeeAnyActive(!isEmployeeAnyActive()));
   $("serviceName").oninput = renderServiceSuggestions;
   $("serviceName").onchange = applyExactService;
-  $("customerSearchInput").oninput = renderCustomerSearch;
+  $("customerSearchInput").oninput = () => { renderCustomerSearch(); scheduleDashboardReturnToTodayNow(); };
   $("customerName").oninput = renderCustomerNameSuggestions;
   $("customerName").onchange = applyExactCustomer;
   $("customerPhonePrefix") && ($("customerPhonePrefix").onchange = () => { $("customerPhoneNumber") && $("customerPhoneNumber").focus(); });
-  $("currentDateInput").onchange = e => { state.selectedDate=e.target.value; saveState(); renderCalendar(); renderReport(); };
-  $("todayBtn").onclick = () => { state.selectedDate=todayISO(); $("currentDateInput").value=state.selectedDate; saveState(); switchTab("calendarTab"); renderCalendar(); renderReport(); };
+  $("currentDateInput").onchange = e => { state.selectedDate=e.target.value; saveState(); renderCalendar(); renderReport(); if(state.selectedDate===todayISO()) setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 50); };
+  $("todayBtn").onclick = () => { state.selectedDate=todayISO(); $("currentDateInput").value=state.selectedDate; saveState(); switchTab("calendarTab"); renderCalendar(); renderReport(); setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 50); };
   $("prevDayBtn").onclick = () => shiftDay(-1);
   $("nextDayBtn").onclick = () => shiftDay(1);
   $("settingsBtn").onclick = openSettings;
@@ -1168,12 +1391,20 @@ function bindEvents(){
   $("hiddenRevenueOpenBtn") && ($("hiddenRevenueOpenBtn").onclick = openHiddenRevenue);
   $("hiddenRevenueFooterBtn") && ($("hiddenRevenueFooterBtn").onclick = openHiddenRevenue);
   $("footerRevenue2TabBtn") && ($("footerRevenue2TabBtn").onclick = openRevenue2FromFooter);
+  $("footerWeeklyEditBtn") && ($("footerWeeklyEditBtn").onclick = () => openPeriodRevenueEdit("week"));
+  $("footerMonthlyEditBtn") && ($("footerMonthlyEditBtn").onclick = () => openPeriodRevenueEdit("month"));
+  $("periodRevenueEditCloseBtn") && ($("periodRevenueEditCloseBtn").onclick = () => $("periodRevenueEditDialog").close());
+  $("periodRevenueEditSaveBtn") && ($("periodRevenueEditSaveBtn").onclick = savePeriodRevenueManualEdit);
+  $("periodRevenueEditResetBtn") && ($("periodRevenueEditResetBtn").onclick = resetPeriodRevenueManualEdit);
+  $("periodRevenueEditPrintBtn") && ($("periodRevenueEditPrintBtn").onclick = printPeriodRevenueManualEdit);
   $("printCashReportBtn") && ($("printCashReportBtn").onclick = () => printAccountingReport("cash"));
   $("printWeeklyRevenueReportBtn") && ($("printWeeklyRevenueReportBtn").onclick = () => printPeriodRevenueReport("week"));
   $("printMonthlyRevenueReportBtn") && ($("printMonthlyRevenueReportBtn").onclick = () => printPeriodRevenueReport("month"));
   $("addCashWithdrawalBtn") && ($("addCashWithdrawalBtn").onclick = addCashWithdrawal);
   $("addCashDepositBtn") && ($("addCashDepositBtn").onclick = addCashDeposit);
   $("journalDateInput") && ($("journalDateInput").onchange = () => { setJournalDate($("journalDateInput").value || todayISO()); refreshCashJournalViews(); });
+  $("journalWeekSelect") && ($("journalWeekSelect").onchange = () => { setJournalDate($("journalWeekSelect").value || startOfWeekISO(todayISO())); refreshCashJournalViews(); });
+  $("journalMonthSelect") && ($("journalMonthSelect").onchange = () => { setJournalDate($("journalMonthSelect").value || startOfMonthISO(todayISO())); refreshCashJournalViews(); });
   $("closeHiddenRevenueBtn") && ($("closeHiddenRevenueBtn").onclick = () => $("hiddenRevenueDialog").close());
   $("revenueEditDate") && ($("revenueEditDate").onchange = renderRevenueEditor);
   $("addManualRevenueBtn") && ($("addManualRevenueBtn").onclick = addManualRevenueItem);
@@ -1182,9 +1413,18 @@ function bindEvents(){
   $("cloudBackupNowBtn") && ($("cloudBackupNowBtn").onclick = cloudBackupNow);
   $("cloudBackupProvider") && ($("cloudBackupProvider").onchange = saveCloudBackupSettings);
   $("cloudBackupEnabled") && ($("cloudBackupEnabled").onchange = saveCloudBackupSettings);
+  $("dashboardPaymentBtn") && ($("dashboardPaymentBtn").onclick = openPaymentSystem);
   $("dashboardCashJournalBtn") && ($("dashboardCashJournalBtn").onclick = openCashJournal);
-  $("languageSelect") && ($("languageSelect").onchange = () => { state.language = $("languageSelect").value; saveState(); renderAll(); updateCleanupPreview(); applyLanguage(); });
+  $("languageSelect") && ($("languageSelect").onchange = () => { state.language = $("languageSelect").value; saveState(); renderAll(); updateCleanupPreview(); renderPaymentSystem(); renderPeriodRevenue("week"); renderPeriodRevenue("month"); if($("periodRevenueEditDialog")?.open) renderPeriodRevenueManualEdit(); renderRevenue2(); applyLanguage(); });
   $("closeSettingsBtn") && ($("closeSettingsBtn").onclick = closeSettingsWithSave);
+  $("closePaymentBtn") && ($("closePaymentBtn").onclick = () => $("paymentDialog").close());
+  $("paymentSearchInput") && ($("paymentSearchInput").oninput = renderPaymentSystem);
+  $("paymentAppointmentSelect") && ($("paymentAppointmentSelect").onchange = paymentLoadAppointment);
+  $("paymentClearCartBtn") && ($("paymentClearCartBtn").onclick = paymentClearCart);
+  $("paymentDiscountInput") && ($("paymentDiscountInput").oninput = renderPaymentCart);
+  $("paymentTipInput") && ($("paymentTipInput").oninput = renderPaymentCart);
+  $("paymentCompleteBtn") && ($("paymentCompleteBtn").onclick = completePaymentSale);
+  document.querySelectorAll(".payment-method").forEach(btn => btn.onclick = () => setPaymentMethod(btn.dataset.paymentMethod));
   $("closeCashJournalBtn") && ($("closeCashJournalBtn").onclick = () => $("cashJournalDialog").close());
   $("saveSettingsBtn") && ($("saveSettingsBtn").onclick = saveSettings);
   $("addServiceBtn").onclick = addService;
@@ -1195,7 +1435,7 @@ function bindEvents(){
   $("closeAppointmentBtn").onclick = () => $("appointmentDialog").close();
   $("deleteAppointmentBtn").onclick = deleteSelectedAppointment;
   $("editAppointmentBtn").onclick = editSelectedAppointment;
-  $("completeAppointmentBtn").onclick = completeSelectedAppointment;
+  $("completeAppointmentBtn").onclick = paySelectedAppointment;
   $("noShowAppointmentBtn") && ($("noShowAppointmentBtn").onclick = noShowSelectedAppointment);
   $("exportBtn") && ($("exportBtn").onclick = exportBackup);
   $("settingsBackupBtn") && ($("settingsBackupBtn").onclick = exportBackup);
@@ -1256,15 +1496,231 @@ function openRevenue2FromFooter(){
 }
 
 function openCashJournal(){
-  setJournalDate(getJournalDate(), false);
+  // Kasse / Mitarbeiter-Umsatz sollen beim Öffnen immer mit dem heutigen Datum starten.
+  setJournalDate(todayISO(), false);
   switchCashJournalTab("settingsCashTab");
   $("cashJournalDialog") && $("cashJournalDialog").showModal();
+}
+
+
+let paymentCart = [];
+let paymentMethod = "Bar";
+
+function openPaymentSystem(options = {}){
+  if(!options.keepCart) paymentCart = [];
+  paymentMethod = "Bar";
+  if($("paymentDiscountInput")) $("paymentDiscountInput").value = "0";
+  if($("paymentTipInput")) $("paymentTipInput").value = "0";
+  setPaymentMethod("Bar");
+  renderPaymentSystem();
+  $("paymentDialog") && $("paymentDialog").showModal();
+}
+
+function setPaymentMethod(method){
+  paymentMethod = method || "Bar";
+  document.querySelectorAll(".payment-method").forEach(btn=>btn.classList.toggle("active", btn.dataset.paymentMethod === paymentMethod));
+}
+
+function localizedPaymentMethod(method){
+  if(method === "Bar") return t("cashPayment");
+  if(method === "Karte") return t("cardPayment");
+  if(method === "Gutschein") return t("voucherPayment");
+  return method || "";
+}
+
+function renderPaymentSystem(){
+  renderPaymentAppointments();
+  renderPaymentServices();
+  renderPaymentCart();
+}
+
+function renderPaymentAppointments(){
+  const select = $("paymentAppointmentSelect");
+  if(!select) return;
+  const day = state.selectedDate || todayISO();
+  const apps = (state.appointments || [])
+    .filter(a => a.date === day && a.status !== "Nicht erschienen")
+    .sort((a,b)=>(a.startTime || "").localeCompare(b.startTime || ""));
+  select.innerHTML = `<option value="">${escapeHtml(t("noAppointmentFreeSale"))}</option>` + apps.map(a=>{
+    const paid = a.status === "Erledigt" ? " ✓" : "";
+    return `<option value="${escapeHtml(a.id)}">${escapeHtml(a.startTime || "")} · ${escapeHtml(a.customerName || t("customerFallback"))} · ${escapeHtml(a.serviceName || t("serviceFallback"))} · ${money(a.price || 0)}${paid}</option>`;
+  }).join("");
+}
+
+function renderPaymentServices(){
+  const grid = $("paymentServiceGrid");
+  if(!grid) return;
+  const q = ($("paymentSearchInput")?.value || "").trim().toLowerCase();
+  const services = (state.services || []).filter(s => !q || String(s.name || "").toLowerCase().includes(q));
+  grid.innerHTML = services.length ? services.map(s=>`
+    <button type="button" class="payment-service-card" data-payment-service="${escapeHtml(s.id)}">
+      <strong>${escapeHtml(s.name || t("serviceFallback"))}</strong>
+      <span>${money(s.price || 0)}</span>
+      <small>${Number(s.duration || 0)} Min</small>
+    </button>`).join("") : `<p class="hint">${escapeHtml(t("noServiceFound"))}</p>`;
+  grid.querySelectorAll("[data-payment-service]").forEach(btn=>btn.onclick=()=>{
+    const service = (state.services || []).find(s=>s.id === btn.dataset.paymentService);
+    if(service) addPaymentCartItem(service.name, Number(service.price || 0), service.id);
+  });
+}
+
+function paymentLoadAppointment(){
+  const id = $("paymentAppointmentSelect")?.value;
+  if(!id) return;
+  const a = (state.appointments || []).find(x=>x.id === id);
+  if(!a) return;
+  const matchedService = (state.services || []).find(s => String(s.name || "").trim().toLowerCase() === String(a.serviceName || "").trim().toLowerCase());
+  const appointmentPrice = Number(a.price || 0) || Number(matchedService?.price || 0);
+  paymentCart = [{id: uid(), sourceAppointmentId: a.id, serviceId: matchedService?.id, title: a.serviceName || matchedService?.name || t("appointment"), qty: 1, price: appointmentPrice}];
+  renderPaymentCart();
+}
+
+function addPaymentCartItem(title, price, serviceId){
+  const existing = paymentCart.find(x=>x.serviceId === serviceId && !x.sourceAppointmentId);
+  if(existing) existing.qty += 1;
+  else paymentCart.push({id: uid(), serviceId, title: title || t("serviceFallback"), qty: 1, price: Number(price || 0)});
+  renderPaymentCart();
+}
+
+function paymentClearCart(){
+  paymentCart = [];
+  if($("paymentAppointmentSelect")) $("paymentAppointmentSelect").value = "";
+  if($("paymentDiscountInput")) $("paymentDiscountInput").value = "0";
+  if($("paymentTipInput")) $("paymentTipInput").value = "0";
+  renderPaymentCart();
+}
+
+function paymentTotals(){
+  const subtotal = paymentCart.reduce((sum,item)=>sum + Number(item.price || 0) * Number(item.qty || 1), 0);
+  const discount = Math.max(0, Number($("paymentDiscountInput")?.value || 0));
+  const tip = Math.max(0, Number($("paymentTipInput")?.value || 0));
+  return {subtotal, discount, tip, total: Math.max(0, subtotal - discount + tip)};
+}
+
+function renderPaymentCart(){
+  const list = $("paymentCartList");
+  if(!list) return;
+  list.innerHTML = paymentCart.length ? paymentCart.map(item=>`
+    <div class="payment-cart-item">
+      <div class="payment-cart-info">
+        <strong>${escapeHtml(item.title)}</strong>
+        <label class="payment-price-edit">${escapeHtml(t("amountEuro"))}
+          <input type="number" min="0" step="0.01" value="${Number(item.price || 0)}" data-payment-price="${escapeHtml(item.id)}">
+        </label>
+        <small>${money(item.price)} × ${Number(item.qty || 1)}</small>
+      </div>
+      <div class="payment-cart-actions">
+        <button type="button" data-payment-minus="${escapeHtml(item.id)}">−</button>
+        <span>${Number(item.qty || 1)}</span>
+        <button type="button" data-payment-plus="${escapeHtml(item.id)}">+</button>
+        <button type="button" data-payment-remove="${escapeHtml(item.id)}">×</button>
+      </div>
+    </div>`).join("") : `<p class="hint">${escapeHtml(t("emptyCart"))}</p>`;
+  list.querySelectorAll("[data-payment-price]").forEach(input=>input.oninput=()=>updatePaymentItemPrice(input.dataset.paymentPrice, input.value));
+  list.querySelectorAll("[data-payment-minus]").forEach(btn=>btn.onclick=()=>changePaymentQty(btn.dataset.paymentMinus, -1));
+  list.querySelectorAll("[data-payment-plus]").forEach(btn=>btn.onclick=()=>changePaymentQty(btn.dataset.paymentPlus, 1));
+  list.querySelectorAll("[data-payment-remove]").forEach(btn=>btn.onclick=()=>{ paymentCart = paymentCart.filter(x=>x.id !== btn.dataset.paymentRemove); renderPaymentCart(); });
+  const totals = paymentTotals();
+  if($("paymentSubtotal")) $("paymentSubtotal").textContent = money(totals.subtotal);
+  if($("paymentTotal")) $("paymentTotal").textContent = money(totals.total);
+}
+
+function updatePaymentItemPrice(id, value){
+  const item = paymentCart.find(x=>x.id === id);
+  if(!item) return;
+  item.price = Math.max(0, Number(String(value).replace(",", ".") || 0));
+  const totals = paymentTotals();
+  if($("paymentSubtotal")) $("paymentSubtotal").textContent = money(totals.subtotal);
+  if($("paymentTotal")) $("paymentTotal").textContent = money(totals.total);
+}
+
+function changePaymentQty(id, delta){
+  const item = paymentCart.find(x=>x.id === id);
+  if(!item) return;
+  item.qty = Math.max(1, Number(item.qty || 1) + delta);
+  renderPaymentCart();
+}
+
+function paymentSaleDateFromCart(){
+  const appointmentItem = paymentCart.find(item => item.sourceAppointmentId);
+  if(appointmentItem){
+    const appointment = (state.appointments || []).find(a => a.id === appointmentItem.sourceAppointmentId);
+    if(appointment?.date) return appointment.date;
+  }
+  // Freie Bar-/Kartenverkäufe aus „Bezahlen“ gehören in die heutige Kasse.
+  return todayISO();
+}
+
+function completePaymentSale(){
+  if(!paymentCart.length){ alert(t("selectServiceOrAppointmentFirst")); return; }
+  const totals = paymentTotals();
+  const sale = {id: uid(), date: paymentSaleDateFromCart(), createdAt: new Date().toISOString(), method: paymentMethod, items: paymentCart.map(x=>({...x})), subtotal: totals.subtotal, discount: totals.discount, tip: totals.tip, total: totals.total};
+  state.paymentSales = state.paymentSales || [];
+  state.paymentSales.push(sale);
+
+  // Verknüpfung Bezahlen -> Kasse/Umsatz:
+  // Beim Abschluss werden verknüpfte Termine als bezahlt markiert und der tatsächlich kassierte Betrag
+  // direkt in den Mitarbeiter-Umsatz/Kasse-Datensatz übernommen. Dadurch erscheint der Umsatz sofort in „Kasse“.
+  const touchedDays = new Set([sale.date]);
+  paymentCart.forEach(item=>{
+    if(item.sourceAppointmentId){
+      const paidAmount = Number(item.price || 0) * Number(item.qty || 1);
+      const a = (state.appointments || []).find(x=>x.id === item.sourceAppointmentId);
+      if(a){
+        a.status = "Erledigt";
+        a.price = paidAmount;
+        touchedDays.add(a.date || sale.date);
+      }
+      ensureEmployeeDailyRevenueRecordsForDay(a?.date || sale.date);
+      const record = employeeDailyRevenueRecordByAppointmentId(item.sourceAppointmentId);
+      if(record){
+        record.status = "Erledigt";
+        record.price = paidAmount;
+        record.originalServicePrice = paidAmount;
+        record.serviceName = item.title || record.serviceName || "Leistung";
+        record.updatedAt = new Date().toISOString();
+      }
+    }
+  });
+
+  const appointmentAmount = paymentCart
+    .filter(item => item.sourceAppointmentId)
+    .reduce((sum,item)=>sum + Number(item.price || 0) * Number(item.qty || 1), 0);
+  const manualAmount = totals.total - appointmentAmount;
+  if(Math.abs(manualAmount) > 0.001){
+    state.manualRevenueItems = state.manualRevenueItems || [];
+    const productNote = sale.items.filter(x=>!x.sourceAppointmentId).map(x=>`${x.title} x${x.qty}`).join(", ");
+    state.manualRevenueItems.push({
+      id: uid(),
+      date: sale.date,
+      title: `${t("paymentTitlePlain")} ${localizedPaymentMethod(paymentMethod)}`,
+      label: `${t("paymentTitlePlain")} ${localizedPaymentMethod(paymentMethod)}`,
+      note: productNote || t("discountTipCorrection"),
+      amount: manualAmount,
+      paymentSaleId: sale.id
+    });
+  }
+
+  saveState();
+  touchedDays.forEach(day => ensureEmployeeDailyRevenueRecordsForDay(day));
+  // Wenn Kasse/Mitarbeiter-Umsatz geöffnet ist, direkt auf den Verkaufstag stellen,
+  // damit „Bezahlen“ sofort sichtbar synchronisiert ist.
+  if($("cashJournalDialog")?.open){
+    setJournalDate(sale.date, false);
+  }
+  renderAll();
+  renderCashTab();
+  renderEmployeeDailyRevenue();
+  renderReport();
+  paymentClearCart();
+  alert(`${t("paymentSavedToCash")}: ${money(totals.total)} (${localizedPaymentMethod(paymentMethod)})`);
 }
 
 function switchCashJournalTab(id){
   const target = id || "settingsCashTab";
   const dialog = $("cashJournalDialog");
   if(!dialog) return;
+  updateJournalDateControl(target);
   dialog.querySelectorAll(".cash-journal-tab").forEach(btn=>{
     btn.classList.toggle("active", btn.dataset.journalTab === target);
   });
@@ -1272,6 +1728,8 @@ function switchCashJournalTab(id){
     panel.classList.toggle("active", panel.id === target);
   });
   dialog.classList.toggle("employee-revenue-tab-active", target === "settingsEmployeeDailyRevenueTab");
+  dialog.classList.toggle("weekly-revenue-tab-active", target === "settingsWeeklyRevenueTab");
+  dialog.classList.toggle("monthly-revenue-tab-active", target === "settingsMonthlyRevenueTab");
   if(target === "settingsCashTab") renderCashTab();
   if(target === "settingsEmployeeDailyRevenueTab") renderEmployeeDailyRevenue();
   if(target === "settingsWeeklyRevenueTab") renderPeriodRevenue("week");
@@ -1281,7 +1739,7 @@ function switchCashJournalTab(id){
 
 function shiftDay(n){
   const d=new Date(state.selectedDate+"T12:00:00"); d.setDate(d.getDate()+n);
-  state.selectedDate=d.toISOString().slice(0,10); $("currentDateInput").value=state.selectedDate; saveState(); renderCalendar(); renderReport();
+  state.selectedDate=d.toISOString().slice(0,10); $("currentDateInput").value=state.selectedDate; saveState(); renderCalendar(); renderReport(); if(state.selectedDate===todayISO()) setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 50);
 }
 
 const I18N = {
@@ -1320,13 +1778,13 @@ const I18N = {
   }
 };
 Object.assign(I18N.de, {
-  initialSetup:"Ersteinrichtung", setupHint:"Die App läuft lokal auf diesem Gerät. Cloud-Backup nutzt aktuell Export oder Teilen-Menü.", opensAt:"Öffnet um", closesAt:"Schließt um", initialEmployees:"Erste Mitarbeiter, getrennt mit Komma", startApp:"App starten", dailySchedule:"Tagesplan", revenueReport:"Umsatzbericht", from:"Von", to:"Bis", refreshReport:"Bericht aktualisieren", period:"Zeitraum", appointmentsPeriod:"Termine Zeitraum", deletedFromRevenue:"Aus Umsatz gelöscht", daysInReport:"Tage im Bericht", deleteRevenueHint:"Mit „Aus Umsatz löschen“ wird der komplette Tag nicht mehr im Umsatzbericht gezählt. Die Termine bleiben im Kalender erhalten.", deletedRevenueDays:"Gelöschte Tage für Umsatzbericht", employeeHint:"Mitarbeiter hier anlegen, verändern oder deaktivieren.", calendarFontColor:"Schriftfarbe im Kalender", customerHint:"Kunden hier anlegen, bearbeiten oder löschen. Beim Eintippen im Terminformular werden Kundendaten vorgeschlagen.", serviceHint:"Leistungen mit Preisen und Dauer selbst gestalten und speichern.", deleteAppointmentsPermanently:"Termine endgültig löschen", deleteAppointmentsHint:"Achtung: Diese Funktion löscht Termine endgültig. Es gibt keine Wiederherstellung in der App. Vorher am besten ein Backup exportieren.", wholeDay:"Ganzer Tag", wholeWeek:"Ganze Woche", wholeMonth:"Ganzer Monat", appointment:"Termin", markDonePaid:"Als bezahlt", markNoShow:"Nicht erschienen", localBackup:"💾 Lokal Backup", localBackupHint:"Exportiert und importiert lokale JSON-Backups. „Bereinigung + Backup“ löscht zuerst alle Termine von heute und Vergangenheit sowie Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz. Danach wird ein Backup erstellt. Nur Zukunft-Termine bleiben erhalten.", cleanupAndBackup:"Bereinigung + Backup", cloudBackupNow:"Cloud Backup jetzt erstellen", autoAfterCleanup:"Automatisch nach „Bereinigung + Backup“", enableRevenueArea:"Umsatzbereich aktivieren", revenueVisibilityHint:"Wenn deaktiviert, werden Umsatzbericht, Umsatzbutton und Umsatzfunktionen ausgeblendet.", noLocalBackup:"Noch kein lokales Backup erstellt.", lastLocalBackup:"Letztes lokales Backup", noCloudBackup:"Noch kein Cloud Backup erstellt.", lastCloudBackup:"Letztes Cloud Backup", cloudDisabled:"Cloud Backup ist deaktiviert.", cloudStatusHint:"Bei aktivem Cloud Backup wird das Teilen/Speichern-Menü genutzt.", importSuccess:"Backup wurde erfolgreich wiederhergestellt.", importFailed:"Backup konnte nicht gelesen werden. Datei ist ungültig oder beschädigt.", backupManualDownload:"Backup-Datei manuell herunterladen", noCleanupData:"Keine alten Daten zum Bereinigen gefunden.", cleanupConfirm:"Alle Termine von heute und Vergangenheit sowie alle Umsätze aus Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz werden gelöscht. Danach wird ein Backup erstellt. Nur Zukunft-Termine bleiben erhalten. Fortfahren?", cleanupRunning:"Bereinige und erstelle Backup...", cleanupDone:"Bereinigung abgeschlossen. Nur Zukunft-Termine bleiben erhalten. Backup wurde erstellt: {filename}.", serviceFallback:"Leistung", employeeLabel:"Mitarbeiter", phoneLabel:"Telefon", internalStatus:"Status intern", priceLabel:"Preis", noteLabel:"Notiz", noAppointmentsInRange:"Keine Termine im Zeitraum.", noDeletedDays:"Keine Tage gelöscht.", appointmentsWord:"Termine", revenueDeletedPermanently:"Umsatz endgültig gelöscht", notRecoverable:"Nicht wiederherstellbar", revenueWord:"Umsatz", deleteRevenuePermanently:"Umsatz endgültig löschen", noAppointmentsInRange:"Keine Termine im Zeitraum.", noDeletedDays:"Keine Tage gelöscht.", days:"Tage"
+  initialSetup:"Ersteinrichtung", setupHint:"Die App läuft lokal auf diesem Gerät. Cloud-Backup nutzt aktuell Export oder Teilen-Menü.", opensAt:"Öffnet um", closesAt:"Schließt um", initialEmployees:"Erste Mitarbeiter, getrennt mit Komma", startApp:"App starten", dailySchedule:"Tagesplan", revenueReport:"Umsatzbericht", from:"Von", to:"Bis", refreshReport:"Bericht aktualisieren", period:"Zeitraum", appointmentsPeriod:"Termine Zeitraum", deletedFromRevenue:"Aus Umsatz gelöscht", daysInReport:"Tage im Bericht", deleteRevenueHint:"Mit „Aus Umsatz löschen“ wird der komplette Tag nicht mehr im Umsatzbericht gezählt. Die Termine bleiben im Kalender erhalten.", deletedRevenueDays:"Gelöschte Tage für Umsatzbericht", employeeHint:"Mitarbeiter hier anlegen, verändern oder deaktivieren.", calendarFontColor:"Schriftfarbe im Kalender", customerHint:"Kunden hier anlegen, bearbeiten oder löschen. Beim Eintippen im Terminformular werden Kundendaten vorgeschlagen.", serviceHint:"Leistungen mit Preisen und Dauer selbst gestalten und speichern.", deleteAppointmentsPermanently:"Termine endgültig löschen", deleteAppointmentsHint:"Achtung: Diese Funktion löscht Termine endgültig. Es gibt keine Wiederherstellung in der App. Vorher am besten ein Backup exportieren.", wholeDay:"Ganzer Tag", wholeWeek:"Ganze Woche", wholeMonth:"Ganzer Monat", appointment:"Termin", markDonePaid:"Bezahlen", markNoShow:"Nicht erschienen", localBackup:"💾 Lokal Backup", localBackupHint:"Exportiert und importiert lokale JSON-Backups. „Bereinigung + Backup“ löscht zuerst alle Termine von heute und Vergangenheit sowie Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz. Danach wird ein Backup erstellt. Nur Zukunft-Termine bleiben erhalten.", cleanupAndBackup:"Bereinigung + Backup", cloudBackupNow:"Cloud Backup jetzt erstellen", autoAfterCleanup:"Automatisch nach „Bereinigung + Backup“", enableRevenueArea:"Umsatzbereich aktivieren", revenueVisibilityHint:"Wenn deaktiviert, werden Umsatzbericht, Umsatzbutton und Umsatzfunktionen ausgeblendet.", noLocalBackup:"Noch kein lokales Backup erstellt.", lastLocalBackup:"Letztes lokales Backup", noCloudBackup:"Noch kein Cloud Backup erstellt.", lastCloudBackup:"Letztes Cloud Backup", cloudDisabled:"Cloud Backup ist deaktiviert.", cloudStatusHint:"Bei aktivem Cloud Backup wird das Teilen/Speichern-Menü genutzt.", importSuccess:"Backup wurde erfolgreich wiederhergestellt.", importFailed:"Backup konnte nicht gelesen werden. Datei ist ungültig oder beschädigt.", backupManualDownload:"Backup-Datei manuell herunterladen", noCleanupData:"Keine alten Daten zum Bereinigen gefunden.", cleanupConfirm:"Alle Termine von heute und Vergangenheit sowie alle Umsätze aus Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz werden gelöscht. Danach wird ein Backup erstellt. Nur Zukunft-Termine bleiben erhalten. Fortfahren?", cleanupRunning:"Bereinige und erstelle Backup...", cleanupDone:"Bereinigung abgeschlossen. Nur Zukunft-Termine bleiben erhalten. Backup wurde erstellt: {filename}.", serviceFallback:"Leistung", employeeLabel:"Mitarbeiter", phoneLabel:"Telefon", internalStatus:"Status intern", priceLabel:"Preis", noteLabel:"Notiz", noAppointmentsInRange:"Keine Termine im Zeitraum.", noDeletedDays:"Keine Tage gelöscht.", appointmentsWord:"Termine", revenueDeletedPermanently:"Umsatz endgültig gelöscht", notRecoverable:"Nicht wiederherstellbar", revenueWord:"Umsatz", deleteRevenuePermanently:"Umsatz endgültig löschen", noAppointmentsInRange:"Keine Termine im Zeitraum.", noDeletedDays:"Keine Tage gelöscht.", days:"Tage"
 });
 Object.assign(I18N.vi, {
-  initialSetup:"Thiết lập ban đầu", setupHint:"Ứng dụng lưu dữ liệu cục bộ trên thiết bị này. Sao lưu Cloud hiện dùng xuất file hoặc menu chia sẻ.", opensAt:"Mở cửa lúc", closesAt:"Đóng cửa lúc", initialEmployees:"Nhân viên ban đầu, cách nhau bằng dấu phẩy", startApp:"Bắt đầu ứng dụng", dailySchedule:"Lịch trong ngày", revenueReport:"Báo cáo doanh thu", from:"Từ", to:"Đến", refreshReport:"Cập nhật báo cáo", period:"Khoảng thời gian", appointmentsPeriod:"Lịch hẹn trong khoảng", deletedFromRevenue:"Đã xóa khỏi doanh thu", daysInReport:"Ngày trong báo cáo", deleteRevenueHint:"Khi dùng “Xóa khỏi doanh thu”, cả ngày sẽ không còn được tính trong báo cáo. Lịch hẹn vẫn ở trong lịch.", deletedRevenueDays:"Ngày đã xóa khỏi báo cáo doanh thu", employeeHint:"Tạo, sửa hoặc tắt nhân viên tại đây.", calendarFontColor:"Màu chữ trong lịch", customerHint:"Tạo, sửa hoặc xóa khách hàng. Khi nhập lịch hẹn, dữ liệu khách sẽ được gợi ý.", serviceHint:"Tự tạo dịch vụ với giá và thời lượng.", deleteAppointmentsPermanently:"Xóa lịch hẹn vĩnh viễn", deleteAppointmentsHint:"Chú ý: Chức năng này xóa lịch hẹn vĩnh viễn. Không thể khôi phục trong ứng dụng. Nên xuất sao lưu trước.", wholeDay:"Cả ngày", wholeWeek:"Cả tuần", wholeMonth:"Cả tháng", appointment:"Lịch hẹn", markDonePaid:"Đánh dấu xong / đã trả", localBackup:"💾 Sao lưu cục bộ", localBackupHint:"Xuất và nhập file sao lưu JSON cục bộ. “Dọn dẹp + Sao lưu” xóa tất cả lịch hẹn hôm nay và quá khứ cùng doanh thu nhân viên, thu nhập, kassa, doanh thu tuần và doanh thu tháng. Sau đó tạo sao lưu. Chỉ lịch hẹn tương lai được giữ lại.", cleanupAndBackup:"Dọn dẹp + Sao lưu", cloudBackupNow:"Tạo sao lưu Cloud ngay", autoAfterCleanup:"Tự động sau “Dọn dẹp + sao lưu”", enableRevenueArea:"Bật khu vực doanh thu", revenueVisibilityHint:"Khi tắt, báo cáo doanh thu, nút doanh thu và chức năng doanh thu sẽ bị ẩn.", noLocalBackup:"Chưa tạo sao lưu cục bộ.", lastLocalBackup:"Sao lưu cục bộ gần nhất", noCloudBackup:"Chưa tạo sao lưu Cloud.", lastCloudBackup:"Sao lưu Cloud gần nhất", cloudDisabled:"Sao lưu Cloud đang tắt.", cloudStatusHint:"Khi bật Cloud Backup, ứng dụng dùng menu chia sẻ/lưu.", importSuccess:"Đã khôi phục sao lưu thành công.", importFailed:"Không đọc được sao lưu. File không hợp lệ hoặc bị hỏng.", backupManualDownload:"Tải file sao lưu thủ công", noCleanupData:"Không có dữ liệu cũ để dọn dẹp.", cleanupConfirm:"Tất cả lịch hẹn hôm nay và quá khứ cùng doanh thu nhân viên, thu nhập, kassa, doanh thu tuần và doanh thu tháng sẽ bị xóa. Sau đó sẽ tạo sao lưu. Chỉ lịch hẹn tương lai được giữ lại. Tiếp tục?", cleanupRunning:"Đang dọn dẹp và tạo sao lưu...", cleanupDone:"Dọn dẹp xong. Chỉ lịch hẹn tương lai được giữ lại. Đã tạo file sao lưu: {filename}.", serviceFallback:"Dịch vụ", employeeLabel:"Nhân viên", phoneLabel:"Số điện thoại", internalStatus:"Trạng thái nội bộ", priceLabel:"Giá", noteLabel:"Ghi chú", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", appointmentsWord:"lịch hẹn", revenueDeletedPermanently:"Doanh thu đã xóa vĩnh viễn", notRecoverable:"Không thể khôi phục", revenueWord:"Doanh thu", deleteRevenuePermanently:"Xóa doanh thu vĩnh viễn", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", days:"ngày"
+  initialSetup:"Thiết lập ban đầu", setupHint:"Ứng dụng lưu dữ liệu cục bộ trên thiết bị này. Sao lưu Cloud hiện dùng xuất file hoặc menu chia sẻ.", opensAt:"Mở cửa lúc", closesAt:"Đóng cửa lúc", initialEmployees:"Nhân viên ban đầu, cách nhau bằng dấu phẩy", startApp:"Bắt đầu ứng dụng", dailySchedule:"Lịch trong ngày", revenueReport:"Báo cáo doanh thu", from:"Từ", to:"Đến", refreshReport:"Cập nhật báo cáo", period:"Khoảng thời gian", appointmentsPeriod:"Lịch hẹn trong khoảng", deletedFromRevenue:"Đã xóa khỏi doanh thu", daysInReport:"Ngày trong báo cáo", deleteRevenueHint:"Khi dùng “Xóa khỏi doanh thu”, cả ngày sẽ không còn được tính trong báo cáo. Lịch hẹn vẫn ở trong lịch.", deletedRevenueDays:"Ngày đã xóa khỏi báo cáo doanh thu", employeeHint:"Tạo, sửa hoặc tắt nhân viên tại đây.", calendarFontColor:"Màu chữ trong lịch", customerHint:"Tạo, sửa hoặc xóa khách hàng. Khi nhập lịch hẹn, dữ liệu khách sẽ được gợi ý.", serviceHint:"Tự tạo dịch vụ với giá và thời lượng.", deleteAppointmentsPermanently:"Xóa lịch hẹn vĩnh viễn", deleteAppointmentsHint:"Chú ý: Chức năng này xóa lịch hẹn vĩnh viễn. Không thể khôi phục trong ứng dụng. Nên xuất sao lưu trước.", wholeDay:"Cả ngày", wholeWeek:"Cả tuần", wholeMonth:"Cả tháng", appointment:"Lịch hẹn", markDonePaid:"Thanh toán", markNoShow:"Không đến", localBackup:"💾 Sao lưu cục bộ", localBackupHint:"Xuất và nhập file sao lưu JSON cục bộ. “Dọn dẹp + Sao lưu” xóa tất cả lịch hẹn hôm nay và quá khứ cùng doanh thu nhân viên, thu nhập, kassa, doanh thu tuần và doanh thu tháng. Sau đó tạo sao lưu. Chỉ lịch hẹn tương lai được giữ lại.", cleanupAndBackup:"Dọn dẹp + Sao lưu", cloudBackupNow:"Tạo sao lưu Cloud ngay", autoAfterCleanup:"Tự động sau “Dọn dẹp + sao lưu”", enableRevenueArea:"Bật khu vực doanh thu", revenueVisibilityHint:"Khi tắt, báo cáo doanh thu, nút doanh thu và chức năng doanh thu sẽ bị ẩn.", noLocalBackup:"Chưa tạo sao lưu cục bộ.", lastLocalBackup:"Sao lưu cục bộ gần nhất", noCloudBackup:"Chưa tạo sao lưu Cloud.", lastCloudBackup:"Sao lưu Cloud gần nhất", cloudDisabled:"Sao lưu Cloud đang tắt.", cloudStatusHint:"Khi bật Cloud Backup, ứng dụng dùng menu chia sẻ/lưu.", importSuccess:"Đã khôi phục sao lưu thành công.", importFailed:"Không đọc được sao lưu. File không hợp lệ hoặc bị hỏng.", backupManualDownload:"Tải file sao lưu thủ công", noCleanupData:"Không có dữ liệu cũ để dọn dẹp.", cleanupConfirm:"Tất cả lịch hẹn hôm nay và quá khứ cùng doanh thu nhân viên, thu nhập, kassa, doanh thu tuần và doanh thu tháng sẽ bị xóa. Sau đó sẽ tạo sao lưu. Chỉ lịch hẹn tương lai được giữ lại. Tiếp tục?", cleanupRunning:"Đang dọn dẹp và tạo sao lưu...", cleanupDone:"Dọn dẹp xong. Chỉ lịch hẹn tương lai được giữ lại. Đã tạo file sao lưu: {filename}.", serviceFallback:"Dịch vụ", employeeLabel:"Nhân viên", phoneLabel:"Số điện thoại", internalStatus:"Trạng thái nội bộ", priceLabel:"Giá", noteLabel:"Ghi chú", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", appointmentsWord:"lịch hẹn", revenueDeletedPermanently:"Doanh thu đã xóa vĩnh viễn", notRecoverable:"Không thể khôi phục", revenueWord:"Doanh thu", deleteRevenuePermanently:"Xóa doanh thu vĩnh viễn", noAppointmentsInRange:"Không có lịch hẹn trong khoảng này.", noDeletedDays:"Chưa xóa ngày nào.", days:"ngày"
 });
 Object.assign(I18N.en, {
-  initialSetup:"Initial setup", setupHint:"The app stores data locally on this device. Cloud backup currently uses export or the share menu.", opensAt:"Opens at", closesAt:"Closes at", initialEmployees:"Initial employees, separated by commas", startApp:"Start app", dailySchedule:"Daily schedule", revenueReport:"Revenue report", from:"From", to:"To", refreshReport:"Refresh report", period:"Period", appointmentsPeriod:"Appointments period", deletedFromRevenue:"Deleted from revenue", daysInReport:"Days in report", deleteRevenueHint:"When “Delete from revenue” is used, the whole day is no longer counted in the revenue report. Appointments stay in the calendar.", deletedRevenueDays:"Deleted days for revenue report", employeeHint:"Create, edit or deactivate employees here.", calendarFontColor:"Calendar font color", customerHint:"Create, edit or delete customers here. Customer data is suggested when typing in the appointment form.", serviceHint:"Create services with custom prices and durations.", deleteAppointmentsPermanently:"Permanently delete appointments", deleteAppointmentsHint:"Warning: This permanently deletes appointments. There is no restore function in the app. Export a backup first if needed.", wholeDay:"Whole day", wholeWeek:"Whole week", wholeMonth:"Whole month", appointment:"Appointment", markDonePaid:"Mark done / paid", markNoShow:"No-show", localBackup:"💾 Local Backup", localBackupHint:"Exports and imports local JSON backups. “Cleanup + Backup” deletes all appointments from today and the past plus Employee Revenue, Income, Cash Register, Weekly Revenue and Monthly Revenue. Then it creates the backup. Only future appointments remain.", cleanupAndBackup:"Cleanup + Backup", cloudBackupNow:"Create cloud backup now", autoAfterCleanup:"Automatically after “Cleanup + Backup”", enableRevenueArea:"Enable revenue area", revenueVisibilityHint:"When disabled, the revenue report, revenue button and revenue functions are hidden.", noLocalBackup:"No local backup created yet.", lastLocalBackup:"Last local backup", noCloudBackup:"No cloud backup created yet.", lastCloudBackup:"Last cloud backup", cloudDisabled:"Cloud backup is disabled.", cloudStatusHint:"When cloud backup is active, the share/save menu is used.", importSuccess:"Backup restored successfully.", importFailed:"Backup could not be read. The file is invalid or damaged.", backupManualDownload:"Download backup file manually", noCleanupData:"No old data found for cleanup.", cleanupConfirm:"All appointments from today and the past plus all revenue data from Employee Revenue, Income, Cash Register, Weekly Revenue and Monthly Revenue will be deleted. Then a backup will be created. Only future appointments remain. Continue?", cleanupRunning:"Cleaning and creating backup...", cleanupDone:"Cleanup completed. Only future appointments remain. Backup file created: {filename}.", serviceFallback:"Service", employeeLabel:"Employee", phoneLabel:"Phone", internalStatus:"Internal status", priceLabel:"Price", noteLabel:"Note", noAppointmentsInRange:"No appointments in this period.", noDeletedDays:"No days deleted.", appointmentsWord:"appointments", revenueDeletedPermanently:"Revenue permanently deleted", notRecoverable:"Not recoverable", revenueWord:"Revenue", deleteRevenuePermanently:"Permanently delete revenue", noAppointmentsInRange:"No appointments in this period.", noDeletedDays:"No days deleted.", days:"days"
+  initialSetup:"Initial setup", setupHint:"The app stores data locally on this device. Cloud backup currently uses export or the share menu.", opensAt:"Opens at", closesAt:"Closes at", initialEmployees:"Initial employees, separated by commas", startApp:"Start app", dailySchedule:"Daily schedule", revenueReport:"Revenue report", from:"From", to:"To", refreshReport:"Refresh report", period:"Period", appointmentsPeriod:"Appointments period", deletedFromRevenue:"Deleted from revenue", daysInReport:"Days in report", deleteRevenueHint:"When “Delete from revenue” is used, the whole day is no longer counted in the revenue report. Appointments stay in the calendar.", deletedRevenueDays:"Deleted days for revenue report", employeeHint:"Create, edit or deactivate employees here.", calendarFontColor:"Calendar font color", customerHint:"Create, edit or delete customers here. Customer data is suggested when typing in the appointment form.", serviceHint:"Create services with custom prices and durations.", deleteAppointmentsPermanently:"Permanently delete appointments", deleteAppointmentsHint:"Warning: This permanently deletes appointments. There is no restore function in the app. Export a backup first if needed.", wholeDay:"Whole day", wholeWeek:"Whole week", wholeMonth:"Whole month", appointment:"Appointment", markDonePaid:"Pay", markNoShow:"No-show", localBackup:"💾 Local Backup", localBackupHint:"Exports and imports local JSON backups. “Cleanup + Backup” deletes all appointments from today and the past plus Employee Revenue, Income, Cash Register, Weekly Revenue and Monthly Revenue. Then it creates the backup. Only future appointments remain.", cleanupAndBackup:"Cleanup + Backup", cloudBackupNow:"Create cloud backup now", autoAfterCleanup:"Automatically after “Cleanup + Backup”", enableRevenueArea:"Enable revenue area", revenueVisibilityHint:"When disabled, the revenue report, revenue button and revenue functions are hidden.", noLocalBackup:"No local backup created yet.", lastLocalBackup:"Last local backup", noCloudBackup:"No cloud backup created yet.", lastCloudBackup:"Last cloud backup", cloudDisabled:"Cloud backup is disabled.", cloudStatusHint:"When cloud backup is active, the share/save menu is used.", importSuccess:"Backup restored successfully.", importFailed:"Backup could not be read. The file is invalid or damaged.", backupManualDownload:"Download backup file manually", noCleanupData:"No old data found for cleanup.", cleanupConfirm:"All appointments from today and the past plus all revenue data from Employee Revenue, Income, Cash Register, Weekly Revenue and Monthly Revenue will be deleted. Then a backup will be created. Only future appointments remain. Continue?", cleanupRunning:"Cleaning and creating backup...", cleanupDone:"Cleanup completed. Only future appointments remain. Backup file created: {filename}.", serviceFallback:"Service", employeeLabel:"Employee", phoneLabel:"Phone", internalStatus:"Internal status", priceLabel:"Price", noteLabel:"Note", noAppointmentsInRange:"No appointments in this period.", noDeletedDays:"No days deleted.", appointmentsWord:"appointments", revenueDeletedPermanently:"Revenue permanently deleted", notRecoverable:"Not recoverable", revenueWord:"Revenue", deleteRevenuePermanently:"Permanently delete revenue", noAppointmentsInRange:"No appointments in this period.", noDeletedDays:"No days deleted.", days:"days"
 });
 Object.assign(I18N.de, {
   displaySettings:"Darstellung / Geräteansicht",
@@ -1407,10 +1865,95 @@ Object.assign(I18N.vi, {
   openRevenue:"Báo cáo doanh thu", cashRegister:"Kassa", day:"Ngày", week:"Tuần", month:"Tháng", date:"Ngày", dailyRevenueTotal:"Doanh thu ngày / tổng", appointments:"Lịch hẹn", dailyRevenueByEmployee:"Doanh thu ngày theo nhân viên", dailyRevenueByEmployeeHint:"Tổng quan gọn với lịch hẹn khách, dịch vụ và giá. Báo cáo có thể xem theo ngày, tuần hoặc tháng.", workTimeVacation:"Giờ làm / nghỉ phép", workTimeVacationHint:"Tất cả nhân viên được liệt kê ở đây. Thiết lập toàn thời gian, phụ/part-time, mini-job hoặc ngày làm riêng. Thời gian được phép, giờ làm theo thứ Hai đến thứ Bảy, kỳ nghỉ và ngày nghỉ lẻ sẽ được tính trong lịch hẹn.", reportPrintFormat:"Định dạng in báo cáo", reportPrintFormatHint:"Áp dụng cho báo cáo kassa, doanh thu nhân viên và thu nhập. Xuất Excel không thay đổi.", versionLabel:"Phiên bản:", developerLabel:"Nhà sản xuất / phát triển:", copyrightLabel:"Bản quyền:", revenueJournal:"Nhật ký doanh thu", employeeRevenue:"Doanh thu nhân viên", weeklyRevenue:"Doanh thu tuần", monthlyRevenue:"Doanh thu tháng", selectDay:"Chọn ngày", printReport:"In báo cáo", currentCash:"Hiện có trong kassa", total:"Tổng", depositChange:"Nạp tiền / tiền lẻ", description:"Mô tả", amountEuro:"Số tiền €", saveDeposit:"Lưu khoản nạp", depositsTotal:"Tổng tiền nạp", cashWithdrawal:"Rút tiền khỏi kassa", withdrawalReason:"Rút tiền để làm gì?", saveWithdrawal:"Lưu khoản rút", withdrawalsTotal:"Tổng tiền rút", employeeRevenueHint:"Hiển thị tất cả lịch hẹn của ngày đã chọn: mở, đã trả và không đến. Có thể sửa số tiền trực tiếp tại đây.", openAmount:"Số tiền còn mở", sumPaid:"Tổng đã trả", periodRevenueHintWeek:"Hiển thị tổng tiền từng ngày trong tuần đã chọn. Không hiển thị thông tin khách riêng lẻ.", totalRevenue:"Tổng doanh thu", periodRevenueHintMonth:"Hiển thị tổng tiền từng ngày trong tháng đã chọn. Không hiển thị thông tin khách riêng lẻ.", income:"Thu nhập", entries:"Mục", employeeIncome:"Thu nhập nhân viên", fromCashRegister:"Từ kassa", remainingCash:"Còn trong kassa", editRevenue:"Sửa doanh thu", editRevenueHint:"Chọn ngày, kiểm tra doanh thu ngày và sửa lịch hẹn trực tiếp theo nhân viên.", dailyRevenue:"Doanh thu ngày", includeDayRevenue:"Tính lại ngày vào doanh thu", excludeDayRevenue:"Loại ngày khỏi doanh thu", appointmentsByEmployee:"Lịch hẹn theo nhân viên", addManualRevenueItem:"Thêm mục doanh thu thủ công", amount:"Số tiền", manualRevenueTitlePlaceholder:"ví dụ: tiền tip, bán hàng, chỉnh sửa", optional:"Tùy chọn", saveManualItem:"Lưu mục thủ công", noEntries:"Chưa có mục nào.", noAppointmentsToday:"Chưa có lịch hẹn cho ngày này.", customersCount:"Khách", openStatus:"Mở", paidStatus:"Đã trả", bookedStatus:"Đã đặt", noPaidRevenueToday:"Chưa có doanh thu trạng thái “Đã trả” cho ngày này.", noRevenue2EmployeeEntries:"Chưa có mục nào. Nhấn nút “E” màu vàng trong tab Doanh thu nhân viên.", noRevenue2CashEntries:"Chưa có mục nào. Nhấn nút “A” màu xanh trong tab Doanh thu nhân viên.", noPaidCustomers:"Không có lịch hẹn khách đã trả.", noAppointmentsOnDay:"Không có lịch hẹn trong ngày này.", noManualRevenueItems:"Chưa có mục doanh thu thủ công cho ngày này.", withoutEmployee:"Không có nhân viên", customerFallback:"Khách", noShowStatus:"Không đến", saveWord:"Lưu", statusChangeTitle:"Đổi trạng thái", changeAmountTitle:"Đổi số tiền", changeIncomeAmountTitle:"Đổi số tiền thu nhập", dayExcludedStatus:"Ngày này hiện đã bị loại khỏi doanh thu.", dayIncludedStatus:"Ngày này hiện được tính vào doanh thu.", activeLabel:"Đang bật", scheduleLabel:"Lịch ngày", cashReport:"Báo cáo kassa", cashBalance:"Số dư kassa", systemCleanBtn:"Dọn dẹp hệ thống", systemCleanHint:"Xóa toàn bộ doanh thu đã lưu và toàn bộ lịch hẹn trong lịch ngày. Cơ sở dữ liệu khách hàng và dịch vụ vẫn được giữ lại.", systemCleanConfirm:"Dọn dẹp hệ thống? Toàn bộ doanh thu đã lưu và toàn bộ lịch hẹn trong lịch ngày sẽ bị xóa vĩnh viễn – quá khứ và tương lai. Cơ sở dữ liệu khách hàng và dịch vụ vẫn được giữ lại.", systemCleanConfirmFinal:"Xác nhận lần cuối: Việc dọn dẹp này không thể hoàn tác trong ứng dụng. Thực sự xóa ngay bây giờ?", systemCleanDone:"Hệ thống đã được dọn dẹp. Toàn bộ doanh thu và lịch hẹn đã bị xóa. Cơ sở dữ liệu khách hàng và dịch vụ vẫn được giữ lại."
 });
 
+Object.assign(I18N.de, {
+  paymentTitle:"💳 Bezahlen", paymentTitlePlain:"Bezahlen", paymentProducts:"Leistungen / Produkte", searchPlaceholder:"Suchen...", cart:"Warenkorb", clear:"Leeren", todayAppointmentCustomer:"Termin/Kunde von heute", subtotal:"Zwischensumme", discountEuro:"Rabatt €", tipEuro:"Trinkgeld €", cashPayment:"Bar", cardPayment:"Karte", voucherPayment:"Gutschein", completePayment:"Bezahlung abschließen", paymentLocalHint:"Hinweis: Diese Kasse speichert lokal Umsatzpositionen und markiert ausgewählte Termine als bezahlt. Für eine echte Deutschland-Kasse müssen TSE, DSFinV-K und GoBD noch angebunden werden.", noAppointmentFreeSale:"Ohne Termin / freier Verkauf", noServiceFound:"Keine Leistung gefunden.", emptyCart:"Noch keine Position im Warenkorb.", selectServiceOrAppointmentFirst:"Bitte zuerst eine Leistung oder einen Termin auswählen.", paymentSavedToCash:"Bezahlung gespeichert und in Kasse übernommen", discountTipCorrection:"Rabatt / Trinkgeld / Korrektur"
+});
+Object.assign(I18N.en, {
+  paymentTitle:"💳 Payment", paymentTitlePlain:"Payment", paymentProducts:"Services / products", searchPlaceholder:"Search...", cart:"Cart", clear:"Clear", todayAppointmentCustomer:"Today’s appointment/customer", subtotal:"Subtotal", discountEuro:"Discount €", tipEuro:"Tip €", cashPayment:"Cash", cardPayment:"Card", voucherPayment:"Voucher", completePayment:"Complete payment", paymentLocalHint:"Note: This checkout stores revenue items locally and marks selected appointments as paid. For a real German cash register, TSE, DSFinV-K and GoBD still need to be connected.", noAppointmentFreeSale:"No appointment / free sale", noServiceFound:"No service found.", emptyCart:"No items in the cart yet.", selectServiceOrAppointmentFirst:"Please select a service or appointment first.", paymentSavedToCash:"Payment saved and added to cash register", discountTipCorrection:"Discount / tip / correction"
+});
+Object.assign(I18N.vi, {
+  paymentTitle:"💳 Thanh toán", paymentTitlePlain:"Thanh toán", paymentProducts:"Dịch vụ / sản phẩm", searchPlaceholder:"Tìm kiếm...", cart:"Giỏ hàng", clear:"Xóa", todayAppointmentCustomer:"Lịch hẹn/khách hôm nay", subtotal:"Tạm tính", discountEuro:"Giảm giá €", tipEuro:"Tiền tip €", cashPayment:"Tiền mặt", cardPayment:"Thẻ", voucherPayment:"Phiếu quà tặng", completePayment:"Hoàn tất thanh toán", paymentLocalHint:"Ghi chú: Kassa này lưu doanh thu cục bộ và đánh dấu lịch hẹn đã chọn là đã thanh toán. Để dùng như kassa chính thức tại Đức, cần kết nối TSE, DSFinV-K và GoBD.", noAppointmentFreeSale:"Không có lịch hẹn / bán tự do", noServiceFound:"Không tìm thấy dịch vụ.", emptyCart:"Chưa có mục nào trong giỏ hàng.", selectServiceOrAppointmentFirst:"Vui lòng chọn dịch vụ hoặc lịch hẹn trước.", paymentSavedToCash:"Thanh toán đã lưu và chuyển vào kassa", discountTipCorrection:"Giảm giá / tip / điều chỉnh"
+});
+
+
+Object.assign(I18N.de, {
+  appointmentBlockCustomer:"Kundendaten", appointmentBlockService:"Leistung", appointmentBlockTime:"Termin", employeeAny:"Beliebig",
+  displaySettings:"Darstellung / Geräteansicht", displaySettingsHint:"Optimiert die App für iPhone, iPad oder PC. „Automatisch“ erkennt die passende Ansicht selbst.", optimizeForDevice:"Darstellung optimieren für", deviceAuto:"Automatisch", deviceIphone:"iPhone", deviceIpad:"iPad", devicePc:"PC / Windows", scheduleZoom:"Tagesplan-Zoom", zoomSmall:"Klein", zoomNormal:"Normal", zoomLarge:"Groß", scheduleInterval:"Tagesplan-Takt", interval15:"15 Minuten", interval30:"30 Minuten",
+  selectWeek:"KW auswählen", selectMonth:"Monat auswählen", weekEdit:"Wochen ändern", monthEdit:"Monat ändern", manualChange:"Manuell ändern", reset:"Zurücksetzen", periodManualHint:"Manuelle Änderungen in diesem Fenster dienen nur für diesen Bericht. Die automatische Synchronisierung von Bezahlen, Kasse, Mitarbeiter Umsatz, Wochen Umsatz und Monat Umsatz bleibt unverändert.", manualReport:"Manuell geänderter Bericht", manual:"Manuell", dailyTotals:"Tages-Gesamtsummen", deletedStatus:"Gelöscht", validAmountAlert:"Bitte gültige Beträge eintragen.", validAmountSingleAlert:"Bitte einen gültigen Betrag eintragen.", changeSaved:"Änderung gespeichert.", resetWeekManualConfirm:"Manuelle Wochenänderung zurücksetzen?", resetMonthManualConfirm:"Manuelle Monatsänderung zurücksetzen?",
+  employeeRevenueNote:"Anmerkung: aktuell haben die Button E und A keine Funktion. „E“ soll später für „Eintragung Bonus“ und „A“ für „Aufteilung Leistung / Mitarbeiter“ sein.", reportAutoFooter:"Bericht automatisch aus dem Umsatzjournal erstellt.", printPdfHint:"PDF über den Druckdialog speichern oder an den angeschlossenen Drucker senden.", printPdf:"Drucken / PDF", excelDownload:"Excel herunterladen", deposits:"Einzahlungen", withdrawals:"Entnahmen", employeeRevenueSection:"Umsatz Mitarbeiter", employeeCount:"Anzahl", sum:"Summe", cashDepositsReport:"Einzahlungen / Wechselgeld", cashWithdrawalsReport:"Geldentnahmen", labelAmount:"Betrag", noShowStatus:"Nicht erschienen", customersTotal:"Kunden Gesamt", allCustomersByEmployee:"Alle Kunden nach Mitarbeiter", timeShort:"Zeit", status:"Status", totalSingleEmployees:"Gesamtsumme einzelne Mitarbeiter", sumPaid:"Summe Bezahlt", employeeIncomeDetails:"Einzelne Kunden nach Mitarbeiter", amount:"Betrag", deletedDay:"Tag gelöscht", correction:"Korrektur"
+});
+Object.assign(I18N.vi, {
+  appointmentBlockCustomer:"Thông tin khách hàng", appointmentBlockService:"Dịch vụ", appointmentBlockTime:"Lịch hẹn", employeeAny:"Bất kỳ",
+  displaySettings:"Hiển thị / thiết bị", displaySettingsHint:"Tối ưu ứng dụng cho iPhone, iPad hoặc PC. “Tự động” sẽ nhận diện chế độ phù hợp.", optimizeForDevice:"Tối ưu hiển thị cho", deviceAuto:"Tự động", deviceIphone:"iPhone", deviceIpad:"iPad", devicePc:"PC / Windows", scheduleZoom:"Phóng to lịch ngày", zoomSmall:"Nhỏ", zoomNormal:"Bình thường", zoomLarge:"Lớn", scheduleInterval:"Khoảng thời gian lịch", interval15:"15 phút", interval30:"30 phút",
+  selectWeek:"Chọn tuần/KW", selectMonth:"Chọn tháng", weekEdit:"Sửa tuần", monthEdit:"Sửa tháng", manualChange:"Sửa thủ công", reset:"Đặt lại", periodManualHint:"Các thay đổi thủ công trong cửa sổ này chỉ dùng cho báo cáo này. Đồng bộ tự động từ Thanh toán, Sổ quỹ, Doanh thu nhân viên, Doanh thu tuần và Doanh thu tháng vẫn giữ nguyên.", manualReport:"Báo cáo đã sửa thủ công", manual:"Thủ công", dailyTotals:"Tổng doanh thu theo ngày", deletedStatus:"Đã xóa", validAmountAlert:"Vui lòng nhập số tiền hợp lệ.", validAmountSingleAlert:"Vui lòng nhập một số tiền hợp lệ.", changeSaved:"Đã lưu thay đổi.", resetWeekManualConfirm:"Đặt lại thay đổi thủ công của tuần?", resetMonthManualConfirm:"Đặt lại thay đổi thủ công của tháng?",
+  employeeRevenueNote:"Ghi chú: hiện tại các nút E và A chưa có chức năng. Sau này “E” dùng cho “nhập thưởng” và “A” dùng cho “chia dịch vụ / nhân viên”", reportAutoFooter:"Báo cáo được tạo tự động từ nhật ký doanh thu.", printPdfHint:"Lưu PDF qua hộp thoại in hoặc gửi đến máy in đã kết nối.", printPdf:"In / PDF", excelDownload:"Tải Excel", deposits:"Tiền nạp", withdrawals:"Tiền rút", employeeRevenueSection:"Doanh thu nhân viên", employeeCount:"Số lượng", sum:"Tổng", cashDepositsReport:"Nạp tiền / tiền lẻ", cashWithdrawalsReport:"Rút tiền", labelAmount:"Số tiền", noShowStatus:"Không đến", customersTotal:"Tổng khách", allCustomersByEmployee:"Tất cả khách theo nhân viên", timeShort:"Giờ", status:"Trạng thái", totalSingleEmployees:"Tổng từng nhân viên", sumPaid:"Tổng đã trả", employeeIncomeDetails:"Từng khách theo nhân viên", amount:"Số tiền", deletedDay:"Ngày đã xóa", correction:"Điều chỉnh",
+  cashRegister:"Sổ quỹ", currentCash:"Hiện có trong quỹ", cashReport:"Báo cáo sổ quỹ", cashBalance:"Số dư quỹ", cashWithdrawal:"Rút tiền khỏi quỹ", fromCashRegister:"Từ sổ quỹ", remainingCash:"Còn trong quỹ", noRevenue2CashEntries:"Chưa có mục nào. Nhấn nút “A” màu xanh trong tab Doanh thu nhân viên."
+});
+Object.assign(I18N.en, {
+  appointmentBlockCustomer:"Customer data", appointmentBlockService:"Service", appointmentBlockTime:"Appointment", employeeAny:"Any",
+  displaySettings:"Display / device view", displaySettingsHint:"Optimizes the app for iPhone, iPad or PC. “Automatic” detects the matching view.", optimizeForDevice:"Optimize display for", deviceAuto:"Automatic", deviceIphone:"iPhone", deviceIpad:"iPad", devicePc:"PC / Windows", scheduleZoom:"Schedule zoom", zoomSmall:"Small", zoomNormal:"Normal", zoomLarge:"Large", scheduleInterval:"Schedule interval", interval15:"15 minutes", interval30:"30 minutes",
+  selectWeek:"Select week/KW", selectMonth:"Select month", weekEdit:"Edit week", monthEdit:"Edit month", manualChange:"Manual edit", reset:"Reset", periodManualHint:"Manual changes in this window are only used for this report. Automatic sync from Payment, Cash register, Employee revenue, Weekly revenue and Monthly revenue remains unchanged.", manualReport:"Manually changed report", manual:"Manual", dailyTotals:"Daily totals", deletedStatus:"Deleted", validAmountAlert:"Please enter valid amounts.", validAmountSingleAlert:"Please enter a valid amount.", changeSaved:"Change saved.", resetWeekManualConfirm:"Reset manual weekly change?", resetMonthManualConfirm:"Reset manual monthly change?",
+  employeeRevenueNote:"Note: the E and A buttons currently have no function. Later, “E” is intended for bonus entry and “A” for splitting service / employee.", reportAutoFooter:"Report automatically created from the revenue journal.", printPdfHint:"Save PDF via the print dialog or send it to the connected printer.", printPdf:"Print / PDF", excelDownload:"Download Excel", deposits:"Deposits", withdrawals:"Withdrawals", employeeRevenueSection:"Employee revenue", employeeCount:"Count", sum:"Sum", cashDepositsReport:"Deposits / change", cashWithdrawalsReport:"Cash withdrawals", labelAmount:"Amount", noShowStatus:"No-show", customersTotal:"Customers total", allCustomersByEmployee:"All customers by employee", timeShort:"Time", status:"Status", totalSingleEmployees:"Total per employee", sumPaid:"Sum paid", employeeIncomeDetails:"Individual customers by employee", amount:"Amount", deletedDay:"Day deleted", correction:"Correction"
+});
+
 function t(key){
   const lang = state.language || "de";
   return (I18N[lang] && I18N[lang][key]) || I18N.de[key] || key;
 }
+
+const STATIC_TEXT_I18N = {
+  vi: {
+    "Noch keine Mitarbeiter vorhanden.": "Chưa có nhân viên.",
+    "Arbeitszeiten": "Giờ làm việc",
+    "Arbeitsmodell, normale Zeiten, Wochentage und Sonder-Arbeitstage": "Mô hình làm việc, giờ thường, ngày trong tuần và ngày làm đặc biệt",
+    "Arbeitszeiten nach Wochentagen aktivieren": "Bật giờ làm theo ngày trong tuần",
+    "Wenn aktiviert, sind nur angehakte Wochentage im Terminplaner freigegeben. Nicht angehakte Tage werden gesperrt. Sonntag ist geschlossen und kann hier nicht aktiviert werden.": "Khi bật, chỉ những ngày trong tuần được chọn mới có thể đặt lịch. Ngày không chọn sẽ bị khóa. Chủ nhật đóng cửa và không thể bật ở đây.",
+    "Sonder-Arbeitstage nach Datum": "Ngày làm đặc biệt theo ngày",
+    "Hier kannst du für einzelne Mitarbeiter ein bestimmtes Datum mit eigener Arbeitszeit freigeben. Diese Freigabe gilt nur an diesem Datum und überschreibt den normalen Wochenplan.": "Tại đây có thể mở một ngày cụ thể với giờ làm riêng cho từng nhân viên. Thiết lập này chỉ áp dụng cho ngày đó và ghi đè lịch tuần thông thường.",
+    "Datum": "Ngày", "Arbeitstag hinzufügen": "Thêm ngày làm", "Einzelnen Urlaubstag hinzufügen": "Thêm một ngày nghỉ", "Urlaubstag hinzufügen": "Thêm ngày nghỉ", "Urlaub / Sperrtage entfernen": "Xóa nghỉ phép / ngày khóa", "Der Terminplaner zeigt Zeiten außerhalb der Freigabe, Sonntage und aktiv gespeicherte Urlaubstage automatisch gesperrt an.": "Lịch hẹn tự động khóa thời gian ngoài giờ cho phép, Chủ nhật và ngày nghỉ đã lưu.",
+    "Kunde": "Khách hàng", "Mitarbeiter": "Nhân viên", "Termin im Tagesplan gelb markieren": "Đánh dấu lịch hẹn màu vàng trong lịch ngày", "Uhrzeit": "Giờ", "Änderungen speichern": "Lưu thay đổi", "Abbrechen": "Hủy", "Schließen": "Đóng", "Speichern": "Lưu", "Löschen": "Xóa", "Bearbeiten": "Sửa", "Aktiv": "Đang bật", "Inaktiv": "Tắt", "Vollzeit": "Toàn thời gian", "Aushilfe / Teilzeit": "Phụ / bán thời gian", "Minijob": "Mini-job", "Individuell": "Tùy chỉnh",
+    "Mo": "T2", "Di": "T3", "Mi": "T4", "Do": "T5", "Fr": "T6", "Sa": "T7", "Montag": "Thứ Hai", "Dienstag": "Thứ Ba", "Mittwoch": "Thứ Tư", "Donnerstag": "Thứ Năm", "Freitag": "Thứ Sáu", "Samstag": "Thứ Bảy",
+    "Noch keine Eintragung eingetragen.": "Chưa có khoản nạp nào.", "Noch keine Geldentnahme eingetragen.": "Chưa có khoản rút nào.", "Keine Einträge vorhanden.": "Chưa có mục nào.", "Noch keine manuellen Umsatzpositionen für diesen Tag.": "Chưa có mục doanh thu thủ công cho ngày này.", "Keine Termine an diesem Tag.": "Không có lịch hẹn trong ngày này.", "Keine bezahlten Kundentermine.": "Không có lịch hẹn khách đã trả.", "Offen": "Mở", "Bezahlt": "Đã trả", "Gebucht": "Đã đặt", "Nicht erschienen": "Không đến", "Leistung": "Dịch vụ", "Status": "Trạng thái", "Betrag": "Số tiền", "Preis": "Giá", "Notiz": "Ghi chú", "Telefon": "Số điện thoại", "Name": "Tên", "Gesamt": "Tổng", "Tagesumsatz": "Doanh thu ngày", "Gesamt Umsatz": "Tổng doanh thu", "Bericht Drucken": "In báo cáo", "Wochen ändern": "Sửa tuần", "Monat ändern": "Sửa tháng", "Zurücksetzen": "Đặt lại", "Manuell ändern": "Sửa thủ công", "Manuell": "Thủ công"
+  },
+  en: {
+    "Noch keine Mitarbeiter vorhanden.": "No employees available yet.",
+    "Arbeitszeiten": "Working hours",
+    "Arbeitsmodell, normale Zeiten, Wochentage und Sonder-Arbeitstage": "Work model, normal hours, weekdays and special working days",
+    "Arbeitszeiten nach Wochentagen aktivieren": "Enable working hours by weekday",
+    "Wenn aktiviert, sind nur angehakte Wochentage im Terminplaner freigegeben. Nicht angehakte Tage werden gesperrt. Sonntag ist geschlossen und kann hier nicht aktiviert werden.": "When enabled, only checked weekdays are available in the appointment planner. Unchecked days are blocked. Sunday is closed and cannot be enabled here.",
+    "Sonder-Arbeitstage nach Datum": "Special working days by date",
+    "Hier kannst du für einzelne Mitarbeiter ein bestimmtes Datum mit eigener Arbeitszeit freigeben. Diese Freigabe gilt nur an diesem Datum und überschreibt den normalen Wochenplan.": "Here you can open a specific date with custom working hours for individual employees. This only applies to that date and overrides the normal weekly schedule.",
+    "Datum": "Date", "Arbeitstag hinzufügen": "Add working day", "Einzelnen Urlaubstag hinzufügen": "Add single vacation day", "Urlaubstag hinzufügen": "Add vacation day", "Urlaub / Sperrtage entfernen": "Remove vacation / blocked days", "Der Terminplaner zeigt Zeiten außerhalb der Freigabe, Sonntage und aktiv gespeicherte Urlaubstage automatisch gesperrt an.": "The appointment planner automatically blocks times outside availability, Sundays and saved vacation days.",
+    "Kunde": "Customer", "Mitarbeiter": "Employee", "Termin im Tagesplan gelb markieren": "Mark appointment yellow in schedule", "Uhrzeit": "Time", "Änderungen speichern": "Save changes", "Abbrechen": "Cancel", "Schließen": "Close", "Speichern": "Save", "Löschen": "Delete", "Bearbeiten": "Edit", "Aktiv": "Active", "Inaktiv": "Inactive", "Vollzeit": "Full-time", "Aushilfe / Teilzeit": "Assistant / part-time", "Minijob": "Mini job", "Individuell": "Custom",
+    "Mo": "Mon", "Di": "Tue", "Mi": "Wed", "Do": "Thu", "Fr": "Fri", "Sa": "Sat", "Montag": "Monday", "Dienstag": "Tuesday", "Mittwoch": "Wednesday", "Donnerstag": "Thursday", "Freitag": "Friday", "Samstag": "Saturday",
+    "Noch keine Eintragung eingetragen.": "No deposit entered yet.", "Noch keine Geldentnahme eingetragen.": "No withdrawal entered yet.", "Keine Einträge vorhanden.": "No entries available.", "Noch keine manuellen Umsatzpositionen für diesen Tag.": "No manual revenue items for this day yet.", "Keine Termine an diesem Tag.": "No appointments on this day.", "Keine bezahlten Kundentermine.": "No paid customer appointments.", "Offen": "Open", "Bezahlt": "Paid", "Gebucht": "Booked", "Nicht erschienen": "No-show", "Leistung": "Service", "Status": "Status", "Betrag": "Amount", "Preis": "Price", "Notiz": "Note", "Telefon": "Phone", "Name": "Name", "Gesamt": "Total", "Tagesumsatz": "Daily revenue", "Gesamt Umsatz": "Total revenue", "Bericht Drucken": "Print report", "Wochen ändern": "Edit week", "Monat ändern": "Edit month", "Zurücksetzen": "Reset", "Manuell ändern": "Manual edit", "Manuell": "Manual"
+  }
+};
+function translateStaticTextNodes(root = document.body){
+  const lang = state.language || "de";
+  if(lang === "de" || !STATIC_TEXT_I18N[lang] || !root) return;
+  const dict = STATIC_TEXT_I18N[lang];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node){
+      const parent = node.parentElement;
+      if(!parent) return NodeFilter.FILTER_REJECT;
+      if(["SCRIPT","STYLE","TEXTAREA"].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
+      if(parent.closest("input,select,option")) return NodeFilter.FILTER_REJECT;
+      const text = node.nodeValue.trim();
+      return text && dict[text] ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+    }
+  });
+  const nodes = [];
+  while(walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(node => {
+    const original = node.nodeValue;
+    const trimmed = original.trim();
+    const before = original.slice(0, original.indexOf(trimmed));
+    const after = original.slice(original.indexOf(trimmed) + trimmed.length);
+    node.nodeValue = before + dict[trimmed] + after;
+  });
+}
+
 function applyLanguage(){
   document.documentElement.lang = state.language || "de";
   document.querySelectorAll("[data-i18n]").forEach(el => {
@@ -2088,10 +2631,17 @@ function cancelMoveAppointment(){
   document.body.classList.remove("move-mode");
 }
 function moveAppointmentTo(employeeId, startTime){
+  clearSelectedCalendarSlot();
   if(!movingAppointmentId) return false;
   const a = state.appointments.find(x => x.id === movingAppointmentId);
   if(!a){ cancelMoveAppointment(); return false; }
   const candidate = {...a, employeeId, startTime, date:state.selectedDate};
+  if(isAppointmentDateTimeInPast(candidate.date, candidate.startTime)){
+    showPastAppointmentWarning();
+    cancelMoveAppointment();
+    renderCalendar();
+    return false;
+  }
   const emp = state.employees.find(e => e.id === employeeId);
   const availabilityIssue = employeeAvailabilityIssue(emp, candidate.date, candidate.startTime, candidate.duration);
   if(availabilityIssue){
@@ -2166,6 +2716,33 @@ function finishTouchDragAppointment(pointerEvent){
   setTimeout(()=>{ suppressAppointmentClick=false; }, 150);
 }
 
+
+function selectedCalendarSlotMatches(employeeId, time){
+  return selectedCalendarSlot
+    && selectedCalendarSlot.date === state.selectedDate
+    && selectedCalendarSlot.employeeId === employeeId
+    && selectedCalendarSlot.time === time;
+}
+function applySelectedCalendarSlotHighlight(){
+  const calendar = $("calendar");
+  if(!calendar) return;
+  calendar.querySelectorAll(".slot.selected-free-slot").forEach(el => el.classList.remove("selected-free-slot"));
+  if(!selectedCalendarSlot || selectedCalendarSlot.date !== state.selectedDate) return;
+  const slot = Array.from(calendar.querySelectorAll(".slot[data-employee][data-time]")).find(el =>
+    el.dataset.employee === selectedCalendarSlot.employeeId && el.dataset.time === selectedCalendarSlot.time
+  );
+  if(slot) slot.classList.add("selected-free-slot");
+}
+function setSelectedCalendarSlot(employeeId, time){
+  selectedCalendarSlot = {date:state.selectedDate, employeeId, time};
+  applySelectedCalendarSlotHighlight();
+}
+function clearSelectedCalendarSlot(){
+  selectedCalendarSlot = null;
+  const calendar = $("calendar");
+  if(calendar) calendar.querySelectorAll(".slot.selected-free-slot").forEach(el => el.classList.remove("selected-free-slot"));
+}
+
 function renderCalendar(){
   const s=slots(), active=state.employees.filter(e=>e.active).sort(byName), todays=state.appointments.filter(a=>a.date===state.selectedDate);
   $("appointmentCount").textContent=`${todays.length} Termine`;
@@ -2181,11 +2758,16 @@ function renderCalendar(){
         const span=Math.max(1,Math.round(Number(a.duration)/getSlotIntervalMinutes())); skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
         grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)}</div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta">${escapeHtml(a.startTime)} · ${escapeHtml(a.phone||"")}</div></div></div>`);
       }else{
-        const issue = employeeAvailabilityIssue(emp, state.selectedDate, t, getSlotIntervalMinutes());
+        const pastIssue = isAppointmentDateTimeInPast(state.selectedDate, t) ? pastAppointmentWarningText() : "";
+        const issue = pastIssue || employeeAvailabilityIssue(emp, state.selectedDate, t, getSlotIntervalMinutes());
         if(issue){
-          grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"><span class="slot-lock">Gesperrt</span></div>`);
+          if(pastIssue){
+            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot past-slot" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"></div>`);
+          }else{
+            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"><span class="slot-lock">Gesperrt</span></div>`);
+          }
         }else{
-          grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp)} data-employee="${emp.id}" data-time="${t}"></div>`);
+          grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored ${selectedCalendarSlotMatches(emp.id, t) ? 'selected-free-slot' : ''}" ${employeeRowStyle(emp)} data-employee="${emp.id}" data-time="${t}"></div>`);
         }
       }
     }
@@ -2202,6 +2784,13 @@ function renderCalendar(){
         moveAppointmentTo(el.dataset.employee, el.dataset.time);
         return;
       }
+      if(isAppointmentDateTimeInPast(state.selectedDate, el.dataset.time)){
+        clearSelectedCalendarSlot();
+        showPastAppointmentWarning();
+        renderCalendar();
+        return;
+      }
+      setSelectedCalendarSlot(el.dataset.employee, el.dataset.time);
       $("employeeSelect").value=el.dataset.employee;
       setEmployeeAnyActive(false);
       $("startTime").value=el.dataset.time;
@@ -2289,21 +2878,86 @@ function renderCalendar(){
 
 function renderCurrentTimeLine(wrap){
   if(state.selectedDate !== todayISO()) return;
-  const start=timeToMinutes(state.openTime);
-  const end=timeToMinutes(state.closeTime);
-  const now=new Date();
-  const nowMin=now.getHours()*60+now.getMinutes();
-  if(nowMin < start || nowMin > end) return;
-  const styles=getComputedStyle(document.documentElement); const employeeCol=parseFloat(styles.getPropertyValue("--employee-col")) || 190; const timeCol=parseFloat(styles.getPropertyValue("--time-col")) || 200; const left=employeeCol + ((nowMin-start)/getSlotIntervalMinutes())*timeCol;
+  const pos = getCurrentTimeLinePosition();
+  if(!pos) return;
+  const left = pos.left;
   const line=document.createElement("div");
   line.className="current-time-line";
   line.style.left=left+"px";
   const label=document.createElement("div");
   label.className="current-time-label";
   label.style.left=left+"px";
-  label.textContent=minutesToTime(nowMin);
+  label.textContent=minutesToTime(pos.nowMin);
   wrap.appendChild(line);
   wrap.appendChild(label);
+}
+
+function getCurrentTimeLinePosition(options={}){
+  if(state.selectedDate !== todayISO()) return null;
+  const start=timeToMinutes(state.openTime);
+  const end=timeToMinutes(state.closeTime);
+  const now=new Date();
+  const realNowMin=now.getHours()*60+now.getMinutes();
+  if(!options.clamp && (realNowMin < start || realNowMin > end)) return null;
+  const nowMin = options.clamp ? Math.max(start, Math.min(end, realNowMin)) : realNowMin;
+  const styles=getComputedStyle(document.documentElement);
+  const employeeCol=parseFloat(styles.getPropertyValue("--employee-col")) || 190;
+  const timeCol=parseFloat(styles.getPropertyValue("--time-col")) || 200;
+  return {
+    left: employeeCol + ((nowMin-start)/getSlotIntervalMinutes())*timeCol,
+    nowMin: realNowMin,
+    scrollMin: nowMin
+  };
+}
+
+function scrollCalendarToCurrentTime(options={}){
+  const calendar = $("calendar");
+  if(!calendar || state.selectedDate !== todayISO()) return;
+  const pos = getCurrentTimeLinePosition({clamp:true});
+  if(!pos) return;
+  const maxLeft = Math.max(0, calendar.scrollWidth - calendar.clientWidth);
+  const targetLeft = Math.max(0, Math.min(maxLeft, pos.left - Math.round(calendar.clientWidth * 0.35)));
+  const behavior = options.smooth ? "smooth" : "auto";
+  try{
+    calendar.scrollTo({left:targetLeft, top:0, behavior});
+  }catch(err){
+    calendar.scrollLeft = targetLeft;
+    calendar.scrollTop = 0;
+  }
+}
+
+function closeDashboardOverlayDialogs(){
+  ["appointmentDialog","paymentDialog"].forEach(id => {
+    const dlg = $(id);
+    if(dlg && dlg.open){
+      try{ dlg.close(); }catch(err){}
+    }
+  });
+}
+
+function clearCustomerSearchView(){
+  const input = $("customerSearchInput");
+  if(input) input.value = "";
+  renderCustomerSearch();
+}
+
+function returnDashboardToTodayNow(){
+  closeDashboardOverlayDialogs();
+  state.selectedDate = todayISO();
+  if($("currentDateInput")) $("currentDateInput").value = state.selectedDate;
+  saveState();
+  switchTab("calendarTab");
+  clearCustomerSearchView();
+  renderCalendar();
+  renderReport();
+  requestAnimationFrame(() => scrollCalendarToCurrentTime({smooth:true}));
+  setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 80);
+  setTimeout(() => scrollCalendarToCurrentTime({smooth:false}), 350);
+}
+
+function scheduleDashboardReturnToTodayNow(delay=5000){
+  clearTimeout(dashboardReturnTimer);
+  dashboardReturnTimer = setTimeout(returnDashboardToTodayNow, delay);
 }
 function startCurrentTimeTicker(){
   setInterval(() => {
@@ -2311,6 +2965,49 @@ function startCurrentTimeTicker(){
   }, 60000);
 }
 
+
+function pastAppointmentWarningText(){
+  return "Bitte neuen Termin wählen – diese Zeit liegt in der Vergangenheit.";
+}
+
+function isAppointmentDateTimeInPast(date, startTime){
+  if(!date || !startTime) return false;
+  const today = todayISO();
+  if(date < today) return true;
+  if(date > today) return false;
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return timeToMinutes(startTime) < nowMin;
+}
+
+function showPastAppointmentWarning(){
+  const text = pastAppointmentWarningText();
+  let note = $("pastAppointmentWarning");
+  if(!note){
+    note = document.createElement("div");
+    note.id = "pastAppointmentWarning";
+    note.setAttribute("role", "alert");
+    note.style.position = "fixed";
+    note.style.left = "50%";
+    note.style.top = "18px";
+    note.style.transform = "translateX(-50%)";
+    note.style.zIndex = "99999";
+    note.style.maxWidth = "92vw";
+    note.style.padding = "12px 16px";
+    note.style.borderRadius = "14px";
+    note.style.background = "#fff7ed";
+    note.style.color = "#9a3412";
+    note.style.border = "1px solid #fed7aa";
+    note.style.boxShadow = "0 12px 30px rgba(0,0,0,.18)";
+    note.style.fontWeight = "800";
+    note.style.textAlign = "center";
+    document.body.appendChild(note);
+  }
+  note.textContent = text;
+  note.style.display = "block";
+  clearTimeout(note._hideTimer);
+  note._hideTimer = setTimeout(() => { note.style.display = "none"; }, 2600);
+}
 
 function appointmentEndTime(a){
   const start = timeToMinutes(a.startTime || "00:00");
@@ -2414,6 +3111,7 @@ function saveAppointment(){
   const old = state.appointments.find(x=>x.id===a.id);
   if(old && (old.status==="Erledigt" || old.status==="Nicht erschienen")) a.status=old.status;
   if(!a.customerName||!a.employeeId||!a.startTime){ alert("Bitte Kunde, Mitarbeiter und Uhrzeit eintragen."); return; }
+  if(isAppointmentDateTimeInPast(a.date, a.startTime)){ showPastAppointmentWarning(); return; }
   if(!Number.isFinite(a.duration) || a.duration < 1){ alert("Bitte eine gültige Dauer in Minuten eintragen."); return; }
   a.duration = Math.max(1, Math.round(a.duration));
   if(a.employeeAny){
@@ -2426,12 +3124,15 @@ function saveAppointment(){
     if(availabilityIssue){ alert("Termin nicht möglich\n\n" + availabilityIssue); return; }
     if(!moveAnyAppointmentAwayFromFixedAppointment(a)) return;
   }
-  state.appointments=state.appointments.filter(x=>x.id!==a.id); state.appointments.push(a); ensureCustomerFromAppointment(a); ensureServiceFromAppointment(a); saveState(); clearForm(); renderAll();
+  state.appointments=state.appointments.filter(x=>x.id!==a.id); state.appointments.push(a); ensureCustomerFromAppointment(a); ensureServiceFromAppointment(a); saveState(); clearForm(); renderAll(); scheduleDashboardReturnToTodayNow();
 }
 function clearForm(){
-  editingAppointmentId=null; ["customerName","customerPhonePrefix","customerPhoneNumber","serviceName","note","startTime"].forEach(id=>{ if($(id)) $(id).value=""; }); $("price").value="0"; $("duration").value="60"; setEmployeeAnyActive(false); $("serviceSuggestions").innerHTML="";
+  editingAppointmentId=null;
+  clearSelectedCalendarSlot();
+  ["customerName","customerPhonePrefix","customerPhoneNumber","serviceName","note","startTime"].forEach(id=>{ if($(id)) $(id).value=""; }); $("price").value="0"; $("duration").value="60"; setEmployeeAnyActive(false); $("serviceSuggestions").innerHTML="";
 }
 function showAppointment(id){
+  clearSelectedCalendarSlot();
   selectedAppointmentId=id; const a=state.appointments.find(x=>x.id===id); const emp=state.employees.find(e=>e.id===a.employeeId);
   $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName)} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>Mitarbeiter: ${escapeHtml(emp?.name||"")}</p><p>Telefon: ${escapeHtml(a.phone||"-")}</p><p>Status intern: ${escapeHtml(employeeDailyRevenueStatusLabel(a.status||"Gebucht"))}</p><p>Preis: ${money(a.price)}</p><p>Notiz: ${escapeHtml(a.note||"-")}</p>`;
   $("appointmentDialog").showModal();
@@ -2531,6 +3232,10 @@ function saveInlineAppointmentEdit(){
     alert("Bitte Kunde, Mitarbeiter und Uhrzeit eintragen.");
     return;
   }
+  if(isAppointmentDateTimeInPast(updated.date, updated.startTime) && (updated.date !== a.date || updated.startTime !== a.startTime)){
+    showPastAppointmentWarning();
+    return;
+  }
   if(!Number.isFinite(updated.duration) || updated.duration < 1){
     alert("Bitte eine gültige Dauer in Minuten eintragen.");
     return;
@@ -2564,19 +3269,50 @@ function saveInlineAppointmentEdit(){
   ensureServiceFromAppointment(a);
   saveState();
   renderAll();
-  showAppointment(a.id);
+  scheduleDashboardReturnToTodayNow();
 }
-function completeSelectedAppointment(){
-  const a=state.appointments.find(x=>x.id===selectedAppointmentId); if(!a) return;
-  a.status="Erledigt";
-  saveState(); $("appointmentDialog").close(); renderAll();
+function paySelectedAppointment(){
+  openPaymentForAppointment(selectedAppointmentId);
+}
+
+function openPaymentForAppointment(appointmentId){
+  const a = (state.appointments || []).find(x => x.id === appointmentId);
+  if(!a) return;
+  selectedAppointmentId = appointmentId;
+
+  // Terminfenster schließen und direkt in den Bezahlen-Bereich wechseln.
+  try{ if($("appointmentDialog") && $("appointmentDialog").open) $("appointmentDialog").close(); }catch(err){}
+
+  const matchedService = (state.services || []).find(s => String(s.name || "").trim().toLowerCase() === String(a.serviceName || "").trim().toLowerCase());
+  const appointmentPrice = Number(a.price || 0) || Number(matchedService?.price || 0);
+  paymentCart = [{
+    id: uid(),
+    sourceAppointmentId: a.id,
+    serviceId: matchedService?.id,
+    title: a.serviceName || matchedService?.name || t("appointment"),
+    qty: 1,
+    price: appointmentPrice
+  }];
+  paymentMethod = "Bar";
+  if($("paymentDiscountInput")) $("paymentDiscountInput").value = "0";
+  if($("paymentTipInput")) $("paymentTipInput").value = "0";
+
+  openPaymentSystem({keepCart:true});
+
+  // Nach dem Rendern den Kunden/Termin im Auswahlfeld anzeigen.
+  setTimeout(() => {
+    if($("paymentAppointmentSelect")){
+      $("paymentAppointmentSelect").value = a.id;
+    }
+    renderPaymentCart();
+  }, 0);
 }
 function noShowSelectedAppointment(){
   const a=state.appointments.find(x=>x.id===selectedAppointmentId); if(!a) return;
   a.status="Nicht erschienen";
-  saveState(); $("appointmentDialog").close(); renderAll();
+  saveState(); $("appointmentDialog").close(); renderAll(); scheduleDashboardReturnToTodayNow();
 }
-function deleteSelectedAppointment(){ if(selectedAppointmentId && confirm("Termin wirklich löschen?")){ state.appointments=state.appointments.filter(a=>a.id!==selectedAppointmentId); saveState(); $("appointmentDialog").close(); renderAll(); } }
+function deleteSelectedAppointment(){ if(selectedAppointmentId && confirm("Termin wirklich löschen?")){ state.appointments=state.appointments.filter(a=>a.id!==selectedAppointmentId); saveState(); $("appointmentDialog").close(); renderAll(); scheduleDashboardReturnToTodayNow(); } }
 
 function renderCustomerSearch(){
   const input=$("customerSearchInput"), box=$("customerSearchResults"); if(!input||!box) return;
@@ -2606,7 +3342,7 @@ function renderCustomerSearch(){
       </div>
     </div>`;
   }).join("") : `<small>${state.language==="vi" ? "Không tìm thấy lịch hẹn sắp tới" : state.language==="en" ? "No open future appointments found" : "Keine offenen zukünftigen Termine gefunden."}</small>`;
-  box.querySelectorAll(".search-result").forEach(el=>el.onclick=()=>{ const a=state.appointments.find(x=>x.id===el.dataset.id); if(a){ state.selectedDate=a.date; $("currentDateInput").value=a.date; saveState(); renderCalendar(); showAppointment(a.id); }});
+  box.querySelectorAll(".search-result").forEach(el=>el.onclick=()=>{ const a=state.appointments.find(x=>x.id===el.dataset.id); if(a){ state.selectedDate=a.date; $("currentDateInput").value=a.date; saveState(); renderCalendar(); showAppointment(a.id); scheduleDashboardReturnToTodayNow(); }});
 }
 
 function applyRevenueVisibility(){
@@ -2881,7 +3617,7 @@ function markEmployeeDailyRevenueActionAUsed(id){
   const input = document.querySelector(`input[data-employee-daily-price="${CSS.escape(id)}"]`);
   const transferAmount = Number(input?.value ?? record.price ?? 0);
   if(!Number.isFinite(transferAmount) || transferAmount < 0){
-    alert("Bitte einen gültigen Betrag eintragen.");
+    alert(t("validAmountSingleAlert"));
     return;
   }
 
@@ -2947,7 +3683,7 @@ function saveEmployeeDailyRevenuePrice(id){
   const input = document.querySelector(`input[data-employee-daily-price="${CSS.escape(id)}"]`);
   const price = Number(input?.value || 0);
   if(!Number.isFinite(price) || price < 0){
-    alert("Bitte einen gültigen Betrag eintragen.");
+    alert(t("validAmountSingleAlert"));
     return;
   }
   record.price = price;
@@ -3090,7 +3826,7 @@ function addCashWithdrawal(){
   const reason = (reasonInput?.value || "").trim();
   const amount = Number(amountInput?.value || 0);
   if(!reason){ alert("Bitte eintragen, wofür Geld entnommen wurde."); return; }
-  if(!Number.isFinite(amount) || amount <= 0){ alert("Bitte einen gültigen Betrag eintragen."); return; }
+  if(!Number.isFinite(amount) || amount <= 0){ alert(t("validAmountSingleAlert")); return; }
   state.cashWithdrawals = state.cashWithdrawals || [];
   state.cashWithdrawals.push({ id: uid(), date: getJournalDate(), reason, amount, createdAt: new Date().toISOString() });
   saveState();
@@ -3105,7 +3841,7 @@ function addCashDeposit(){
   const reason = (reasonInput?.value || "").trim();
   const amount = Number(amountInput?.value || 0);
   if(!reason){ alert("Bitte eine Bezeichnung für die Einzahlung eintragen."); return; }
-  if(!Number.isFinite(amount) || amount <= 0){ alert("Bitte einen gültigen Betrag eintragen."); return; }
+  if(!Number.isFinite(amount) || amount <= 0){ alert(t("validAmountSingleAlert")); return; }
   state.cashDeposits = state.cashDeposits || [];
   state.cashDeposits.push({ id: uid(), date: getJournalDate(), reason, amount, createdAt: new Date().toISOString() });
   saveState();
@@ -3211,7 +3947,7 @@ function saveRevenue2Price(id, kind = "employee"){
   const input = document.querySelector(`input[data-revenue2-price="${CSS.escape(id)}"][data-revenue2-kind="${CSS.escape(kind)}"]`);
   const price = Number(input?.value || 0);
   if(!Number.isFinite(price) || price < 0){
-    alert("Bitte einen gültigen Betrag eintragen.");
+    alert(t("validAmountSingleAlert"));
     return;
   }
   entry.price = price;
@@ -4041,11 +4777,11 @@ function openSettings(){
   updateDeletePeriodPreview();
   updateCleanupPreview();
   updateBackupStatuses();
-  updateLicenseInfoBox();
   switchSettingsTab("settingsGeneralTab");
   $("settingsDialog").showModal();
 }
 function showAppointment(id){
+  clearSelectedCalendarSlot();
   selectedAppointmentId=id;
   const a=state.appointments.find(x=>x.id===id); if(!a) return;
   const emp=state.employees.find(e=>e.id===a.employeeId);
