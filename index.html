@@ -11,6 +11,8 @@
 </head>
 <body>
 <div id="app">
+
+  <!-- Lizenz-/Studio-ID-Sperrseite: Wird vor Setup oder Haupt-App angezeigt, bis die Lizenz geprüft wurde. -->
   <section id="licenseScreen" class="screen hidden license-screen">
     <div class="license-card">
       <img class="setup-logo" src="logo-192.png" alt="Logo">
@@ -23,13 +25,13 @@
 
       <div id="licenseStatusBox" class="license-status-box hidden"></div>
 
+
       <div class="license-actions">
         <button id="licenseCheckBtn" type="button">Lizenz prüfen</button>
         <button id="licenseChangeStudioBtn" type="button" class="secondary">Studio-ID ändern</button>
       </div>
     </div>
   </section>
-
   <section id="setupScreen" class="screen hidden">
     <div class="setup-card">
       <img class="setup-logo" src="logo-192.png" alt="Logo">
@@ -76,7 +78,6 @@
       </div>
       <div class="top-actions">
         <button id="revenueHeaderButton" class="icon-tab revenue-feature" data-tab="reportTab" title="Umsatzbericht" data-i18n-title="revenueReport">📊</button>
-        <button id="dashboardPaymentBtn" class="settings-button payment-dashboard-button">💳 <span data-i18n="paymentTitlePlain">Bezahlen</span></button>
         <button id="dashboardCashJournalBtn" class="settings-button cash-dashboard-button">💶 <span data-i18n="cashRegister">Kasse</span></button>
         <button id="settingsBtn" class="settings-button">⚙️ <span data-i18n="settings">Einstellungen</span></button>
       </div>
@@ -230,7 +231,6 @@
         <button type="button" class="settings-tab" data-settings-tab="settingsBackupTab" data-i18n="backup">Backup</button>
         <button type="button" class="settings-tab" data-settings-tab="settingsServicesTab" data-i18n="serviceDatabase">Leistungsdatenbank</button>
         <button type="button" class="settings-tab" data-settings-tab="settingsCustomersTab" data-i18n="customerFile">Kundendatenbank</button>
-        <button type="button" class="settings-tab" data-settings-tab="settingsEmployeesTab" data-i18n="employee">Mitarbeiter</button>
         <button type="button" class="settings-tab" data-settings-tab="settingsWorkTimeTab" data-i18n="workTimeVacation">Arbeitszeit / Urlaub</button>
         <button type="button" class="settings-tab" data-settings-tab="settingsSystemTab" data-i18n="systemInfo">System Info</button>
       </div>
@@ -301,12 +301,28 @@
           <p id="displayModeHint" class="hint">Aktiv: Automatisch</p>
         </div>
 
+        <!-- Lizenzanzeige: Statusinformationen und Wechsel der Studio-ID. -->
         <div class="settings-section license-info-section">
           <h3>Lizenz</h3>
           <div id="licenseInfoBox" class="license-info-box">Lizenz wird geprüft …</div>
           <button id="settingsChangeStudioIdBtn" type="button" class="secondary">Studio-ID ändern</button>
           <button id="settingsRecheckLicenseBtn" type="button" class="secondary">Lizenz erneut prüfen</button>
         </div>
+
+        <div class="settings-section">
+          <h3 data-i18n="employeeDatabase">Mitarbeiter-Datenbank</h3>
+          <p class="hint" data-i18n="employeeHint">Mitarbeiter hier anlegen, verändern oder deaktivieren.</p>
+          <label><span data-i18n="name">Name</span>
+            <input id="settingsEmployeeName" placeholder="Mitarbeitername">
+          </label>
+          <label><span data-i18n="calendarFontColor">Schriftfarbe im Kalender</span>
+            <input id="settingsEmployeeColor" type="color" value="#2d1b25">
+          </label>
+          <button id="saveEmployeeBtn" data-i18n="saveEmployee">Mitarbeiter speichern</button>
+          <button id="cancelEmployeeEditBtn" class="secondary" data-i18n="cancelEdit">Bearbeiten abbrechen</button>
+          <div id="settingsEmployeeList" class="employee-list"></div>
+        </div>
+
         <div class="settings-section danger-section">
           <h3 data-i18n="deleteAppointmentsPermanently">Termine endgültig löschen</h3>
           <p class="hint" data-i18n="deleteAppointmentsHint">Achtung: Diese Funktion löscht Termine endgültig. Es gibt keine Wiederherstellung in der App. Vorher am besten ein Backup exportieren.</p>
@@ -368,25 +384,6 @@
       </div>
     </div>
 
-    <div id="settingsEmployeesTab" class="settings-tab-panel">
-      <div class="settings-grid">
-        <div class="settings-section">
-          <h3 data-i18n="employeeDatabase">Mitarbeiter-Datenbank</h3>
-          <p class="hint" data-i18n="employeeHint">Mitarbeiter hier anlegen, verändern oder deaktivieren.</p>
-          <label><span data-i18n="name">Name</span>
-            <input id="settingsEmployeeName" placeholder="Mitarbeitername">
-          </label>
-          <label><span data-i18n="calendarFontColor">Schriftfarbe im Kalender</span>
-            <input id="settingsEmployeeColor" type="color" value="#2d1b25">
-          </label>
-          <button id="saveEmployeeBtn" data-i18n="saveEmployee">Mitarbeiter speichern</button>
-          <button id="cancelEmployeeEditBtn" class="secondary" data-i18n="cancelEdit">Bearbeiten abbrechen</button>
-          <div id="settingsEmployeeList" class="employee-list"></div>
-        </div>
-      </div>
-    </div>
-
-
     <div id="settingsBackupTab" class="settings-tab-panel">
       <div class="settings-grid">
         <div class="settings-section backup-section local-backup-section">
@@ -439,7 +436,7 @@
       <div class="settings-grid system-info-grid">
         <div class="settings-section wide-section">
           <h3 data-i18n="systemInfo">System Info</h3>
-          <p class="hint"><strong data-i18n="versionLabel">Version:</strong> 2.86</p>
+          <p class="hint"><strong data-i18n="versionLabel">Version:</strong> 2.88</p>
           <p class="hint"><strong data-i18n="developerLabel">Hersteller / Entwickler:</strong> Liam Trinh</p>
           <p class="hint"><strong data-i18n="copyrightLabel">Copyright:</strong> Copyright © 2026 Liam Trinh 鄭慶廉</p>
           <div class="system-clean-actions">
@@ -459,46 +456,6 @@
     </menu>
   </dialog>
 
-
-  <dialog id="paymentDialog" class="settings-dialog payment-dialog">
-    <div class="settings-dialog-header payment-dialog-header">
-      <h2 data-i18n="paymentTitle">💳 Bezahlen</h2>
-      <button id="closePaymentBtn" type="button" class="secondary" data-i18n="close">Schließen</button>
-    </div>
-    <div class="payment-layout">
-      <section class="payment-panel payment-products-panel">
-        <div class="payment-section-title">
-          <h3 data-i18n="paymentProducts">Leistungen / Produkte</h3>
-          <input id="paymentSearchInput" type="search" placeholder="Suchen..." data-i18n-placeholder="searchPlaceholder">
-        </div>
-        <div id="paymentServiceGrid" class="payment-service-grid"></div>
-      </section>
-      <section class="payment-panel payment-cart-panel">
-        <div class="payment-section-title">
-          <h3 data-i18n="cart">Warenkorb</h3>
-          <button id="paymentClearCartBtn" type="button" class="secondary" data-i18n="clear">Leeren</button>
-        </div>
-        <label><span data-i18n="todayAppointmentCustomer">Termin/Kunde von heute</span>
-          <select id="paymentAppointmentSelect"></select>
-        </label>
-        <div id="paymentCartList" class="payment-cart-list"></div>
-        <div class="payment-totals">
-          <div><span data-i18n="subtotal">Zwischensumme</span><strong id="paymentSubtotal">0,00 €</strong></div>
-          <label class="payment-discount-row"><span data-i18n="discountEuro">Rabatt €</span><input id="paymentDiscountInput" type="number" min="0" step="0.01" value="0"></label>
-          <label class="payment-discount-row"><span data-i18n="tipEuro">Trinkgeld €</span><input id="paymentTipInput" type="number" min="0" step="0.01" value="0"></label>
-          <div class="payment-total-row"><span data-i18n="total">Gesamt</span><strong id="paymentTotal">0,00 €</strong></div>
-        </div>
-        <div class="payment-methods">
-          <button type="button" class="payment-method active" data-payment-method="Bar" data-i18n="cashPayment">Bar</button>
-          <button type="button" class="payment-method" data-payment-method="Karte" data-i18n="cardPayment">Karte</button>
-          <button type="button" class="payment-method" data-payment-method="Gutschein" data-i18n="voucherPayment">Gutschein</button>
-        </div>
-        <button id="paymentCompleteBtn" type="button" class="payment-complete-btn" data-i18n="completePayment">Bezahlung abschließen</button>
-        <p class="hint" data-i18n="paymentLocalHint">Hinweis: Diese Kasse speichert lokal Umsatzpositionen und markiert ausgewählte Termine als bezahlt. Für eine echte Deutschland-Kasse müssen TSE, DSFinV-K und GoBD noch angebunden werden.</p>
-      </section>
-    </div>
-  </dialog>
-
   <dialog id="cashJournalDialog" class="settings-dialog cash-journal-dialog">
     <div class="settings-dialog-header">
       <h2 data-i18n="revenueJournal">Umsatzjournal</h2>
@@ -508,14 +465,8 @@
         <button type="button" class="settings-tab cash-journal-tab" data-journal-tab="settingsWeeklyRevenueTab" data-i18n="weeklyRevenue">Wochen Umsatz</button>
         <button type="button" class="settings-tab cash-journal-tab" data-journal-tab="settingsMonthlyRevenueTab" data-i18n="monthlyRevenue">Monat Umsatz</button>
       </div>
-      <label id="journalDateControl" class="journal-date-control"><span data-i18n="selectDay">Tag auswählen</span>
+      <label class="journal-date-control"><span data-i18n="selectDay">Tag auswählen</span>
         <input id="journalDateInput" type="date">
-      </label>
-      <label id="journalWeekControl" class="journal-date-control hidden"><span data-i18n="selectWeek">KW auswählen</span>
-        <select id="journalWeekSelect"></select>
-      </label>
-      <label id="journalMonthControl" class="journal-date-control hidden"><span data-i18n="selectMonth">Monat auswählen</span>
-        <select id="journalMonthSelect"></select>
       </label>
     </div>
 
@@ -588,7 +539,7 @@
           <div>
             <h3 data-i18n="employeeRevenue">Mitarbeiter Umsatz</h3>
             <p class="hint" data-i18n="employeeRevenueHint">Zeigt alle Termine vom ausgewählten Tag: offen, bezahlt und nicht erschienen. Beträge können direkt hier geändert werden.</p>
-            <p class="hint employee-revenue-note" data-i18n="employeeRevenueNote"><strong>Anmerkung:</strong> aktuell haben die Button E und A keine Funktion. „E“ soll später für „Eintragung Bonus“ und „A“ für „Aufteilung Leistung / Mitarbeiter“ sein.</p>
+            <p class="hint employee-revenue-note"><strong>Anmerkung:</strong> aktuell haben die Button E und A keine Funktion. „E“ soll später für „Eintragung Bonus“ und „A“ für „Aufteilung Leistung / Mitarbeiter“ sein.</p>
           </div>
           <button id="printEmployeeDailyRevenueReportBtn" type="button" class="secondary" data-i18n="printReport">Bericht Drucken</button>
         </div>
@@ -703,35 +654,12 @@
     </div>
 
     <menu>
-      <p class="hint backup-copyright employee-revenue-footer-copyright">Copyright <span class="footer-secret-c-wrap"><span aria-hidden="true">©</span><button id="footerRevenue2TabBtn" type="button" class="footer-revenue2-trigger"></button></span> 2026 Liam Trinh 鄭慶廉</p>
-      <p class="hint backup-copyright period-revenue-footer-copyright weekly-revenue-footer-copyright">Copyright <span class="period-secret-c-wrap"><span aria-hidden="true">©</span><button id="footerWeeklyEditBtn" type="button" class="period-secret-trigger"></button></span> 2026 Liam Trinh 鄭慶廉</p>
-      <p class="hint backup-copyright period-revenue-footer-copyright monthly-revenue-footer-copyright">Copyright <span class="period-secret-c-wrap"><span aria-hidden="true">©</span><button id="footerMonthlyEditBtn" type="button" class="period-secret-trigger"></button></span> 2026 Liam Trinh 鄭慶廉</p>
+      <p class="hint backup-copyright employee-revenue-footer-copyright">Copyright <button id="footerRevenue2TabBtn" type="button" class="footer-revenue2-trigger" title="Einnahme öffnen">© 2026</button> Liam Trinh 鄭慶廉</p>
       <button id="closeCashJournalBtn" data-i18n="close">Schließen</button>
     </menu>
   </dialog>
 
 
-
-  <dialog id="periodRevenueEditDialog" class="settings-dialog period-revenue-edit-dialog">
-    <div class="settings-dialog-header">
-      <h2 id="periodRevenueEditTitle" data-i18n="weekEdit">Wochen ändern</h2>
-      <button id="periodRevenueEditPrintBtn" type="button" class="secondary" data-i18n="printReport">Bericht Drucken</button>
-    </div>
-    <div class="settings-section wide-section">
-      <div class="employee-revenue-summary">
-        <div class="stat-card"><span id="periodRevenueEditRangeLabel" data-i18n="period">Zeitraum</span><strong id="periodRevenueEditRange">-</strong></div>
-        <div class="stat-card"><span data-i18n="days">Tage</span><strong id="periodRevenueEditDays">0</strong></div>
-        <div class="stat-card employee-revenue-paid-total"><span data-i18n="totalRevenue">Gesamt Umsatz</span><strong id="periodRevenueEditTotal">0 €</strong></div>
-      </div>
-      <p class="hint" data-i18n="periodManualHint">Manuelle Änderungen in diesem Fenster dienen nur für diesen Bericht. Die automatische Synchronisierung von Bezahlen, Kasse, Mitarbeiter Umsatz, Wochen Umsatz und Monat Umsatz bleibt unverändert.</p>
-      <div id="periodRevenueEditList" class="period-revenue-edit-list"></div>
-    </div>
-    <menu>
-      <button id="periodRevenueEditResetBtn" type="button" class="secondary" data-i18n="reset">Zurücksetzen</button>
-      <button id="periodRevenueEditSaveBtn" type="button" data-i18n="saveWord">Speichern</button>
-      <button id="periodRevenueEditCloseBtn" type="button" class="secondary" data-i18n="close">Schließen</button>
-    </menu>
-  </dialog>
 
   <dialog id="hiddenRevenueDialog" class="settings-dialog hidden-revenue-dialog">
     <div class="settings-dialog-header">
@@ -792,14 +720,16 @@
 
     <menu>
       <button id="editAppointmentBtn" class="secondary" data-i18n="edit">Bearbeiten</button>
-      <button id="completeAppointmentBtn" class="success" data-i18n="markDonePaid">Bezahlen</button>
+      <button id="completeAppointmentBtn" class="success" data-i18n="markDonePaid">Als bezahlt</button>
       <button id="noShowAppointmentBtn" class="secondary" data-i18n="markNoShow">Nicht erschienen</button>
       <button id="deleteAppointmentBtn" class="danger" data-i18n="delete">Löschen</button>
       <button id="closeAppointmentBtn" data-i18n="close">Schließen</button>
     </menu>
   </dialog>
 
+  <!-- Lizenz-Fußleiste: immer sichtbar, wenn die App freigeschaltet ist. -->
   <div id="licenseFooterBar" class="license-footer-bar hidden" aria-live="polite">Lizenz wird geprüft …</div>
+
 <script src="app.js"></script>
 </body>
 </html>
