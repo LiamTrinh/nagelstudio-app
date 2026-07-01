@@ -268,9 +268,58 @@ let editingCustomerId = null;
 let dashboardReturnTimer = null;
 
 function normalizeDashboardReturnDelay(value){
-  const allowed = [10000, 30000, 60000, 120000, 180000, 240000, 300000];
-  const ms = Number(value);
-  return allowed.includes(ms) ? ms : 60000;
+  const ms = Math.round(Number(value));
+  // Individuelle Zeiten erlauben: mindestens 1 Sekunde, maximal 60 Minuten.
+  if(Number.isFinite(ms) && ms >= 1000 && ms <= 3600000) return ms;
+  return 60000;
+}
+
+function dashboardReturnPresetValues(){
+  return [10000, 30000, 60000, 120000, 180000, 240000, 300000];
+}
+
+function formatDashboardReturnDelay(ms){
+  ms = normalizeDashboardReturnDelay(ms);
+  if(ms % 60000 === 0) return String(ms / 60000) + " Minute" + (ms === 60000 ? "" : "n");
+  if(ms % 1000 === 0) return String(ms / 1000) + " Sekunden";
+  return String(ms) + " ms";
+}
+
+function setDashboardReturnDelayControls(ms){
+  ms = normalizeDashboardReturnDelay(ms);
+  const select = $("dashboardReturnDelayMs");
+  const customWrap = $("dashboardReturnCustomWrap");
+  const customValue = $("dashboardReturnCustomValue");
+  const customUnit = $("dashboardReturnCustomUnit");
+  if(!select) return;
+  if(dashboardReturnPresetValues().includes(ms)){
+    select.value = String(ms);
+    if(customWrap) customWrap.style.display = "none";
+  }else{
+    select.value = "custom";
+    if(customWrap) customWrap.style.display = "grid";
+    if(customUnit && customValue){
+      if(ms % 60000 === 0){ customUnit.value = "minutes"; customValue.value = String(ms / 60000); }
+      else { customUnit.value = "seconds"; customValue.value = String(Math.round(ms / 1000)); }
+    }
+  }
+}
+
+function updateDashboardReturnCustomVisibility(){
+  const select = $("dashboardReturnDelayMs");
+  const customWrap = $("dashboardReturnCustomWrap");
+  if(!select || !customWrap) return;
+  customWrap.style.display = select.value === "custom" ? "grid" : "none";
+}
+
+function getDashboardReturnDelayFromControls(){
+  const select = $("dashboardReturnDelayMs");
+  if(!select) return getDashboardReturnDelay();
+  if(select.value !== "custom") return normalizeDashboardReturnDelay(select.value);
+  const value = Number($("dashboardReturnCustomValue")?.value || 1);
+  const unit = $("dashboardReturnCustomUnit")?.value || "seconds";
+  const ms = unit === "minutes" ? value * 60000 : value * 1000;
+  return normalizeDashboardReturnDelay(ms);
 }
 
 function isDashboardReturnEnabled(){
@@ -1418,6 +1467,7 @@ function bindEvents(){
   $("customerName").oninput = renderCustomerNameSuggestions;
   $("customerName").onchange = applyExactCustomer;
   bindDashboardReturnCancelOnAppointmentInput();
+  $("dashboardReturnDelayMs") && ($("dashboardReturnDelayMs").onchange = updateDashboardReturnCustomVisibility);
   $("customerPhonePrefix") && ($("customerPhonePrefix").onchange = () => { $("customerPhoneNumber") && $("customerPhoneNumber").focus(); });
   $("currentDateInput").onchange = e => { state.selectedDate=e.target.value; saveState(); renderCalendar(); renderReport(); if(state.selectedDate===todayISO()) setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 50); };
   $("todayBtn").onclick = () => { state.selectedDate=todayISO(); $("currentDateInput").value=state.selectedDate; saveState(); switchTab("calendarTab"); renderCalendar(); renderReport(); setTimeout(() => scrollCalendarToCurrentTime({smooth:true}), 50); };
@@ -4603,7 +4653,7 @@ function openSettings(){
   updateDisplayModeHint();
   $("settingsStudioName").value=state.studioName;
   $("dashboardReturnEnabled") && ($("dashboardReturnEnabled").checked = isDashboardReturnEnabled());
-  $("dashboardReturnDelayMs") && ($("dashboardReturnDelayMs").value = String(getDashboardReturnDelay()));
+  setDashboardReturnDelayControls(getDashboardReturnDelay());
   $("cloudBackupProvider") && ($("cloudBackupProvider").value = state.cloudBackupProvider || "share");
   $("cloudBackupEnabled") && ($("cloudBackupEnabled").checked = !!state.cloudBackupEnabled);
   updateBackupStatuses();
@@ -4640,7 +4690,7 @@ function saveSettings(silent=false){
   state.scheduleZoom = $("scheduleZoom") ? normalizeScheduleZoom($("scheduleZoom").value) : normalizeScheduleZoom(state.scheduleZoom || "normal");
   state.scheduleIntervalMinutes = $("scheduleIntervalMinutes") ? normalizeScheduleIntervalMinutes($("scheduleIntervalMinutes").value) : normalizeScheduleIntervalMinutes(state.scheduleIntervalMinutes || 15);
   state.dashboardReturnEnabled = $("dashboardReturnEnabled") ? $("dashboardReturnEnabled").checked : isDashboardReturnEnabled();
-  state.dashboardReturnDelayMs = $("dashboardReturnDelayMs") ? normalizeDashboardReturnDelay($("dashboardReturnDelayMs").value) : getDashboardReturnDelay();
+  state.dashboardReturnDelayMs = getDashboardReturnDelayFromControls();
   if(!state.dashboardReturnEnabled) cancelDashboardReturnTimer();
   state.reportPrintFormat = $("reportPrintFormat") ? normalizeReportPrintFormat($("reportPrintFormat").value) : normalizeReportPrintFormat(state.reportPrintFormat || "a4");
   state.openTime=$("settingsOpen").value||state.openTime;
@@ -4937,6 +4987,8 @@ function importBackup(e){
         scheduleZoom:normalizeScheduleZoom(imported.scheduleZoom || "normal"),
         scheduleIntervalMinutes:normalizeScheduleIntervalMinutes(imported.scheduleIntervalMinutes || 15),
         reportPrintFormat:normalizeReportPrintFormat(imported.reportPrintFormat || "a4"),
+        dashboardReturnEnabled: typeof imported.dashboardReturnEnabled === "boolean" ? imported.dashboardReturnEnabled : true,
+        dashboardReturnDelayMs: normalizeDashboardReturnDelay(imported.dashboardReturnDelayMs ?? 60000),
         cloudBackupEnabled:!!imported.cloudBackupEnabled,
         cloudBackupProvider:normalizeCloudProvider(imported.cloudBackupProvider || "onedrive"),
         cloudBackupAfterCleanup:!!imported.cloudBackupAfterCleanup,
@@ -4966,7 +5018,7 @@ function openSettings(){
   updateDisplayModeHint();
   $("settingsStudioName").value=state.studioName;
   $("dashboardReturnEnabled") && ($("dashboardReturnEnabled").checked = isDashboardReturnEnabled());
-  $("dashboardReturnDelayMs") && ($("dashboardReturnDelayMs").value = String(getDashboardReturnDelay()));
+  setDashboardReturnDelayControls(getDashboardReturnDelay());
   $("settingsStudioPhone").value=state.studioPhone || "";
   $("settingsStudioAddress").value=state.studioAddress || "";
   $("deleteDayInput") && ($("deleteDayInput").value=state.selectedDate || todayISO());

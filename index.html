@@ -316,8 +316,21 @@
                 <option value="180000">3 Minuten</option>
                 <option value="240000">4 Minuten</option>
                 <option value="300000">5 Minuten</option>
+                <option value="custom">Eigene Zeit</option>
               </select>
             </label>
+            <div id="dashboardReturnCustomWrap" class="setting-inline-grid" style="display:none; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <label><span>Eigener Wert</span>
+                <input id="dashboardReturnCustomValue" type="number" min="1" max="60" step="1" value="1" inputmode="numeric">
+              </label>
+              <label><span>Einheit</span>
+                <select id="dashboardReturnCustomUnit">
+                  <option value="seconds">Sekunden</option>
+                  <option value="minutes">Minuten</option>
+                </select>
+              </label>
+            </div>
+            <p class="hint">Eigene Zeit erlaubt Werte von 1 Sekunde bis maximal 60 Minuten.</p>
           </div>
 
         </div>
