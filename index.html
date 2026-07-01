@@ -299,6 +299,27 @@
           </label>
           <p class="hint" data-i18n="reportPrintFormatHint">Gilt für Kassenbericht, Mitarbeiter Umsatz und Einnahme. Excel-Export bleibt unverändert.</p>
           <p id="displayModeHint" class="hint">Aktiv: Automatisch</p>
+
+          <div class="settings-subsection">
+            <h4>Automatisch zurück zum Tagesplan</h4>
+            <p class="hint">Nach Bezahlen, Kundensuche oder Termin-Aktion kann die App automatisch wieder auf den heutigen Tagesplan springen. Hier kannst du die Funktion aktivieren, die Wartezeit ändern oder komplett deaktivieren.</p>
+            <label class="checkbox-line">
+              <input id="dashboardReturnEnabled" type="checkbox">
+              <span>Automatische Zurück-Funktion aktivieren</span>
+            </label>
+            <label><span>Wartezeit</span>
+              <select id="dashboardReturnDelayMs">
+                <option value="10000">10 Sekunden</option>
+                <option value="30000">30 Sekunden</option>
+                <option value="60000">1 Minute</option>
+                <option value="120000">2 Minuten</option>
+                <option value="180000">3 Minuten</option>
+                <option value="240000">4 Minuten</option>
+                <option value="300000">5 Minuten</option>
+              </select>
+            </label>
+          </div>
+
         </div>
 
         <div class="settings-section license-info-section">

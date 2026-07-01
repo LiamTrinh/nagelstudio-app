@@ -267,6 +267,20 @@ let editingEmployeeId = null;
 let editingCustomerId = null;
 let dashboardReturnTimer = null;
 
+function normalizeDashboardReturnDelay(value){
+  const allowed = [10000, 30000, 60000, 120000, 180000, 240000, 300000];
+  const ms = Number(value);
+  return allowed.includes(ms) ? ms : 60000;
+}
+
+function isDashboardReturnEnabled(){
+  return state?.dashboardReturnEnabled !== false;
+}
+
+function getDashboardReturnDelay(){
+  return normalizeDashboardReturnDelay(state?.dashboardReturnDelayMs ?? 60000);
+}
+
 function uid(){ return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()); }
 function todayISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
 function defaultServices(){ return [
@@ -277,7 +291,7 @@ function defaultServices(){ return [
   {id:uid(), name:"Nail Art", price:15, duration:30}
 ];}
 function defaultState(){ return {
-	  version:"3.0", configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", scheduleIntervalMinutes:15, cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
+	  version:"3.0", configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", scheduleIntervalMinutes:15, dashboardReturnEnabled:true, dashboardReturnDelayMs:60000, cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
   employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[], employeeDailyRevenueRecords:[], revenue2Entries:[], revenue2DeletedAppointmentIds:[], revenue2CashEntries:[], revenue2CashDeletedAppointmentIds:[], cashWithdrawals:[], cashDeposits:[], journalRevenueCorrections:{}, journalRevenueDeletedDays:[], periodRevenueManualEdits:{week:{},month:{}}, paymentSales:[],
   selectedDate:todayISO(), journalDate:todayISO(), storageMode:"local"
 };}
@@ -320,6 +334,8 @@ function loadState(){
     data.scheduleZoom = normalizeScheduleZoom(data.scheduleZoom || "normal");
     data.reportPrintFormat = normalizeReportPrintFormat(data.reportPrintFormat || "a4");
     data.scheduleIntervalMinutes = normalizeScheduleIntervalMinutes(data.scheduleIntervalMinutes || 15);
+    if(typeof data.dashboardReturnEnabled !== "boolean") data.dashboardReturnEnabled = true;
+    data.dashboardReturnDelayMs = normalizeDashboardReturnDelay(data.dashboardReturnDelayMs ?? 60000);
     data.cloudBackupEnabled = !!data.cloudBackupEnabled;
     data.cloudBackupProvider = normalizeCloudProvider(data.cloudBackupProvider || "onedrive");
     data.cloudBackupAfterCleanup = !!data.cloudBackupAfterCleanup;
@@ -3134,9 +3150,11 @@ function returnDashboardToTodayNow(){
   setTimeout(() => scrollCalendarToCurrentTime({smooth:false}), 350);
 }
 
-function scheduleDashboardReturnToTodayNow(delay=60000){
+function scheduleDashboardReturnToTodayNow(delay=null){
   cancelDashboardReturnTimer();
-  dashboardReturnTimer = setTimeout(returnDashboardToTodayNow, delay);
+  if(!isDashboardReturnEnabled()) return;
+  const ms = normalizeDashboardReturnDelay(delay ?? getDashboardReturnDelay());
+  dashboardReturnTimer = setTimeout(returnDashboardToTodayNow, ms);
 }
 function startCurrentTimeTicker(){
   setInterval(() => {
@@ -4584,6 +4602,8 @@ function openSettings(){
   $("reportPrintFormat") && ($("reportPrintFormat").value = normalizeReportPrintFormat(state.reportPrintFormat || "a4"));
   updateDisplayModeHint();
   $("settingsStudioName").value=state.studioName;
+  $("dashboardReturnEnabled") && ($("dashboardReturnEnabled").checked = isDashboardReturnEnabled());
+  $("dashboardReturnDelayMs") && ($("dashboardReturnDelayMs").value = String(getDashboardReturnDelay()));
   $("cloudBackupProvider") && ($("cloudBackupProvider").value = state.cloudBackupProvider || "share");
   $("cloudBackupEnabled") && ($("cloudBackupEnabled").checked = !!state.cloudBackupEnabled);
   updateBackupStatuses();
@@ -4619,6 +4639,9 @@ function saveSettings(silent=false){
   state.displayDeviceMode = $("displayDeviceMode") ? normalizeDisplayDeviceMode($("displayDeviceMode").value) : normalizeDisplayDeviceMode(state.displayDeviceMode || "auto");
   state.scheduleZoom = $("scheduleZoom") ? normalizeScheduleZoom($("scheduleZoom").value) : normalizeScheduleZoom(state.scheduleZoom || "normal");
   state.scheduleIntervalMinutes = $("scheduleIntervalMinutes") ? normalizeScheduleIntervalMinutes($("scheduleIntervalMinutes").value) : normalizeScheduleIntervalMinutes(state.scheduleIntervalMinutes || 15);
+  state.dashboardReturnEnabled = $("dashboardReturnEnabled") ? $("dashboardReturnEnabled").checked : isDashboardReturnEnabled();
+  state.dashboardReturnDelayMs = $("dashboardReturnDelayMs") ? normalizeDashboardReturnDelay($("dashboardReturnDelayMs").value) : getDashboardReturnDelay();
+  if(!state.dashboardReturnEnabled) cancelDashboardReturnTimer();
   state.reportPrintFormat = $("reportPrintFormat") ? normalizeReportPrintFormat($("reportPrintFormat").value) : normalizeReportPrintFormat(state.reportPrintFormat || "a4");
   state.openTime=$("settingsOpen").value||state.openTime;
   state.closeTime=$("settingsClose").value||state.closeTime;
@@ -4942,6 +4965,8 @@ function openSettings(){
   $("reportPrintFormat") && ($("reportPrintFormat").value = normalizeReportPrintFormat(state.reportPrintFormat || "a4"));
   updateDisplayModeHint();
   $("settingsStudioName").value=state.studioName;
+  $("dashboardReturnEnabled") && ($("dashboardReturnEnabled").checked = isDashboardReturnEnabled());
+  $("dashboardReturnDelayMs") && ($("dashboardReturnDelayMs").value = String(getDashboardReturnDelay()));
   $("settingsStudioPhone").value=state.studioPhone || "";
   $("settingsStudioAddress").value=state.studioAddress || "";
   $("deleteDayInput") && ($("deleteDayInput").value=state.selectedDate || todayISO());
