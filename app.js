@@ -2760,7 +2760,7 @@ function renderCalendar(){
   const s=slots(), active=state.employees.filter(e=>e.active).sort(byName), todays=state.appointments.filter(a=>a.date===state.selectedDate);
   $("appointmentCount").textContent=`${todays.length} Termine`;
   const grid=document.createElement("div"); grid.className="grid"; grid.style.setProperty("--slots",s.length);
-  grid.innerHTML=`<div class="corner">${t("employee")}</div>`+s.map(t=>`<div class="time-header">${t}</div>`).join("");
+  grid.innerHTML=`<div class="corner">${t("employee")}</div>`+s.map(t=>`<div class="time-header" data-time="${t}">${t}</div>`).join("");
   for(const emp of active){
     grid.insertAdjacentHTML("beforeend",`<div class="employee-cell employee-row-colored" ${employeeRowStyle(emp)}><span class="employee-name-colored" style="color:${escapeHtml(emp.color || "#d94f93")}">${escapeHtml(emp.name)}</span></div>`);
     let skipUntil = null;
@@ -2895,13 +2895,16 @@ function renderCalendar(){
 function updateCalendarNameColumnLock(){
   const calendar = $("calendar");
   if(!calendar) return;
-  const wrap = calendar.querySelector(".calendar-grid-wrap");
-  if(!wrap) return;
-  // iPad/iPhone Safari kann position:sticky in sehr breiten CSS-Grids beim
-  // horizontalen Scrollen falsch berechnen. Darum wird die Namensspalte hier
-  // per Scrollwert sauber links im sichtbaren Tagesplan gehalten.
-  const x = Math.max(0, Math.round(calendar.scrollLeft || 0));
-  wrap.style.setProperty("--calendar-scroll-x", x + "px");
+  const grid = calendar.querySelector(".grid");
+  if(!grid) return;
+  // V138: Die Namensspalte bleibt wieder per echtem CSS-sticky links.
+  // Die vorherige translateX-Korrektur hat auf iPad Safari die Scrollbreite
+  // vergrößert und dadurch rechts leeren Platz sowie falsche Zeitlinien erzeugt.
+  calendar.querySelectorAll(".corner,.employee-cell").forEach(el => {
+    el.style.left = "0px";
+    el.style.right = "auto";
+    el.style.transform = "none";
+  });
 }
 
 function bindCalendarScrollFix(){
@@ -2932,40 +2935,58 @@ function renderCurrentTimeLine(wrap){
 
 function getCurrentTimeLinePosition(options={}){
   if(state.selectedDate !== todayISO()) return null;
-  const start=timeToMinutes(state.openTime);
-  const end=timeToMinutes(state.closeTime);
   const now=new Date();
   const realNowMin=now.getHours()*60+now.getMinutes();
-  if(!options.clamp && (realNowMin < start || realNowMin > end)) return null;
-  const nowMin = options.clamp ? Math.max(start, Math.min(end, realNowMin)) : realNowMin;
+  const interval=getSlotIntervalMinutes();
 
-  // Wichtig: Die Breite der Mitarbeiter-/Zeitspalten kann je nach Gerät,
-  // Zoom und Ausrichtung über CSS am body überschrieben werden. Darum nicht
-  // die :root-Variablen verwenden, sondern die tatsächlich gerenderten Spalten messen.
   const calendar = options.calendar || $("calendar");
   const scope = options.wrap || calendar || document;
   const grid = scope.querySelector ? scope.querySelector(".grid") : null;
-  const firstHeader = grid ? grid.querySelector(".time-header") : null;
-  const secondHeader = firstHeader ? firstHeader.nextElementSibling : null;
-  let employeeCol = firstHeader ? firstHeader.offsetLeft : 0;
-  let timeCol = firstHeader ? firstHeader.getBoundingClientRect().width : 0;
-  if(firstHeader && secondHeader && secondHeader.classList.contains("time-header")){
-    const measuredGap = secondHeader.offsetLeft - firstHeader.offsetLeft;
-    if(measuredGap > 0) timeCol = measuredGap;
-  }
-  let headerHeight = firstHeader ? firstHeader.getBoundingClientRect().height : 0;
+  if(!grid) return null;
 
-  if(!employeeCol || !timeCol){
-    const styles=getComputedStyle(grid || document.documentElement);
-    employeeCol=parseFloat(styles.getPropertyValue("--employee-col")) || 190;
-    timeCol=parseFloat(styles.getPropertyValue("--time-col")) || 200;
+  const headers = Array.from(grid.querySelectorAll(".time-header[data-time]"));
+  if(!headers.length) return null;
+
+  const headerHeight = Math.round(Math.max(
+    headers[0]?.getBoundingClientRect?.().height || 0,
+    grid.querySelector(".corner")?.getBoundingClientRect?.().height || 0,
+    42
+  ));
+
+  const slotInfo = headers.map(el => ({el, min:timeToMinutes(el.dataset.time || el.textContent || "00:00")}));
+  const first = slotInfo[0];
+  const last = slotInfo[slotInfo.length-1];
+  if(!first || !last) return null;
+
+  let targetMin = realNowMin;
+  if(options.clamp){
+    targetMin = Math.max(first.min, Math.min(last.min + interval, realNowMin));
+  }else if(realNowMin < first.min || realNowMin > last.min + interval){
+    // Wenn die aktuelle Uhrzeit außerhalb des angezeigten Plans liegt,
+    // keine gelbe Linie anzeigen. Dadurch klebt 18:43 nicht rechts, wenn
+    // der sichtbare Plan z.B. erst bei 19:15 beginnt.
+    return null;
   }
-  if(!headerHeight) headerHeight = 56;
+
+  let current = null;
+  for(let i=0;i<slotInfo.length;i++){
+    const startMin = slotInfo[i].min;
+    const endMin = startMin + interval;
+    if(targetMin >= startMin && targetMin <= endMin){
+      current = slotInfo[i];
+      break;
+    }
+  }
+  if(!current) current = targetMin < first.min ? first : last;
+
+  const colWidth = Math.max(1, Math.round(current.el.getBoundingClientRect().width || current.el.offsetWidth || parseFloat(getComputedStyle(grid).getPropertyValue("--time-col")) || 160));
+  const fraction = Math.max(0, Math.min(1, (targetMin - current.min) / interval));
+  const left = Math.round(current.el.offsetLeft + fraction * colWidth);
 
   return {
-    left: employeeCol + ((nowMin-start)/getSlotIntervalMinutes())*timeCol,
+    left,
     nowMin: realNowMin,
-    scrollMin: nowMin,
+    scrollMin: targetMin,
     headerHeight
   };
 }
