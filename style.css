@@ -3473,3 +3473,19 @@ body.app-device-ipad .appointment.appointment-short{
   line-height:1.02;
   padding:3px 4px;
 }
+
+/* Zusatzregel: Pediküre-Termine mit aktiviertem "Beliebig" behalten ihren blauen Kasten,
+   bekommen aber zusätzlich einen deutlich sichtbaren dunkelgelben Rand. */
+.appointment.appointment-any-employee.appointment-pedicure,
+.appointment.appointment-any-employee.appointment-pedicure-refill{
+  border:3px solid #b8860b !important;
+  box-shadow:0 0 0 2px rgba(184,134,11,.35), 0 6px 14px rgba(0,0,0,.12) !important;
+}
+.appointment.appointment-any-employee.appointment-pedicure .name,
+.appointment.appointment-any-employee.appointment-pedicure .meta{
+  color:#07314f !important;
+}
+.appointment.appointment-any-employee.appointment-pedicure-refill .name,
+.appointment.appointment-any-employee.appointment-pedicure-refill .meta{
+  color:#fff !important;
+}
