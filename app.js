@@ -335,10 +335,31 @@ function todayISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezo
 function defaultServices(){ return [
   {id:uid(), name:"Maniküre", price:25, duration:30},
   {id:uid(), name:"Pediküre", price:35, duration:45},
+  {id:uid(), name:"Pediküre & Auffüllen", price:100, duration:120},
+  {id:uid(), name:"Pediküre Gel", price:50, duration:60},
+  {id:uid(), name:"Pediküre mit Maniküre", price:50, duration:60},
   {id:uid(), name:"Gelmodellage", price:55, duration:90},
   {id:uid(), name:"Auffüllen", price:40, duration:60},
   {id:uid(), name:"Nail Art", price:15, duration:30}
 ];}
+function ensureBuiltInServices(list){
+  const services = Array.isArray(list) ? list : [];
+  const wanted = [
+    {name:"Pediküre & Auffüllen", price:100, duration:120},
+    {name:"Pediküre Gel", price:50, duration:60},
+    {name:"Pediküre mit Maniküre", price:50, duration:60}
+  ];
+  wanted.forEach(item => {
+    const found = services.find(s => String(s.name || "").trim().toLowerCase() === item.name.toLowerCase());
+    if(found){
+      found.price = Number(found.price || item.price) || item.price;
+      found.duration = Number(found.duration || item.duration) || item.duration;
+    }else{
+      services.push({id:uid(), ...item});
+    }
+  });
+  return services;
+}
 function defaultState(){ return {
 	  version:"3.0", configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", scheduleIntervalMinutes:15, dashboardReturnEnabled:true, dashboardReturnDelayMs:60000, cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
   employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[], employeeDailyRevenueRecords:[], revenue2Entries:[], revenue2DeletedAppointmentIds:[], revenue2CashEntries:[], revenue2CashDeletedAppointmentIds:[], cashWithdrawals:[], cashDeposits:[], journalRevenueCorrections:{}, journalRevenueDeletedDays:[], periodRevenueManualEdits:{week:{},month:{}}, paymentSales:[],
@@ -355,7 +376,7 @@ function loadState(){
     }
     data = data || defaultState();
     data.version = 70;
-    data.services = data.services && data.services.length ? data.services : defaultServices();
+    data.services = ensureBuiltInServices(data.services && data.services.length ? data.services : defaultServices());
     data.excludedRevenueDays = data.excludedRevenueDays || [];
     data.manualRevenueItems = data.manualRevenueItems || [];
     data.employeeDailyRevenueRecords = data.employeeDailyRevenueRecords || [];
@@ -499,7 +520,16 @@ function refreshCashJournalViews(){
 
 function money(n){ return Number(n||0).toLocaleString("de-DE",{style:"currency",currency:"EUR"}); }
 function statusClass(status){ return "status-" + String(status || "Gebucht").replace(/\s+/g,"-"); }
-function appointmentClass(a){ return `appointment ${statusClass(a && a.status)}${a && a.employeeAny ? " appointment-any-employee" : ""}`; }
+function isPedicureRefillService(name){
+  return String(name || "").trim().toLowerCase() === "pediküre & auffüllen";
+}
+function isPedicureService(name){
+  return String(name || "").trim().toLowerCase().includes("pediküre");
+}
+function appointmentClass(a){
+  const pedicureClass = a && isPedicureRefillService(a.serviceName) ? " appointment-pedicure-refill" : a && isPedicureService(a.serviceName) ? " appointment-pedicure" : "";
+  return `appointment ${statusClass(a && a.status)}${a && a.employeeAny ? " appointment-any-employee" : ""}${pedicureClass}`;
+}
 function slots(){ const out=[]; for(let m=timeToMinutes(state.openTime); m<timeToMinutes(state.closeTime); m+=getSlotIntervalMinutes()) out.push(minutesToTime(m)); return out; }
 
 
@@ -2882,7 +2912,7 @@ function renderCalendar(){
       const a=todays.find(x=>x.employeeId===emp.id && x.startTime===t);
       if(a){
         const span=Math.max(1,Math.round(Number(a.duration)/getSlotIntervalMinutes())); skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
-        grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)}</div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta">${escapeHtml(a.startTime)} · ${escapeHtml(a.phone||"")}</div></div></div>`);
+        grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
       }else{
         const pastIssue = isAppointmentDateTimeInPast(state.selectedDate, t) ? pastAppointmentWarningText() : "";
         const issue = pastIssue || employeeAvailabilityIssue(emp, state.selectedDate, t, getSlotIntervalMinutes());

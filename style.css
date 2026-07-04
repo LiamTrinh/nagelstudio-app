@@ -3282,3 +3282,55 @@ body.app-device-ipad .time-header{
 body.app-device-pc .time-header{
   font-size:10px;
 }
+
+
+/* Version 2.88: Termintext und Pediküre-Farben */
+.appointment .appointment-time-inline{
+  font-weight:800;
+  margin-left:6px;
+  white-space:nowrap;
+}
+.appointment .appointment-phone-line{
+  display:block;
+  margin-top:2px;
+}
+.appointment.appointment-pedicure{
+  background:#7ec8ff !important;
+  color:#07314f !important;
+  border:1px solid #4aaee8 !important;
+}
+.appointment.appointment-pedicure .name,
+.appointment.appointment-pedicure .meta{
+  color:#07314f !important;
+}
+.appointment.appointment-pedicure-refill{
+  background:#0b4f9c !important;
+  color:#fff !important;
+  border:1px solid #073a73 !important;
+}
+.appointment.appointment-pedicure-refill .name,
+.appointment.appointment-pedicure-refill .meta{
+  color:#fff !important;
+}
+.appointment.status-Erledigt.appointment-pedicure,
+.appointment.status-Erledigt.appointment-pedicure-refill{
+  background:#137333 !important;
+  color:#fff !important;
+  border-color:#137333 !important;
+}
+.appointment.status-Nicht-erschienen.appointment-pedicure,
+.appointment.status-Nicht-erschienen.appointment-pedicure-refill{
+  background:#8a8f98 !important;
+  color:#fff !important;
+  border-color:#8a8f98 !important;
+}
+.appointment.status-Erledigt.appointment-pedicure .name,
+.appointment.status-Erledigt.appointment-pedicure .meta,
+.appointment.status-Erledigt.appointment-pedicure-refill .name,
+.appointment.status-Erledigt.appointment-pedicure-refill .meta,
+.appointment.status-Nicht-erschienen.appointment-pedicure .name,
+.appointment.status-Nicht-erschienen.appointment-pedicure .meta,
+.appointment.status-Nicht-erschienen.appointment-pedicure-refill .name,
+.appointment.status-Nicht-erschienen.appointment-pedicure-refill .meta{
+  color:#fff !important;
+}
