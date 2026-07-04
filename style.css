@@ -3223,3 +3223,62 @@ body.app-device-ipad .cash-journal-dialog.employee-revenue-tab-active menu .empl
   box-shadow:0 2px 8px rgba(0,0,0,.12);
 }
 
+
+/* V143: Tagesplan-Zeitachse kompakt
+   Uhrzeit-Spalten im Dashboard deutlich schmaler, damit mehr Stunden sichtbar sind. */
+body.schedule-zoom-small{
+  --time-col:40px;
+}
+body.schedule-zoom-normal{
+  --time-col:53px;
+}
+body.schedule-zoom-large{
+  --time-col:63px;
+}
+body.app-device-iphone,
+body.app-device-iphone.schedule-zoom-small,
+body.app-device-iphone.schedule-zoom-normal,
+body.app-device-iphone.schedule-zoom-large{
+  --time-col:28px;
+}
+body.app-device-ipad{
+  --time-col:45px;
+}
+body.app-device-ipad.schedule-zoom-small{
+  --time-col:41px;
+}
+body.app-device-ipad.schedule-zoom-normal{
+  --time-col:45px;
+}
+body.app-device-ipad.schedule-zoom-large{
+  --time-col:51px;
+}
+body.app-device-pc.schedule-zoom-small{
+  --time-col:47px;
+}
+body.app-device-pc.schedule-zoom-normal{
+  --time-col:53px;
+}
+body.app-device-pc.schedule-zoom-large{
+  --time-col:67px;
+}
+.time-header{
+  min-width:var(--time-col);
+  font-size:10px;
+  line-height:1;
+  letter-spacing:-0.2px;
+  padding:0 2px;
+  white-space:nowrap;
+}
+body.app-device-iphone .time-header{
+  font-size:8px;
+  letter-spacing:-0.4px;
+  padding:0 1px;
+}
+body.app-device-ipad .time-header{
+  font-size:9px;
+  letter-spacing:-0.35px;
+}
+body.app-device-pc .time-header{
+  font-size:10px;
+}
