@@ -528,7 +528,8 @@ function isPedicureService(name){
 }
 function appointmentClass(a){
   const pedicureClass = a && isPedicureRefillService(a.serviceName) ? " appointment-pedicure-refill" : a && isPedicureService(a.serviceName) ? " appointment-pedicure" : "";
-  return `appointment ${statusClass(a && a.status)}${a && a.employeeAny ? " appointment-any-employee" : ""}${pedicureClass}`;
+  const shortClass = a && Number(a.duration || 0) <= 30 ? " appointment-short" : "";
+  return `appointment ${statusClass(a && a.status)}${a && a.employeeAny ? " appointment-any-employee" : ""}${pedicureClass}${shortClass}`;
 }
 function slots(){ const out=[]; for(let m=timeToMinutes(state.openTime); m<timeToMinutes(state.closeTime); m+=getSlotIntervalMinutes()) out.push(minutesToTime(m)); return out; }
 
@@ -2912,18 +2913,18 @@ function renderCalendar(){
       const a=todays.find(x=>x.employeeId===emp.id && x.startTime===t);
       if(a){
         const span=Math.max(1,Math.round(Number(a.duration)/getSlotIntervalMinutes())); skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
-        grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
+        grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored${timeToMinutes(t) % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
       }else{
         const pastIssue = isAppointmentDateTimeInPast(state.selectedDate, t) ? pastAppointmentWarningText() : "";
         const issue = pastIssue || employeeAvailabilityIssue(emp, state.selectedDate, t, getSlotIntervalMinutes());
         if(issue){
           if(pastIssue){
-            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot past-slot" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"></div>`);
+            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot past-slot${timeToMinutes(t) % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"></div>`);
           }else{
-            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"><span class="slot-lock">Gesperrt</span></div>`);
+            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot${timeToMinutes(t) % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"><span class="slot-lock">Gesperrt</span></div>`);
           }
         }else{
-          grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored ${selectedCalendarSlotMatches(emp.id, t) ? 'selected-free-slot' : ''}" ${employeeRowStyle(emp)} data-employee="${emp.id}" data-time="${t}"></div>`);
+          grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored ${timeToMinutes(t) % 60 === 0 ? 'full-hour-slot ' : ''}${selectedCalendarSlotMatches(emp.id, t) ? 'selected-free-slot' : ''}" ${employeeRowStyle(emp)} data-employee="${emp.id}" data-time="${t}"></div>`);
         }
       }
     }

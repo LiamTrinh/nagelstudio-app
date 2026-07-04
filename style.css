@@ -3389,3 +3389,87 @@ body.app-device-ipad .time-header.full-hour{
 body.app-device-pc .time-header.full-hour{
   font-size:10px;
 }
+
+/* Tagesplan-Feinschliff: Uhrzeit etwas breiter, Mitarbeiter-Spalte schmaler, volle Stunden klarer markieren. */
+body.schedule-zoom-small{
+  --employee-col:108px;
+  --time-col:32px;
+}
+body.schedule-zoom-normal{
+  --employee-col:118px;
+  --time-col:36px;
+}
+body.schedule-zoom-large{
+  --employee-col:132px;
+  --time-col:42px;
+}
+body.app-device-iphone,
+body.app-device-iphone.schedule-zoom-small,
+body.app-device-iphone.schedule-zoom-normal,
+body.app-device-iphone.schedule-zoom-large{
+  --employee-col:92px;
+  --time-col:30px;
+}
+body.app-device-ipad,
+body.app-device-ipad.schedule-zoom-normal{
+  --employee-col:116px;
+  --time-col:36px;
+}
+body.app-device-ipad.schedule-zoom-small{
+  --employee-col:106px;
+  --time-col:32px;
+}
+body.app-device-ipad.schedule-zoom-large{
+  --employee-col:128px;
+  --time-col:42px;
+}
+body.app-device-pc.schedule-zoom-small{
+  --employee-col:112px;
+  --time-col:34px;
+}
+body.app-device-pc.schedule-zoom-normal{
+  --employee-col:124px;
+  --time-col:38px;
+}
+body.app-device-pc.schedule-zoom-large{
+  --employee-col:140px;
+  --time-col:46px;
+}
+.corner,
+.employee-cell{
+  padding-left:10px;
+  padding-right:8px;
+}
+.time-header.full-hour{
+  color:#8b0000 !important;
+  font-weight:1000;
+  background:linear-gradient(180deg,#fff7f7,#fff) !important;
+  box-shadow:inset 2px 0 0 rgba(139,0,0,.55);
+}
+.slot.full-hour-slot{
+  box-shadow:inset 2px 0 0 rgba(139,0,0,.32);
+}
+.appointment.appointment-short{
+  padding:4px 5px;
+  font-size:11px;
+  line-height:1.04;
+  border-radius:12px;
+  overflow:hidden;
+}
+.appointment.appointment-short .name,
+.appointment.appointment-short .meta{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.appointment.appointment-short .appointment-time-inline{
+  margin-left:4px;
+}
+.appointment.appointment-short .appointment-phone-line{
+  display:none;
+}
+body.app-device-ipad .appointment.appointment-short{
+  font-size:10.5px;
+  line-height:1.02;
+  padding:3px 4px;
+}
