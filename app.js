@@ -2903,7 +2903,7 @@ function renderCalendar(){
   const s=slots(), active=state.employees.filter(e=>e.active).sort(byName), todays=state.appointments.filter(a=>a.date===state.selectedDate);
   $("appointmentCount").textContent=`${todays.length} Termine`;
   const grid=document.createElement("div"); grid.className="grid"; grid.style.setProperty("--slots",s.length);
-  grid.innerHTML=`<div class="corner">${t("employee")}</div>`+s.map(t=>`<div class="time-header" data-time="${t}">${t}</div>`).join("");
+  grid.innerHTML=`<div class="corner">${t("employee")}</div>`+s.map(slotTime=>`<div class="time-header${timeToMinutes(slotTime) % 60 === 0 ? " full-hour" : ""}" data-time="${slotTime}">${slotTime}</div>`).join("");
   for(const emp of active){
     grid.insertAdjacentHTML("beforeend",`<div class="employee-cell employee-row-colored" ${employeeRowStyle(emp)}><span class="employee-name-colored" style="color:${escapeHtml(emp.color || "#d94f93")}">${escapeHtml(emp.name)}</span></div>`);
     let skipUntil = null;

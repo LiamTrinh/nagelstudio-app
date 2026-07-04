@@ -3334,3 +3334,58 @@ body.app-device-pc .time-header{
 .appointment.status-Nicht-erschienen.appointment-pedicure-refill .meta{
   color:#fff !important;
 }
+
+
+/* Dashboard Tagesplan: Uhrzeit-Spalten nochmals um ca. die Hälfte schmaler; volle Stunden dunkelrot hervorheben. */
+body.schedule-zoom-small{
+  --time-col:20px;
+}
+body.schedule-zoom-normal{
+  --time-col:27px;
+}
+body.schedule-zoom-large{
+  --time-col:32px;
+}
+body.app-device-iphone,
+body.app-device-iphone.schedule-zoom-small,
+body.app-device-iphone.schedule-zoom-normal,
+body.app-device-iphone.schedule-zoom-large{
+  --time-col:14px;
+}
+body.app-device-ipad{
+  --time-col:23px;
+}
+body.app-device-ipad.schedule-zoom-small{
+  --time-col:21px;
+}
+body.app-device-ipad.schedule-zoom-normal{
+  --time-col:23px;
+}
+body.app-device-ipad.schedule-zoom-large{
+  --time-col:26px;
+}
+body.app-device-pc.schedule-zoom-small{
+  --time-col:24px;
+}
+body.app-device-pc.schedule-zoom-normal{
+  --time-col:27px;
+}
+body.app-device-pc.schedule-zoom-large{
+  --time-col:34px;
+}
+.time-header{
+  overflow:visible;
+}
+.time-header.full-hour{
+  color:#8b0000 !important;
+  font-weight:1000;
+}
+body.app-device-iphone .time-header.full-hour{
+  font-size:8px;
+}
+body.app-device-ipad .time-header.full-hour{
+  font-size:9px;
+}
+body.app-device-pc .time-header.full-hour{
+  font-size:10px;
+}
