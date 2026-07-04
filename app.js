@@ -527,9 +527,13 @@ function isPedicureService(name){
   return String(name || "").trim().toLowerCase().includes("pediküre");
 }
 function appointmentClass(a){
-  const pedicureClass = a && isPedicureRefillService(a.serviceName) ? " appointment-pedicure-refill" : a && isPedicureService(a.serviceName) ? " appointment-pedicure" : "";
+  const isPedicureRefill = a && isPedicureRefillService(a.serviceName);
+  const isPedicure = a && isPedicureService(a.serviceName);
+  const isAnyPedicure = !!(a && a.employeeAny && isPedicure);
+  const pedicureClass = isPedicureRefill ? " appointment-pedicure-refill" : isPedicure ? " appointment-pedicure" : "";
+  const anyPedicureClass = isAnyPedicure ? " appointment-pedicure-any" : "";
   const shortClass = a && Number(a.duration || 0) <= 30 ? " appointment-short" : "";
-  return `appointment ${statusClass(a && a.status)}${a && a.employeeAny ? " appointment-any-employee" : ""}${pedicureClass}${shortClass}`;
+  return `appointment ${statusClass(a && a.status)}${a && a.employeeAny ? " appointment-any-employee" : ""}${pedicureClass}${anyPedicureClass}${shortClass}`;
 }
 function slots(){ const out=[]; for(let m=timeToMinutes(state.openTime); m<timeToMinutes(state.closeTime); m+=getSlotIntervalMinutes()) out.push(minutesToTime(m)); return out; }
 
