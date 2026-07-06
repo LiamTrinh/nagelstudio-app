@@ -3650,3 +3650,139 @@ body.app-device-ipad #appointmentDialog .appointment-edit-date-time{
     gap:12px !important;
   }
 }
+
+
+/* Version 2.92: Arbeitszeit/Urlaub nutzt volle Dialogbreite und iPad-Layout ohne Überlappung */
+#settingsWorkTimeTab.active{
+  width:100% !important;
+}
+#settingsWorkTimeTab .settings-section.wide-section,
+.settings-section.wide-section.worktime-section{
+  max-width:none !important;
+  width:100% !important;
+}
+.settings-dialog:has(#settingsWorkTimeTab.active){
+  width:min(1420px,98vw) !important;
+  max-width:98vw !important;
+}
+.worktime-list{
+  width:100%;
+}
+.worktime-card{
+  width:100%;
+  overflow:visible;
+  padding:18px;
+}
+.worktime-section{
+  width:100%;
+}
+.worktime-grid{
+  grid-template-columns:minmax(220px,1.25fr) minmax(150px,.75fr) minmax(150px,.75fr);
+  gap:14px;
+}
+.worktime-weekly-days{
+  grid-template-columns:repeat(auto-fit,minmax(500px,1fr));
+  gap:12px;
+}
+.weekday-time-row{
+  grid-template-columns:minmax(130px,1fr) minmax(112px,.75fr) 34px minmax(112px,.75fr);
+  gap:10px;
+  padding:10px 12px;
+  min-width:0;
+}
+.weekday-time-row label,
+.weekday-time-row input,
+.weekday-time-row span{
+  min-width:0;
+}
+.weekday-time-row input[type="time"]{
+  height:52px;
+  padding:0 10px;
+  text-align:center;
+}
+.weekday-time-row span{
+  text-align:center;
+  color:var(--muted);
+}
+.worktime-special-add{
+  grid-template-columns:minmax(170px,1fr) minmax(130px,.8fr) minmax(130px,.8fr) minmax(190px,auto);
+  gap:12px;
+}
+.worktime-vacation-row{
+  grid-template-columns:minmax(240px,1.1fr) minmax(180px,.9fr) minmax(180px,.9fr);
+  gap:12px;
+}
+.worktime-single-vacation{
+  grid-template-columns:minmax(260px,1fr) minmax(200px,auto);
+  gap:12px;
+}
+.worktime-actions{
+  align-items:center;
+}
+.worktime-actions small{
+  flex:1 1 420px;
+}
+@media(max-width:1100px){
+  .settings-dialog:has(#settingsWorkTimeTab.active){
+    width:98vw !important;
+  }
+  .worktime-weekly-days{
+    grid-template-columns:1fr !important;
+  }
+  .worktime-grid{
+    grid-template-columns:1fr 1fr 1fr;
+  }
+}
+@media(max-width:760px){
+  .worktime-grid,
+  .worktime-vacation-row,
+  .worktime-single-vacation,
+  .worktime-special-add{
+    grid-template-columns:1fr !important;
+  }
+  .weekday-time-row{
+    grid-template-columns:1fr 1fr 34px 1fr;
+  }
+}
+body.app-device-ipad .settings-dialog:has(#settingsWorkTimeTab.active){
+  width:98vw !important;
+  max-width:98vw !important;
+  max-height:94svh !important;
+  padding:20px !important;
+}
+body.app-device-ipad #settingsWorkTimeTab .settings-section.wide-section,
+body.app-device-ipad .settings-section.wide-section.worktime-section{
+  max-width:none !important;
+  width:100% !important;
+}
+body.app-device-ipad .worktime-card{
+  padding:16px;
+}
+body.app-device-ipad .worktime-grid{
+  grid-template-columns:minmax(190px,1.2fr) minmax(140px,.9fr) minmax(140px,.9fr);
+}
+body.app-device-ipad .worktime-weekly-days{
+  grid-template-columns:1fr !important;
+}
+body.app-device-ipad .weekday-time-row{
+  grid-template-columns:minmax(150px,1.2fr) minmax(120px,.85fr) 34px minmax(120px,.85fr);
+  gap:10px;
+}
+body.app-device-ipad .weekday-time-row input[type="time"]{
+  height:54px;
+  font-size:17px;
+}
+body.app-device-ipad .worktime-special-add{
+  grid-template-columns:minmax(180px,1fr) minmax(130px,.75fr) minmax(130px,.75fr) minmax(190px,auto);
+}
+@media (orientation:portrait) and (max-width:900px){
+  body.app-device-ipad .worktime-grid,
+  body.app-device-ipad .worktime-special-add,
+  body.app-device-ipad .worktime-vacation-row,
+  body.app-device-ipad .worktime-single-vacation{
+    grid-template-columns:1fr !important;
+  }
+  body.app-device-ipad .weekday-time-row{
+    grid-template-columns:minmax(150px,1.3fr) minmax(120px,.85fr) 34px minmax(120px,.85fr);
+  }
+}
