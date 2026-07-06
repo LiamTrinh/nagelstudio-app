@@ -3515,3 +3515,65 @@ body.app-device-ipad .appointment.appointment-short{
 .appointment.appointment-pedicure-any.appointment-pedicure-refill .meta{
   color:#fff !important;
 }
+
+
+/* Version 50: Bearbeiten-Dialog iPad-Fix für Datum/Uhrzeit + robustes Touch-Verschieben */
+.appointment-edit-form{
+  width:100%;
+  min-width:0;
+}
+.appointment-edit-form *,
+.appointment-edit-form label,
+.appointment-edit-form input,
+.appointment-edit-form select,
+.appointment-edit-form textarea{
+  box-sizing:border-box;
+  min-width:0;
+  max-width:100%;
+}
+.appointment-edit-form .grid-2{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:16px;
+  align-items:start;
+}
+.appointment-edit-form .appointment-edit-date-time{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  column-gap:24px;
+  row-gap:10px;
+}
+.appointment-edit-form .appointment-edit-date-time label{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin:10px 0 4px;
+  white-space:nowrap;
+}
+.appointment-edit-form .appointment-edit-date-time input,
+.appointment-edit-form .appointment-edit-date-time select{
+  display:block;
+  width:100% !important;
+  inline-size:100% !important;
+  height:48px;
+  text-align:left;
+}
+body.dragging-appointment .calendar,
+body.dragging-appointment .calendar-grid-wrap{
+  touch-action:none;
+}
+body.dragging-appointment .appointment:not(.dragging-touch){
+  opacity:.55;
+}
+@media(max-width:760px){
+  .appointment-edit-form .grid-2,
+  .appointment-edit-form .appointment-edit-date-time{
+    grid-template-columns:1fr;
+  }
+}
+@supports (-webkit-touch-callout: none){
+  .appointment-edit-form .appointment-edit-date-time input,
+  .appointment-edit-form .appointment-edit-date-time select{
+    -webkit-appearance:menulist;
+    appearance:auto;
+    transform:translateZ(0);
+  }
+}

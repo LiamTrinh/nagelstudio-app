@@ -262,6 +262,7 @@ let longPressTimer = null;
 let touchDragGhost = null;
 let touchDragOriginal = null;
 let touchDragPointerId = null;
+let touchDragCleanupInstalled = false;
 let suppressAppointmentClick = false;
 let editingEmployeeId = null;
 let editingCustomerId = null;
@@ -2790,6 +2791,40 @@ function startMoveAppointment(id){
 function cancelMoveAppointment(){
   movingAppointmentId = null;
   document.body.classList.remove("move-mode");
+  document.querySelectorAll(".slot.drop-target").forEach(s => s.classList.remove("drop-target"));
+}
+
+function cleanupTouchDragAppointment(options = {}){
+  clearTimeout(longPressTimer);
+  const release = options.releaseEvent;
+  if(touchDragOriginal && touchDragPointerId !== null && touchDragOriginal.releasePointerCapture){
+    try{ touchDragOriginal.releasePointerCapture(touchDragPointerId); }catch(err){}
+  }else if(release?.target?.releasePointerCapture && release.pointerId !== undefined){
+    try{ release.target.releasePointerCapture(release.pointerId); }catch(err){}
+  }
+  if(touchDragGhost){
+    touchDragGhost.remove();
+    touchDragGhost = null;
+  }
+  document.querySelectorAll(".slot.drop-target").forEach(s => s.classList.remove("drop-target"));
+  touchDragOriginal = null;
+  touchDragPointerId = null;
+  document.body.classList.remove("dragging-appointment");
+  if(options.cancelMove !== false) cancelMoveAppointment();
+}
+
+function installTouchDragSafetyGuards(){
+  if(touchDragCleanupInstalled) return;
+  touchDragCleanupInstalled = true;
+  window.addEventListener("blur", () => cleanupTouchDragAppointment(), {passive:true});
+  document.addEventListener("visibilitychange", () => { if(document.hidden) cleanupTouchDragAppointment(); }, {passive:true});
+  document.addEventListener("pointercancel", e => cleanupTouchDragAppointment({releaseEvent:e}), {passive:true});
+  document.addEventListener("pointerup", e => {
+    if(touchDragGhost && touchDragPointerId !== null && e.pointerId !== touchDragPointerId){
+      cleanupTouchDragAppointment({releaseEvent:e});
+      setTimeout(()=>{ suppressAppointmentClick=false; }, 150);
+    }
+  }, {passive:true});
 }
 function moveAppointmentTo(employeeId, startTime){
   clearSelectedCalendarSlot();
@@ -2832,10 +2867,13 @@ function moveAppointmentTo(employeeId, startTime){
 function beginTouchDragAppointment(el, pointerEvent){
   const id = el.dataset.id;
   if(!id) return;
+  installTouchDragSafetyGuards();
   startMoveAppointment(id);
   touchDragOriginal = el;
   touchDragPointerId = pointerEvent.pointerId;
-  el.setPointerCapture && el.setPointerCapture(pointerEvent.pointerId);
+  if(el.setPointerCapture && pointerEvent.pointerId !== undefined){
+    try{ el.setPointerCapture(pointerEvent.pointerId); }catch(err){}
+  }
 
   touchDragGhost = el.cloneNode(true);
   touchDragGhost.classList.add("dragging-touch");
@@ -2858,22 +2896,19 @@ function finishTouchDragAppointment(pointerEvent){
   clearTimeout(longPressTimer);
   document.querySelectorAll(".slot.drop-target").forEach(s => s.classList.remove("drop-target"));
 
-  if(touchDragGhost){
-    touchDragGhost.remove();
-    touchDragGhost = null;
-  }
-
   const under = document.elementFromPoint(pointerEvent.clientX, pointerEvent.clientY);
   const slot = under && under.closest ? under.closest(".slot[data-employee]") : null;
-  if(slot && movingAppointmentId){
+  const activeMoveId = movingAppointmentId;
+
+  cleanupTouchDragAppointment({cancelMove:false, releaseEvent:pointerEvent});
+
+  if(slot && activeMoveId){
+    movingAppointmentId = activeMoveId;
     moveAppointmentTo(slot.dataset.employee, slot.dataset.time);
   }else{
     cancelMoveAppointment();
   }
 
-  touchDragOriginal = null;
-  touchDragPointerId = null;
-  document.body.classList.remove("dragging-appointment");
   setTimeout(()=>{ suppressAppointmentClick=false; }, 150);
 }
 
@@ -2972,7 +3007,10 @@ function renderCalendar(){
     };
   });
   $("calendar").querySelectorAll(".appointment").forEach(el=>{
+    const isTouchLike = (navigator.maxTouchPoints || 0) > 0 || window.matchMedia?.("(pointer: coarse)").matches || document.body.classList.contains("app-device-ipad") || document.body.classList.contains("app-device-iphone");
+    el.draggable = !isTouchLike;
     el.ondragstart=(e)=>{
+      if(isTouchLike){ e.preventDefault(); return false; }
       e.dataTransfer.setData("text/plain", el.dataset.id);
       movingAppointmentId = el.dataset.id;
       document.body.classList.add("move-mode");
@@ -3011,16 +3049,10 @@ function renderCalendar(){
     };
 
     el.onpointercancel=(e)=>{
-      clearTimeout(longPressTimer);
-      if(touchDragGhost){
-        touchDragGhost.remove();
-        touchDragGhost=null;
-      }
-      cancelMoveAppointment();
-      document.body.classList.remove("dragging-appointment");
-      touchDragPointerId=null;
+      cleanupTouchDragAppointment({releaseEvent:e});
       el._dragStart = null;
       el._dragLatest = null;
+      setTimeout(()=>{ suppressAppointmentClick=false; }, 150);
     };
 
     el.onpointerleave=(e)=>{
@@ -3460,7 +3492,7 @@ function renderAppointmentEditForm(a){
       <label>Leistung auswählen
         <select id="editApptServiceName">${serviceOptions}</select>
       </label>
-      <div class="grid-2">
+      <div class="grid-2 appointment-edit-date-time">
         <label>Datum
           <input id="editApptDate" type="date" value="${escapeHtml(a.date || state.selectedDate || todayISO())}">
         </label>
