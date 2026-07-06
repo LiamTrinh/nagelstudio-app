@@ -4830,7 +4830,7 @@ function buildBackupPayload(type){
       backupType:type || "Normal",
       createdAt:nowStampHuman(),
       createdAtISO:new Date().toISOString(),
-      appVersion:"3.16",
+      appVersion:"3.17",
       note:type === "Bereinigung"
         ? "Backup nach Bereinigung: Alle Termine von heute und Vergangenheit sowie alle Umsatzdaten aus Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz wurden vorher endgültig entfernt. Nur Zukunft-Termine bleiben erhalten."
         : "Normales Backup."

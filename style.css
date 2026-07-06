@@ -3577,3 +3577,76 @@ body.dragging-appointment .appointment:not(.dragging-touch){
     transform:translateZ(0);
   }
 }
+
+/* Version 2.91: Termin-Bearbeiten Datum/Uhrzeit iPad-Darstellung final korrigiert */
+#appointmentDialog .appointment-edit-form{
+  display:block;
+}
+#appointmentDialog .appointment-edit-form label{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+}
+#appointmentDialog .appointment-edit-form input,
+#appointmentDialog .appointment-edit-form select,
+#appointmentDialog .appointment-edit-form textarea{
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  box-sizing:border-box;
+  font-size:16px;
+  line-height:1.25;
+}
+#appointmentDialog .appointment-edit-date-time{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+  gap:18px !important;
+  align-items:end !important;
+}
+#appointmentDialog .appointment-edit-date-time label{
+  margin:0 !important;
+  white-space:normal !important;
+}
+#appointmentDialog #editApptDate,
+#appointmentDialog #editApptStartTime{
+  height:50px !important;
+  min-height:50px !important;
+  max-height:50px !important;
+  padding:0 14px !important;
+  line-height:50px !important;
+  text-align:left !important;
+  border-radius:12px !important;
+  overflow:hidden !important;
+}
+#appointmentDialog #editApptDate{
+  -webkit-appearance:none !important;
+  appearance:none !important;
+  background-color:#fff !important;
+}
+#appointmentDialog #editApptStartTime{
+  -webkit-appearance:menulist !important;
+  appearance:auto !important;
+  background-color:#fff !important;
+}
+@supports (-webkit-touch-callout: none){
+  #appointmentDialog #editApptDate{
+    -webkit-appearance:none !important;
+    appearance:none !important;
+    display:block !important;
+  }
+  #appointmentDialog #editApptStartTime{
+    -webkit-appearance:menulist !important;
+    appearance:auto !important;
+  }
+}
+body.app-device-ipad #appointmentDialog .appointment-edit-date-time{
+  grid-template-columns:1fr !important;
+  gap:12px !important;
+}
+@media(max-width:900px){
+  #appointmentDialog .appointment-edit-date-time{
+    grid-template-columns:1fr !important;
+    gap:12px !important;
+  }
+}
