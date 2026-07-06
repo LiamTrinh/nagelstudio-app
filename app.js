@@ -3437,11 +3437,12 @@ function renderAppointmentEditForm(a){
     .map(time => `<option value="${escapeHtml(time)}" ${time === a.startTime ? "selected" : ""}>${escapeHtml(time)}</option>`)
     .join("");
 
-  const serviceOptions = state.services
-    .slice()
-    .sort(byName)
-    .map(s => `<option value="${escapeHtml(s.name)}">${money(s.price)} · ${s.duration} Min</option>`)
-    .join("");
+  const sortedServices = state.services.slice().sort(byName);
+  const hasCurrentService = sortedServices.some(s => String(s.name || "").trim().toLowerCase() === String(a.serviceName || "").trim().toLowerCase());
+  const serviceOptions = [
+    !hasCurrentService && a.serviceName ? `<option value="${escapeHtml(a.serviceName)}" selected>${escapeHtml(a.serviceName)} · aktueller Termin</option>` : "",
+    ...sortedServices.map(s => `<option value="${escapeHtml(s.name)}" ${String(s.name || "").trim().toLowerCase() === String(a.serviceName || "").trim().toLowerCase() ? "selected" : ""}>${escapeHtml(s.name)} · ${money(s.price)} · ${s.duration} Min</option>`)
+  ].join("");
 
   $("appointmentDetails").innerHTML = `
     <div class="appointment-edit-form">
@@ -3456,10 +3457,17 @@ function renderAppointmentEditForm(a){
           <input id="editApptPhoneNumber" inputmode="tel" value="${escapeHtml(splitPhoneNumber(a.phone || "").number)}">
         </label>
       </div>
-      <label>Leistung
-        <input id="editApptServiceName" list="editServicesDatalist" value="${escapeHtml(a.serviceName || "")}" placeholder="Leistung manuell eintragen">
-        <datalist id="editServicesDatalist">${serviceOptions}</datalist>
+      <label>Leistung auswählen
+        <select id="editApptServiceName">${serviceOptions}</select>
       </label>
+      <div class="grid-2">
+        <label>Datum
+          <input id="editApptDate" type="date" value="${escapeHtml(a.date || state.selectedDate || todayISO())}">
+        </label>
+        <label>Uhrzeit
+          <select id="editApptStartTime">${timeOptions}</select>
+        </label>
+      </div>
       <div class="grid-2">
         <label>Preis €
           <input id="editApptPrice" type="number" min="0" step="0.01" value="${Number(a.price || 0)}">
@@ -3476,9 +3484,6 @@ function renderAppointmentEditForm(a){
           <input id="editApptEmployeeAny" type="checkbox" ${a.employeeAny ? "checked" : ""}>
           <small>Termin im Tagesplan gelb markieren</small>
         </label>
-        <label>Uhrzeit
-          <select id="editApptStartTime">${timeOptions}</select>
-        </label>
       </div>
       <label>Notiz
         <textarea id="editApptNote">${escapeHtml(a.note || "")}</textarea>
@@ -3490,6 +3495,16 @@ function renderAppointmentEditForm(a){
       <small>Neue Leistungen werden mit Preis und Minuten automatisch in der Leistungsdatenbank gespeichert.</small>
     </div>`;
 
+  const serviceSelect = $("editApptServiceName");
+  if(serviceSelect){
+    serviceSelect.onchange = () => {
+      const selectedService = (state.services || []).find(s => String(s.name || "").trim().toLowerCase() === String(serviceSelect.value || "").trim().toLowerCase());
+      if(selectedService){
+        $("editApptPrice").value = Number(selectedService.price || 0);
+        $("editApptDuration").value = Number(selectedService.duration || 60);
+      }
+    };
+  }
   $("saveInlineAppointmentEditBtn").onclick = saveInlineAppointmentEdit;
   $("cancelInlineAppointmentEditBtn").onclick = () => showAppointment(a.id);
 }
@@ -3502,6 +3517,7 @@ function saveInlineAppointmentEdit(){
     ...a,
     customerName: $("editApptCustomerName").value.trim(),
     phone: combinePhoneFields("editApptPhonePrefix", "editApptPhoneNumber"),
+    date: $("editApptDate").value || a.date,
     serviceName: $("editApptServiceName").value.trim(),
     price: Number($("editApptPrice").value || 0),
     duration: Number($("editApptDuration").value || 60),
@@ -3511,8 +3527,8 @@ function saveInlineAppointmentEdit(){
     note: $("editApptNote").value.trim()
   };
 
-  if(!updated.customerName || !updated.employeeId || !updated.startTime){
-    alert("Bitte Kunde, Mitarbeiter und Uhrzeit eintragen.");
+  if(!updated.customerName || !updated.employeeId || !updated.date || !updated.startTime){
+    alert("Bitte Kunde, Datum, Mitarbeiter und Uhrzeit eintragen.");
     return;
   }
   if(isAppointmentDateTimeInPast(updated.date, updated.startTime) && (updated.date !== a.date || updated.startTime !== a.startTime)){
@@ -3548,10 +3564,13 @@ function saveInlineAppointmentEdit(){
   }
 
   Object.assign(a, updated);
+  state.selectedDate = a.date;
+  if($("currentDateInput")) $("currentDateInput").value = a.date;
   ensureCustomerFromAppointment(a);
   ensureServiceFromAppointment(a);
   saveState();
   renderAll();
+  showAppointment(a.id);
   scheduleDashboardReturnToTodayNow();
 }
 function paySelectedAppointment(){
