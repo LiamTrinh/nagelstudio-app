@@ -3786,3 +3786,27 @@ body.app-device-ipad .worktime-special-add{
     grid-template-columns:minmax(150px,1.3fr) minmax(120px,.85fr) 34px minmax(120px,.85fr);
   }
 }
+
+
+/* iPad/Safari Tastatur-Fix: Textfelder müssen den Touch direkt annehmen dürfen. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+textarea{
+  touch-action:manipulation;
+  -webkit-user-select:text;
+  user-select:text;
+  -webkit-touch-callout:default;
+}
+label input,
+label textarea{
+  cursor:text;
+}
+body.app-device-ipad input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+body.app-device-ipad textarea{
+  -webkit-appearance:none;
+  appearance:none;
+}
+body.app-device-ipad input[type="date"],
+body.app-device-ipad input[type="time"]{
+  -webkit-appearance:auto;
+  appearance:auto;
+}
