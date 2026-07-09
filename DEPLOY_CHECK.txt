@@ -1,0 +1,5 @@
+UPLOAD-CHECK
+1. Alle Dateien aus diesem ZIP in den ROOT des GitHub-Repositories nagelstudio-app hochladen. Nicht den ZIP-Ordner hochladen.
+2. Danach prüfen: https://liamtrinh.github.io/nagelstudio-app/version.txt muss Version 3.07 anzeigen.
+3. Danach App öffnen mit: https://liamtrinh.github.io/nagelstudio-app/?v=3.07
+4. Wenn version.txt 404 zeigt, ist GitHub Pages noch nicht aktualisiert oder die Datei liegt im falschen Ordner.

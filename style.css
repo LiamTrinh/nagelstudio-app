@@ -2252,7 +2252,7 @@ body.app-device-ipad .appointment{
   .revenue2-delete{grid-column:5;grid-row:2;}
 }
 
-/* Version 3.05: Mitarbeiter Umsatz - übertragene Erledigt-Buttons sind gesperrt und grau */
+/* Version 3.06: Mitarbeiter Umsatz - übertragene Erledigt-Buttons sind gesperrt und grau */
 .employee-daily-revenue-done-open.employee-daily-revenue-done-active,
 .employee-daily-revenue-done-open:disabled,
 .employee-daily-revenue-a-open.employee-daily-revenue-a-active,
@@ -3880,7 +3880,7 @@ body.app-device-ipad .employee-cell{
   max-width:none;
 }
 
-/* Version 3.05: Tagesplan-Termine als echtes Overlay über einem vollständigen festen Raster.
+/* Version 3.06: Tagesplan-Termine als echtes Overlay über einem vollständigen festen Raster.
    Wichtig für manuelle Dauer wie 125 Minuten: Die Rasterzellen bleiben komplett vorhanden,
    nur der Termin liegt darüber. Dadurch verschieben sich Zeitleiste und Mitarbeiterleiste nicht. */
 .calendar .appointment-slot{
@@ -3914,7 +3914,7 @@ body.app-device-ipad .employee-cell{
   z-index:40 !important;
 }
 
-/* Version 3.05: harter Fix gegen verschobene Zeitleiste bei 125-Minuten-Terminen.
+/* Version 3.06: harter Fix gegen verschobene Zeitleiste bei 125-Minuten-Terminen.
    Termine sind absolut über dem Raster positioniert und beeinflussen das CSS-Grid nicht mehr. */
 .calendar .grid{
   position:relative;
@@ -3941,4 +3941,44 @@ body.app-device-ipad .employee-cell{
   max-height:100%;
   box-sizing:border-box;
   overflow:hidden;
+}
+
+
+/* Version 3.06 FINAL: echte separate Overlay-Ebene für Termine. */
+.calendar-grid-wrap{
+  position:relative !important;
+  display:inline-block !important;
+  min-width:max-content !important;
+}
+.calendar-appointment-layer{
+  position:absolute !important;
+  left:0 !important;
+  top:0 !important;
+  right:auto !important;
+  bottom:auto !important;
+  z-index:24 !important;
+  pointer-events:none !important;
+}
+.calendar .appointment-slot.appointment-overlay{
+  position:absolute !important;
+  display:block !important;
+  z-index:24 !important;
+  pointer-events:auto !important;
+  background:transparent !important;
+  overflow:hidden !important;
+  box-sizing:border-box !important;
+  padding:6px !important;
+  border:0 !important;
+  min-width:0 !important;
+}
+.calendar .appointment-slot.appointment-overlay .appointment{
+  width:100% !important;
+  height:100% !important;
+  min-height:0 !important;
+  max-height:100% !important;
+  box-sizing:border-box !important;
+  overflow:hidden !important;
+}
+.calendar .grid > .appointment-slot{
+  display:none !important;
 }

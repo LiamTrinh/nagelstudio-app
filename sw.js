@@ -1,61 +1,19 @@
-const CACHE = "nail-studio-pwa-v305-hard-reset";
-const FILES = [
-  "./",
-  "./index.html?v=3.05",
-  "./style.css?v=3.05",
-  "./app.js?v=3.05",
-  "./studio-licenses.json",
-  "./manifest.json?v=3.05",
-  "./icon.svg",
-  "./logo-192.png",
-  "./logo-512.png",
-  "./logo-header.png",
-  "./lotus-lt-system-logo.png",
-  "./backup-modern-icon.png"
-];
-
-self.addEventListener("install", event => {
-  self.skipWaiting();
-  event.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.map(key => caches.delete(key))))
-      .then(() => caches.open(CACHE))
-      .then(cache => cache.addAll(FILES).catch(() => undefined))
-  );
-});
-
-self.addEventListener("activate", event => {
-  event.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))
-      .then(() => self.clients.claim())
-  );
-});
-
+const CACHE_NAME = "nail-studio-pwa-v307-final-reset";
+const ASSETS = ["./", "index.html", "style.css?v=3.07-final", "app.js?v=3.07-final", "manifest.json", "logo-192.png", "logo-512.png", "logo-header.png", "lotus-lt-system-logo.png"];
+self.addEventListener("install", event => { self.skipWaiting(); event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).catch(()=>{})); });
+self.addEventListener("activate", event => { event.waitUntil((async()=>{ const names=await caches.keys(); await Promise.all(names.filter(n=>n!==CACHE_NAME).map(n=>caches.delete(n))); await self.clients.claim(); })()); });
 self.addEventListener("fetch", event => {
-  const request = event.request;
-  if(request.method !== "GET") return;
-  const url = new URL(request.url);
-  const isAppShell = /\/(index\.html|app\.js|style\.css|manifest\.json|sw\.js|reset-cache\.html)$/.test(url.pathname) || url.pathname.endsWith("/");
-
-  if(isAppShell){
-    event.respondWith(
-      fetch(request, {cache:"no-store"})
-        .then(response => {
-          const copy = response.clone();
-          caches.open(CACHE).then(cache => cache.put(request, copy)).catch(() => undefined);
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
-    return;
-  }
-
-  event.respondWith(
-    caches.match(request).then(cached => cached || fetch(request).then(response => {
-      const copy = response.clone();
-      caches.open(CACHE).then(cache => cache.put(request, copy)).catch(() => undefined);
-      return response;
-    }))
-  );
+  if(event.request.method !== "GET") return;
+  event.respondWith((async()=>{
+    try{
+      const url=new URL(event.request.url);
+      if(url.pathname.endsWith("index.html") || url.pathname.endsWith("app.js") || url.pathname.endsWith("style.css") || url.pathname.endsWith("sw.js")){
+        return await fetch(event.request, {cache:"no-store"});
+      }
+      return await fetch(event.request);
+    }catch(e){
+      const cached=await caches.match(event.request);
+      return cached || Response.error();
+    }
+  })());
 });

@@ -1,4 +1,4 @@
-const APP_VERSION="3.05";
+const APP_VERSION="3.07";
 const KEY = "nail_studio_pwa_v63";
 const OLD_KEYS = ["nail_studio_pwa_v62", "nail_studio_pwa_v61", "nail_studio_pwa_v60", "nail_studio_pwa_v59", "nail_studio_pwa_v58", "nail_studio_pwa_v57", "nail_studio_pwa_v56", "nail_studio_pwa_v55", "nail_studio_pwa_v54", "nail_studio_pwa_v53", "nail_studio_pwa_v52", "nail_studio_pwa_v51", "nail_studio_pwa_v50", "nail_studio_pwa_v49", "nail_studio_pwa_v48", "nail_studio_pwa_v47", "nail_studio_pwa_v46", "nail_studio_pwa_v45", "nail_studio_pwa_v44", "nail_studio_pwa_v43", "nail_studio_pwa_v42", "nail_studio_pwa_v41", "nail_studio_pwa_v40", "nail_studio_pwa_v39", "nail_studio_pwa_v38", "nail_studio_pwa_v37", "nail_studio_pwa_v36", "nail_studio_pwa_v35", "nail_studio_pwa_v34", "nail_studio_pwa_v33", "nail_studio_pwa_v32", "nail_studio_pwa_v31", "nail_studio_pwa_v30", "nail_studio_pwa_v29", "nail_studio_pwa_v28", "nail_studio_pwa_v27", "nail_studio_pwa_v26", "nail_studio_pwa_v25", "nail_studio_pwa_v24", "nail_studio_pwa_v23", "nail_studio_pwa_v22", "nail_studio_pwa_v21", "nail_studio_pwa_v20", "nail_studio_pwa_v19", "nail_studio_pwa_v18", "nail_studio_pwa_v17", "nail_studio_pwa_v16", "nail_studio_pwa_v15", "nail_studio_pwa_v14", "nail_studio_pwa_v13", "nail_studio_pwa_v12", "nail_studio_pwa_v11", "nail_studio_pwa_v10", "nail_studio_pwa_v9", "nail_studio_pwa_v8", "nail_studio_pwa_v7", "nail_studio_pwa_v6", "nail_studio_pwa_v5", "nail_studio_pwa_v4", "nail_studio_pwa_v3", "nail_studio_pwa_v2", "nail_studio_pwa_v1"];
 const $ = id => document.getElementById(id);
@@ -2196,7 +2196,7 @@ function applyLanguage(){
 
 function renderAll(){
   applyDeviceView();
-  // Version 3.05: sichtbare System-Info-Version bei jedem Rendern erzwingen.
+  // Version 3.07: sichtbare System-Info-Version bei jedem Rendern erzwingen.
   window.NAGELSTUDIO_APP_VERSION = APP_VERSION;
   state.version = APP_VERSION;
   $("studioTitle").textContent = state.studioName || "Nagelstudio";
@@ -3014,14 +3014,16 @@ function renderCalendar(){
   grid.innerHTML=`<div class="corner" style="grid-column:1;grid-row:1;">${t("employee")}</div>`+
     s.map((slotTime, slotIndex)=>`<div class="time-header${timeToMinutes(slotTime) % 60 === 0 ? " full-hour" : ""}" data-time="${slotTime}" style="grid-column:${slotIndex + 2};grid-row:1;">${slotTime}</div>`).join("");
 
+  const appointmentLayer=document.createElement("div");
+  appointmentLayer.className="calendar-appointment-layer";
+
   for(const [employeeIndex, emp] of active.entries()){
     const gridRow = employeeIndex + 2;
     grid.insertAdjacentHTML("beforeend",`<div class="employee-cell employee-row-colored" ${employeeRowStyle(emp, `grid-column:1;grid-row:${gridRow};`)}><span class="employee-name-colored" style="color:${escapeHtml(emp.color || "#d94f93")}">${escapeHtml(emp.name)}</span></div>`);
 
-    // Version 3.05: Zuerst werden ALLE Raster-Zellen fest aufgebaut.
-    // Termine werden danach als Overlay auf feste Spalten gelegt. Dadurch kann ein Termin
-    // mit manueller Dauer (z. B. 125 Min) keine Zellen einfügen, überspringen oder die
-    // horizontale Zeitleiste/Mitarbeiterleiste verschieben.
+    // Version 3.07: Das Raster besteht ausschließlich aus Kopf-, Mitarbeiter- und Slot-Zellen.
+    // Termine werden NICHT mehr in das CSS-Grid eingefügt, sondern in eine separate Overlay-Ebene.
+    // Dadurch kann auch eine freie Dauer wie 125 Minuten keine Grid-Spalten, Zeilen oder Sticky-Leisten verschieben.
     for(const [slotIndex, slotTimeValue] of s.entries()){
       const slotMin = timeToMinutes(slotTimeValue);
       const gridColumn = slotIndex + 2;
@@ -3043,27 +3045,26 @@ function renderCalendar(){
       .filter(a => a.employeeId === emp.id)
       .sort((a,b) => timeToMinutes(a.startTime || "00:00") - timeToMinutes(b.startTime || "00:00"));
     for(const a of employeeAppointments){
-      const slotIndex = s.indexOf(a.startTime);
-      if(slotIndex < 0) continue;
       const intervalMinutes = getSlotIntervalMinutes();
-      const slotMin = timeToMinutes(a.startTime);
-      const gridColumn = slotIndex + 2;
+      const startMin = timeToMinutes(a.startTime || "00:00");
+      const openMin = timeToMinutes(state.openTime);
+      let slotIndex = Math.round((startMin - openMin) / intervalMinutes);
+      if(!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex >= s.length) continue;
       const rawDuration = Number(a.duration || intervalMinutes);
-      const rawSpan = Math.max(1, Math.ceil(rawDuration / intervalMinutes));
+      const exactSpan = Math.max(1, rawDuration / intervalMinutes);
       const remainingSlots = Math.max(1, s.length - slotIndex);
-      const span = Math.min(rawSpan, remainingSlots);
-      // Version 3.05: Termine werden absolut positioniert und sind KEINE Grid-Items mehr.
-      // Dadurch kann eine freie Dauer wie 125 Minuten niemals neue Grid-Spalten/Zellen erzeugen
-      // oder die sticky Zeitleiste/Mitarbeiterleiste verschieben.
+      const span = Math.min(exactSpan, remainingSlots);
       const geom = appointmentAbsoluteGeometry(slotIndex, employeeIndex, span);
       const appointmentStyle = `left:${geom.left}px;top:${geom.top}px;width:${geom.width}px;height:${geom.height}px;`;
-      grid.insertAdjacentHTML("beforeend",`<div class="appointment-slot appointment-absolute employee-row-colored${slotMin % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, appointmentStyle)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
+      const slotMin = startMin;
+      appointmentLayer.insertAdjacentHTML("beforeend",`<div class="appointment-slot appointment-overlay employee-row-colored${slotMin % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, appointmentStyle)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
     }
   }
   $("calendar").innerHTML="";
   const wrap=document.createElement("div");
   wrap.className="calendar-grid-wrap";
   wrap.appendChild(grid);
+  wrap.appendChild(appointmentLayer);
   $("calendar").appendChild(wrap);
   bindCalendarScrollFix();
   updateCalendarNameColumnLock();
@@ -3162,7 +3163,6 @@ function renderCalendar(){
     };
   });
 }
-
 
 function updateCalendarNameColumnLock(){
   const calendar = $("calendar");
@@ -5229,7 +5229,7 @@ function showAppointment(id){
 installIpadKeyboardFocusFix();
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("sw.js?v=3.05").then(reg => {
+    navigator.serviceWorker.register("sw.js?v=3.07-final").then(reg => {
       reg.update && reg.update();
     }).catch(() => {});
   });
