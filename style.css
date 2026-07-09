@@ -3810,3 +3810,18 @@ body.app-device-ipad input[type="time"]{
   -webkit-appearance:auto;
   appearance:auto;
 }
+
+/* V153: Mitarbeiterleiste beim Termin-Anlegen/Verschieben stabilisieren */
+.calendar-grid-wrap{position:relative;min-width:max-content;contain:layout paint;}
+.grid{grid-auto-flow:row;grid-auto-rows:auto;align-items:stretch;}
+.corner,.employee-cell{left:0!important;right:auto!important;transform:none!important;min-width:var(--employee-col);max-width:var(--employee-col);overflow:hidden;backface-visibility:hidden;-webkit-transform:translateZ(0);}
+.corner{grid-column:1;grid-row:1;}
+.employee-cell{grid-column:1;}
+.time-header{grid-row:1;}
+.slot{min-width:0;overflow:hidden;}
+.appointment.dragging-touch{position:fixed!important;z-index:99999!important;width:min(220px,42vw);height:auto;min-height:54px;pointer-events:none;opacity:.92;}
+body.app-device-ipad .calendar{overscroll-behavior:contain;touch-action:pan-x pan-y;}
+body.app-device-ipad .calendar-grid-wrap{transform:translateZ(0);}
+body.app-device-ipad .corner,
+body.app-device-ipad .employee-cell{z-index:12;-webkit-backface-visibility:hidden;}
+body.app-device-ipad .corner{z-index:18;}
