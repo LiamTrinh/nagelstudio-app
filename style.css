@@ -3880,18 +3880,25 @@ body.app-device-ipad .employee-cell{
   max-width:none;
 }
 
-/* Version 3.03: Tagesplan-Termine als Overlay über einem vollständigen festen Raster.
+/* Version 3.04: Tagesplan-Termine als echtes Overlay über einem vollständigen festen Raster.
    Wichtig für manuelle Dauer wie 125 Minuten: Die Rasterzellen bleiben komplett vorhanden,
    nur der Termin liegt darüber. Dadurch verschieben sich Zeitleiste und Mitarbeiterleiste nicht. */
-.calendar .slot.appointment-slot{
+.calendar .appointment-slot{
+  grid-row:auto;
   z-index:24;
   background:transparent !important;
   pointer-events:auto;
   overflow:hidden;
+  box-sizing:border-box;
+  height:var(--row-h);
+  padding:6px;
+  min-width:0;
+  border:0 !important;
 }
-.calendar .slot.appointment-slot .appointment{
+.calendar .appointment-slot .appointment{
   width:100%;
   max-width:100%;
+  height:100%;
   box-sizing:border-box;
 }
 .calendar .slot[data-employee]{

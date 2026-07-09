@@ -1,5 +1,5 @@
-const CACHE = "nail-studio-pwa-v159-version-303-grid-overlay-version-fix";
-const FILES = ["./","./index.html","./style.css","./app.js","./studio-licenses.json","./manifest.json","./icon.svg","./logo-192.png","./logo-512.png","./logo-header.png","./lotus-lt-system-logo.png","./backup-modern-icon.png"];
+const CACHE = "nail-studio-pwa-v160-version-304-cache-bust-grid-overlay";
+const FILES = ["./","./index.html","./style.css?v=3.04","./app.js?v=3.04","./studio-licenses.json","./manifest.json","./icon.svg","./logo-192.png","./logo-512.png","./logo-header.png","./lotus-lt-system-logo.png","./backup-modern-icon.png"];
 self.addEventListener("install", e => {
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
