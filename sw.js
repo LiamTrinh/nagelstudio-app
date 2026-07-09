@@ -1,19 +1,14 @@
-const CACHE_NAME = "nail-studio-pwa-v307-final-reset";
-const ASSETS = ["./", "index.html", "style.css?v=3.07-final", "app.js?v=3.07-final", "manifest.json", "logo-192.png", "logo-512.png", "logo-header.png", "lotus-lt-system-logo.png"];
-self.addEventListener("install", event => { self.skipWaiting(); event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).catch(()=>{})); });
-self.addEventListener("activate", event => { event.waitUntil((async()=>{ const names=await caches.keys(); await Promise.all(names.filter(n=>n!==CACHE_NAME).map(n=>caches.delete(n))); await self.clients.claim(); })()); });
-self.addEventListener("fetch", event => {
-  if(event.request.method !== "GET") return;
-  event.respondWith((async()=>{
-    try{
-      const url=new URL(event.request.url);
-      if(url.pathname.endsWith("index.html") || url.pathname.endsWith("app.js") || url.pathname.endsWith("style.css") || url.pathname.endsWith("sw.js")){
-        return await fetch(event.request, {cache:"no-store"});
-      }
-      return await fetch(event.request);
-    }catch(e){
-      const cached=await caches.match(event.request);
-      return cached || Response.error();
-    }
-  })());
+const CACHE = "nail-studio-pwa-v159-version-303-grid-overlay-version-fix";
+const FILES = ["./","./index.html","./style.css","./app.js","./studio-licenses.json","./manifest.json","./icon.svg","./logo-192.png","./logo-512.png","./logo-header.png","./lotus-lt-system-logo.png","./backup-modern-icon.png"];
+self.addEventListener("install", e => {
+  self.skipWaiting();
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
 });
+self.addEventListener("activate", e => {
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+});
+self.addEventListener("fetch", e => e.respondWith(fetch(e.request).then(r => {
+  const copy = r.clone();
+  caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+  return r;
+}).catch(() => caches.match(e.request))));
