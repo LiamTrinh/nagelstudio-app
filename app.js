@@ -405,7 +405,7 @@ function ensureBuiltInServices(list){
   return services;
 }
 function defaultState(){ return {
-	  version:"3.01", configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", scheduleIntervalMinutes:15, dashboardReturnEnabled:true, dashboardReturnDelayMs:60000, cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
+	  version:"3.02", configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", scheduleIntervalMinutes:15, dashboardReturnEnabled:true, dashboardReturnDelayMs:60000, cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
   employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[], employeeDailyRevenueRecords:[], revenue2Entries:[], revenue2DeletedAppointmentIds:[], revenue2CashEntries:[], revenue2CashDeletedAppointmentIds:[], cashWithdrawals:[], cashDeposits:[], journalRevenueCorrections:{}, journalRevenueDeletedDays:[], periodRevenueManualEdits:{week:{},month:{}}, paymentSales:[],
   selectedDate:todayISO(), journalDate:todayISO(), storageMode:"local"
 };}
@@ -4895,7 +4895,7 @@ function buildBackupPayload(type){
         ? "Backup nach Bereinigung: Alle Termine von heute und Vergangenheit sowie alle Umsatzdaten aus Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz wurden vorher endgültig entfernt. Nur Zukunft-Termine bleiben erhalten."
         : "Normales Backup."
     },
-    data:{...state, version:"3.01"}
+    data:{...state, version:"3.02"}
   };
 }
 function setLocalBackupStatus(filename){
@@ -5121,7 +5121,7 @@ function importBackup(e){
       state={
         ...defaultState(),
         ...imported,
-        version:"3.01",
+        version:"3.02",
         configured:true,
         services:Array.isArray(imported.services) && imported.services.length ? imported.services : defaultServices(),
         customers:Array.isArray(imported.customers) ? imported.customers : [],
