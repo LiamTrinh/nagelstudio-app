@@ -3851,3 +3851,14 @@ body.app-device-ipad .employee-cell{
   background-clip:padding-box;
   contain:paint;
 }
+
+
+/* Version 2.97: Tagesplan gegen manuelle Dauer-Werte stabilisieren.
+   Termine werden im JS jetzt immer auf volle Raster-Spalten aufgerundet, damit
+   jede Mitarbeiter-Zeile exakt gleich viele Grid-Spalten belegt. */
+.calendar .grid{
+  grid-auto-flow:row !important;
+}
+.calendar .slot{
+  box-sizing:border-box;
+}

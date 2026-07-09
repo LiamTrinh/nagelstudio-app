@@ -2994,10 +2994,15 @@ function renderCalendar(){
       if(skipUntil && timeToMinutes(t) < skipUntil) continue;
       const a=todays.find(x=>x.employeeId===emp.id && x.startTime===t);
       if(a){
-        const rawSpan=Math.max(1,Math.round(Number(a.duration)/getSlotIntervalMinutes()));
+        const intervalMinutes = getSlotIntervalMinutes();
+        // Version 2.97: Dauer darf manuell geändert werden und muss nicht exakt zum Tagesplan-Takt passen.
+        // Wichtig: Die Anzahl der übersprungenen Rasterfelder muss exakt zur CSS-Grid-Spalte passen.
+        // Mit Math.round() konnte z. B. 20 Min bei 15-Min-Takt nur 1 Spalte breit sein,
+        // aber trotzdem 2 Zeitfelder blockieren. Dadurch rutschten Mitarbeiterleiste und Zeitleiste auseinander.
+        const rawSpan=Math.max(1,Math.ceil(Number(a.duration || intervalMinutes)/intervalMinutes));
         const remainingSlots=Math.max(1, s.length - s.indexOf(t));
         const span=Math.min(rawSpan, remainingSlots);
-        skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
+        skipUntil=timeToMinutes(a.startTime)+(span * intervalMinutes);
         grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored${timeToMinutes(t) % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
       }else{
         const pastIssue = isAppointmentDateTimeInPast(state.selectedDate, t) ? pastAppointmentWarningText() : "";
