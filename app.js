@@ -1,4 +1,4 @@
-const APP_VERSION="3.04";
+const APP_VERSION="3.05";
 const KEY = "nail_studio_pwa_v63";
 const OLD_KEYS = ["nail_studio_pwa_v62", "nail_studio_pwa_v61", "nail_studio_pwa_v60", "nail_studio_pwa_v59", "nail_studio_pwa_v58", "nail_studio_pwa_v57", "nail_studio_pwa_v56", "nail_studio_pwa_v55", "nail_studio_pwa_v54", "nail_studio_pwa_v53", "nail_studio_pwa_v52", "nail_studio_pwa_v51", "nail_studio_pwa_v50", "nail_studio_pwa_v49", "nail_studio_pwa_v48", "nail_studio_pwa_v47", "nail_studio_pwa_v46", "nail_studio_pwa_v45", "nail_studio_pwa_v44", "nail_studio_pwa_v43", "nail_studio_pwa_v42", "nail_studio_pwa_v41", "nail_studio_pwa_v40", "nail_studio_pwa_v39", "nail_studio_pwa_v38", "nail_studio_pwa_v37", "nail_studio_pwa_v36", "nail_studio_pwa_v35", "nail_studio_pwa_v34", "nail_studio_pwa_v33", "nail_studio_pwa_v32", "nail_studio_pwa_v31", "nail_studio_pwa_v30", "nail_studio_pwa_v29", "nail_studio_pwa_v28", "nail_studio_pwa_v27", "nail_studio_pwa_v26", "nail_studio_pwa_v25", "nail_studio_pwa_v24", "nail_studio_pwa_v23", "nail_studio_pwa_v22", "nail_studio_pwa_v21", "nail_studio_pwa_v20", "nail_studio_pwa_v19", "nail_studio_pwa_v18", "nail_studio_pwa_v17", "nail_studio_pwa_v16", "nail_studio_pwa_v15", "nail_studio_pwa_v14", "nail_studio_pwa_v13", "nail_studio_pwa_v12", "nail_studio_pwa_v11", "nail_studio_pwa_v10", "nail_studio_pwa_v9", "nail_studio_pwa_v8", "nail_studio_pwa_v7", "nail_studio_pwa_v6", "nail_studio_pwa_v5", "nail_studio_pwa_v4", "nail_studio_pwa_v3", "nail_studio_pwa_v2", "nail_studio_pwa_v1"];
 const $ = id => document.getElementById(id);
@@ -2196,7 +2196,7 @@ function applyLanguage(){
 
 function renderAll(){
   applyDeviceView();
-  // Version 3.04: sichtbare System-Info-Version bei jedem Rendern erzwingen.
+  // Version 3.05: sichtbare System-Info-Version bei jedem Rendern erzwingen.
   window.NAGELSTUDIO_APP_VERSION = APP_VERSION;
   state.version = APP_VERSION;
   $("studioTitle").textContent = state.studioName || "Nagelstudio";
@@ -2987,6 +2987,23 @@ function clearSelectedCalendarSlot(){
   if(calendar) calendar.querySelectorAll(".slot.selected-free-slot").forEach(el => el.classList.remove("selected-free-slot"));
 }
 
+function cssPixelVar(name, fallback){
+  const raw = getComputedStyle(document.body || document.documentElement).getPropertyValue(name).trim();
+  const n = parseFloat(raw);
+  return Number.isFinite(n) ? n : fallback;
+}
+function appointmentAbsoluteGeometry(slotIndex, employeeIndex, span){
+  const employeeCol = cssPixelVar("--employee-col", 170);
+  const timeCol = cssPixelVar("--time-col", 160);
+  const rowH = cssPixelVar("--row-h", 96);
+  return {
+    left: employeeCol + slotIndex * timeCol,
+    top: 56 + employeeIndex * rowH,
+    width: Math.max(timeCol, span * timeCol),
+    height: rowH
+  };
+}
+
 function renderCalendar(){
   const s=slots(), active=state.employees.filter(e=>e.active).sort(byName), todays=state.appointments.filter(a=>a.date===state.selectedDate);
   $("appointmentCount").textContent=`${todays.length} Termine`;
@@ -3001,7 +3018,7 @@ function renderCalendar(){
     const gridRow = employeeIndex + 2;
     grid.insertAdjacentHTML("beforeend",`<div class="employee-cell employee-row-colored" ${employeeRowStyle(emp, `grid-column:1;grid-row:${gridRow};`)}><span class="employee-name-colored" style="color:${escapeHtml(emp.color || "#d94f93")}">${escapeHtml(emp.name)}</span></div>`);
 
-    // Version 3.04: Zuerst werden ALLE Raster-Zellen fest aufgebaut.
+    // Version 3.05: Zuerst werden ALLE Raster-Zellen fest aufgebaut.
     // Termine werden danach als Overlay auf feste Spalten gelegt. Dadurch kann ein Termin
     // mit manueller Dauer (z. B. 125 Min) keine Zellen einfügen, überspringen oder die
     // horizontale Zeitleiste/Mitarbeiterleiste verschieben.
@@ -3035,8 +3052,12 @@ function renderCalendar(){
       const rawSpan = Math.max(1, Math.ceil(rawDuration / intervalMinutes));
       const remainingSlots = Math.max(1, s.length - slotIndex);
       const span = Math.min(rawSpan, remainingSlots);
-      const appointmentStyle = `grid-column:${gridColumn} / span ${span};grid-row:${gridRow};`;
-      grid.insertAdjacentHTML("beforeend",`<div class="appointment-slot employee-row-colored${slotMin % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, appointmentStyle)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
+      // Version 3.05: Termine werden absolut positioniert und sind KEINE Grid-Items mehr.
+      // Dadurch kann eine freie Dauer wie 125 Minuten niemals neue Grid-Spalten/Zellen erzeugen
+      // oder die sticky Zeitleiste/Mitarbeiterleiste verschieben.
+      const geom = appointmentAbsoluteGeometry(slotIndex, employeeIndex, span);
+      const appointmentStyle = `left:${geom.left}px;top:${geom.top}px;width:${geom.width}px;height:${geom.height}px;`;
+      grid.insertAdjacentHTML("beforeend",`<div class="appointment-slot appointment-absolute employee-row-colored${slotMin % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, appointmentStyle)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
     }
   }
   $("calendar").innerHTML="";
@@ -4901,7 +4922,7 @@ function buildBackupPayload(type){
       backupType:type || "Normal",
       createdAt:nowStampHuman(),
       createdAtISO:new Date().toISOString(),
-      appVersion:"3.17",
+      appVersion:APP_VERSION,
       note:type === "Bereinigung"
         ? "Backup nach Bereinigung: Alle Termine von heute und Vergangenheit sowie alle Umsatzdaten aus Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz wurden vorher endgültig entfernt. Nur Zukunft-Termine bleiben erhalten."
         : "Normales Backup."
@@ -5206,5 +5227,11 @@ function showAppointment(id){
   $("appointmentDialog").showModal();
 }
 installIpadKeyboardFocusFix();
-if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js")); }
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("sw.js?v=3.05").then(reg => {
+      reg.update && reg.update();
+    }).catch(() => {});
+  });
+}
 boot();

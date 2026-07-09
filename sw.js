@@ -1,14 +1,61 @@
-const CACHE = "nail-studio-pwa-v160-version-304-cache-bust-grid-overlay";
-const FILES = ["./","./index.html","./style.css?v=3.04","./app.js?v=3.04","./studio-licenses.json","./manifest.json","./icon.svg","./logo-192.png","./logo-512.png","./logo-header.png","./lotus-lt-system-logo.png","./backup-modern-icon.png"];
-self.addEventListener("install", e => {
+const CACHE = "nail-studio-pwa-v305-hard-reset";
+const FILES = [
+  "./",
+  "./index.html?v=3.05",
+  "./style.css?v=3.05",
+  "./app.js?v=3.05",
+  "./studio-licenses.json",
+  "./manifest.json?v=3.05",
+  "./icon.svg",
+  "./logo-192.png",
+  "./logo-512.png",
+  "./logo-header.png",
+  "./lotus-lt-system-logo.png",
+  "./backup-modern-icon.png"
+];
+
+self.addEventListener("install", event => {
   self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
+  event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.map(key => caches.delete(key))))
+      .then(() => caches.open(CACHE))
+      .then(cache => cache.addAll(FILES).catch(() => undefined))
+  );
 });
-self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))
+      .then(() => self.clients.claim())
+  );
 });
-self.addEventListener("fetch", e => e.respondWith(fetch(e.request).then(r => {
-  const copy = r.clone();
-  caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-  return r;
-}).catch(() => caches.match(e.request))));
+
+self.addEventListener("fetch", event => {
+  const request = event.request;
+  if(request.method !== "GET") return;
+  const url = new URL(request.url);
+  const isAppShell = /\/(index\.html|app\.js|style\.css|manifest\.json|sw\.js|reset-cache\.html)$/.test(url.pathname) || url.pathname.endsWith("/");
+
+  if(isAppShell){
+    event.respondWith(
+      fetch(request, {cache:"no-store"})
+        .then(response => {
+          const copy = response.clone();
+          caches.open(CACHE).then(cache => cache.put(request, copy)).catch(() => undefined);
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(request).then(cached => cached || fetch(request).then(response => {
+      const copy = response.clone();
+      caches.open(CACHE).then(cache => cache.put(request, copy)).catch(() => undefined);
+      return response;
+    }))
+  );
+});

@@ -2252,7 +2252,7 @@ body.app-device-ipad .appointment{
   .revenue2-delete{grid-column:5;grid-row:2;}
 }
 
-/* Version 3.04: Mitarbeiter Umsatz - übertragene Erledigt-Buttons sind gesperrt und grau */
+/* Version 3.05: Mitarbeiter Umsatz - übertragene Erledigt-Buttons sind gesperrt und grau */
 .employee-daily-revenue-done-open.employee-daily-revenue-done-active,
 .employee-daily-revenue-done-open:disabled,
 .employee-daily-revenue-a-open.employee-daily-revenue-a-active,
@@ -3652,7 +3652,7 @@ body.app-device-ipad #appointmentDialog .appointment-edit-date-time{
 }
 
 
-/* Version 2.92: Arbeitszeit/Urlaub nutzt volle Dialogbreite und iPad-Layout ohne Überlappung */
+/* Arbeitszeit/Urlaub nutzt volle Dialogbreite und iPad-Layout ohne Überlappung */
 #settingsWorkTimeTab.active{
   width:100% !important;
 }
@@ -3788,7 +3788,7 @@ body.app-device-ipad .worktime-special-add{
 }
 
 
-/* Version 2.96: sichere Übernahme aus 2.92 + iPad Tastatur-Fix + Mitarbeiterleiste stabil */
+/* Sichere Übernahme alter Daten + iPad Tastatur-Fix + Mitarbeiterleiste stabil */
 .calendar{
   position:relative;
   overflow:auto;
@@ -3880,7 +3880,7 @@ body.app-device-ipad .employee-cell{
   max-width:none;
 }
 
-/* Version 3.04: Tagesplan-Termine als echtes Overlay über einem vollständigen festen Raster.
+/* Version 3.05: Tagesplan-Termine als echtes Overlay über einem vollständigen festen Raster.
    Wichtig für manuelle Dauer wie 125 Minuten: Die Rasterzellen bleiben komplett vorhanden,
    nur der Termin liegt darüber. Dadurch verschieben sich Zeitleiste und Mitarbeiterleiste nicht. */
 .calendar .appointment-slot{
@@ -3912,4 +3912,33 @@ body.app-device-ipad .employee-cell{
 }
 .calendar .corner{
   z-index:40 !important;
+}
+
+/* Version 3.05: harter Fix gegen verschobene Zeitleiste bei 125-Minuten-Terminen.
+   Termine sind absolut über dem Raster positioniert und beeinflussen das CSS-Grid nicht mehr. */
+.calendar .grid{
+  position:relative;
+}
+.calendar .appointment-slot.appointment-absolute{
+  position:absolute !important;
+  /* left/top/width/height werden in Pixeln aus den aktuellen CSS-Variablen berechnet. */
+  z-index:24;
+  display:block;
+  grid-column:auto !important;
+  grid-row:auto !important;
+  background:transparent !important;
+  pointer-events:auto;
+  overflow:hidden;
+  box-sizing:border-box;
+  padding:6px;
+  min-width:0;
+  border:0 !important;
+}
+.calendar .appointment-slot.appointment-absolute .appointment{
+  width:100%;
+  height:100%;
+  min-height:0 !important;
+  max-height:100%;
+  box-sizing:border-box;
+  overflow:hidden;
 }

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <title>Nagelstudio Cache Reset</title>
+  <style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;padding:28px;background:#fff7fb;color:#2d1b25}button{font-size:18px;padding:14px 18px;border:0;border-radius:14px;background:#d94f93;color:white;font-weight:800}.box{max-width:620px;background:white;border:1px solid #f0dce6;border-radius:22px;padding:22px;box-shadow:0 8px 24px rgba(45,27,37,.08)}</style>
+</head>
+<body>
+  <div class="box">
+    <h1>Cache wird bereinigt …</h1>
+    <p>Diese Seite löscht alte PWA-/Service-Worker-Dateien, damit Version 3.05 geladen wird.</p>
+    <button id="go">Jetzt bereinigen und App öffnen</button>
+    <p id="status"></p>
+  </div>
+<script>
+async function resetAndOpen(){
+  const status = document.getElementById('status');
+  status.textContent = 'Bereinigung läuft …';
+  try{
+    if('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    if(window.caches){
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    localStorage.setItem('nagelstudio_cache_reset_305', new Date().toISOString());
+    status.textContent = 'Fertig. App wird neu geöffnet …';
+  }catch(e){
+    status.textContent = 'Bereinigung teilweise fehlgeschlagen, App wird trotzdem neu geöffnet …';
+  }
+  location.replace('./index.html?v=3.05&reset=' + Date.now());
+}
+document.getElementById('go').addEventListener('click', resetAndOpen);
+resetAndOpen();
+</script>
+</body>
+</html>
