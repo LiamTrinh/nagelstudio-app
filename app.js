@@ -1443,8 +1443,6 @@ async function boot(){
     const currentDateInput = $("currentDateInput");
     if(currentDateInput) currentDateInput.value = state.selectedDate || todayISO();
 
-    installIPadKeyboardFocusFix();
-
     bindLicenseEvents();
 
     if(typeof startCurrentTimeTicker === "function") startCurrentTimeTicker();
@@ -2784,77 +2782,6 @@ function addService(){
 }
 
 
-
-
-function isIOSLikeDevice(){
-  const ua = navigator.userAgent || "";
-  return /iPad|iPhone|iPod/i.test(ua) || ((navigator.maxTouchPoints || 0) > 1 && /Macintosh/i.test(ua));
-}
-
-function isKeyboardTextControl(el){
-  if(!el || el.disabled || el.readOnly) return false;
-  const tag = String(el.tagName || "").toLowerCase();
-  if(tag === "textarea") return true;
-  if(tag !== "input") return false;
-  const type = String(el.getAttribute("type") || "text").toLowerCase();
-  return ["text","search","tel","url","email","password","number","decimal"].includes(type);
-}
-
-function keyboardFocusTargetFromEvent(e){
-  let target = e.target;
-  if(!target) return null;
-  if(isKeyboardTextControl(target)) return target;
-  const label = target.closest ? target.closest("label") : null;
-  if(label){
-    const control = label.querySelector("input, textarea");
-    if(isKeyboardTextControl(control)) return control;
-  }
-  return null;
-}
-
-function focusKeyboardControl(el){
-  if(!isKeyboardTextControl(el)) return;
-  // Wenn ein Termin-Touch-Drag noch aktiv war, blockiert Safari manchmal das nächste Tastatur-Öffnen.
-  cleanupTouchDragAppointment({cancelMove:true});
-  try{ el.focus({preventScroll:false}); }catch(err){ try{ el.focus(); }catch(err2){} }
-  try{
-    const value = String(el.value || "");
-    if(typeof el.setSelectionRange === "function") el.setSelectionRange(value.length, value.length);
-  }catch(err){}
-}
-
-function installIPadKeyboardFocusFix(){
-  if(window.__ipadKeyboardFocusFixInstalled) return;
-  window.__ipadKeyboardFocusFixInstalled = true;
-  let touchStart = null;
-  const rememberTouchStart = e => {
-    const t = e.changedTouches && e.changedTouches[0];
-    if(!t) return;
-    touchStart = {x:t.clientX, y:t.clientY, target:e.target};
-  };
-  const focusFromTouchEnd = e => {
-    if(!isIOSLikeDevice()) return;
-    const t = e.changedTouches && e.changedTouches[0];
-    if(!t) return;
-    const moved = touchStart ? Math.abs(t.clientX - touchStart.x) + Math.abs(t.clientY - touchStart.y) : 0;
-    if(moved > 18) return;
-    const el = keyboardFocusTargetFromEvent(e) || keyboardFocusTargetFromEvent({target:document.elementFromPoint(t.clientX, t.clientY)});
-    if(el) focusKeyboardControl(el);
-  };
-  const focusFromPointer = e => {
-    if(!isIOSLikeDevice()) return;
-    if(e.pointerType && e.pointerType !== "touch") return;
-    const el = keyboardFocusTargetFromEvent(e);
-    if(el) focusKeyboardControl(el);
-  };
-  document.addEventListener("touchstart", rememberTouchStart, {capture:true, passive:true});
-  document.addEventListener("touchend", focusFromTouchEnd, {capture:true, passive:true});
-  document.addEventListener("pointerup", focusFromPointer, {capture:true, passive:true});
-  document.addEventListener("focusin", e => {
-    if(isKeyboardTextControl(e.target)) cleanupTouchDragAppointment({cancelMove:true});
-  }, {capture:true, passive:true});
-}
-
 function startMoveAppointment(id){
   movingAppointmentId = id;
   suppressAppointmentClick = true;
@@ -3015,62 +2942,37 @@ function clearSelectedCalendarSlot(){
 function renderCalendar(){
   const s=slots(), active=state.employees.filter(e=>e.active).sort(byName), todays=state.appointments.filter(a=>a.date===state.selectedDate);
   $("appointmentCount").textContent=`${todays.length} Termine`;
-  const calendarEl = $("calendar");
-  const keepScrollLeft = calendarEl ? calendarEl.scrollLeft : 0;
-  const keepScrollTop = calendarEl ? calendarEl.scrollTop : 0;
   const grid=document.createElement("div"); grid.className="grid"; grid.style.setProperty("--slots",s.length);
-  grid.style.setProperty("--employees",active.length);
-
-  // V153: iPad/Safari Stabilisierung der Mitarbeiterleiste.
-  // Alle Kalenderzellen bekommen explizite Grid-Positionen. Dadurch kann ein neu
-  // angelegter Termin mit langer Dauer keine impliziten Spalten erzeugen und die
-  // linke Mitarbeiter-Spalte nicht mehr optisch verschieben.
-  grid.innerHTML=`<div class="corner" style="grid-column:1;grid-row:1;">${t("employee")}</div>`+
-    s.map((slotTime, slotIndex)=>`<div class="time-header${timeToMinutes(slotTime) % 60 === 0 ? " full-hour" : ""}" data-time="${slotTime}" style="grid-column:${slotIndex+2};grid-row:1;">${slotTime}</div>`).join("");
-
-  active.forEach((emp, empIndex)=>{
-    const row = empIndex + 2;
-    grid.insertAdjacentHTML("beforeend",`<div class="employee-cell employee-row-colored" ${employeeRowStyle(emp, `grid-column:1;grid-row:${row};`)}><span class="employee-name-colored" style="color:${escapeHtml(emp.color || "#d94f93")}">${escapeHtml(emp.name)}</span></div>`);
+  grid.innerHTML=`<div class="corner">${t("employee")}</div>`+s.map(slotTime=>`<div class="time-header${timeToMinutes(slotTime) % 60 === 0 ? " full-hour" : ""}" data-time="${slotTime}">${slotTime}</div>`).join("");
+  for(const emp of active){
+    grid.insertAdjacentHTML("beforeend",`<div class="employee-cell employee-row-colored" ${employeeRowStyle(emp)}><span class="employee-name-colored" style="color:${escapeHtml(emp.color || "#d94f93")}">${escapeHtml(emp.name)}</span></div>`);
     let skipUntil = null;
-    s.forEach((slotTime, slotIndex)=>{
-      const slotMinutes = timeToMinutes(slotTime);
-      if(skipUntil && slotMinutes < skipUntil) return;
-      const col = slotIndex + 2;
-      const cellPlacement = `grid-column:${col};grid-row:${row};`;
-      const a=todays.find(x=>x.employeeId===emp.id && x.startTime===slotTime);
+    for(const t of s){
+      if(skipUntil && timeToMinutes(t) < skipUntil) continue;
+      const a=todays.find(x=>x.employeeId===emp.id && x.startTime===t);
       if(a){
-        const rawSpan=Math.max(1,Math.ceil(Number(a.duration || getSlotIntervalMinutes())/getSlotIntervalMinutes()));
-        const span=Math.max(1,Math.min(rawSpan, s.length - slotIndex));
-        skipUntil=slotMinutes+Number(a.duration || getSlotIntervalMinutes());
-        grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored${slotMinutes % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, `grid-column:${col} / span ${span};grid-row:${row};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
+        const span=Math.max(1,Math.round(Number(a.duration)/getSlotIntervalMinutes())); skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
+        grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored${timeToMinutes(t) % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
       }else{
-        const pastIssue = isAppointmentDateTimeInPast(state.selectedDate, slotTime) ? pastAppointmentWarningText() : "";
-        const issue = pastIssue || employeeAvailabilityIssue(emp, state.selectedDate, slotTime, getSlotIntervalMinutes());
+        const pastIssue = isAppointmentDateTimeInPast(state.selectedDate, t) ? pastAppointmentWarningText() : "";
+        const issue = pastIssue || employeeAvailabilityIssue(emp, state.selectedDate, t, getSlotIntervalMinutes());
         if(issue){
           if(pastIssue){
-            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot past-slot${slotMinutes % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, cellPlacement)} title="${escapeHtml(issue)}"></div>`);
+            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot past-slot${timeToMinutes(t) % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"></div>`);
           }else{
-            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot${slotMinutes % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, cellPlacement)} title="${escapeHtml(issue)}"><span class="slot-lock">Gesperrt</span></div>`);
+            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot${timeToMinutes(t) % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"><span class="slot-lock">Gesperrt</span></div>`);
           }
         }else{
-          grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored ${slotMinutes % 60 === 0 ? 'full-hour-slot ' : ''}${selectedCalendarSlotMatches(emp.id, slotTime) ? 'selected-free-slot' : ''}" ${employeeRowStyle(emp, cellPlacement)} data-employee="${emp.id}" data-time="${slotTime}"></div>`);
+          grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored ${timeToMinutes(t) % 60 === 0 ? 'full-hour-slot ' : ''}${selectedCalendarSlotMatches(emp.id, t) ? 'selected-free-slot' : ''}" ${employeeRowStyle(emp)} data-employee="${emp.id}" data-time="${t}"></div>`);
         }
       }
-    });
-  });
-
-  calendarEl.innerHTML="";
+    }
+  }
+  $("calendar").innerHTML="";
   const wrap=document.createElement("div");
   wrap.className="calendar-grid-wrap";
   wrap.appendChild(grid);
-  calendarEl.appendChild(wrap);
-  calendarEl.scrollLeft = keepScrollLeft;
-  calendarEl.scrollTop = keepScrollTop;
-  requestAnimationFrame(()=>{
-    calendarEl.scrollLeft = keepScrollLeft;
-    calendarEl.scrollTop = keepScrollTop;
-    updateCalendarNameColumnLock();
-  });
+  $("calendar").appendChild(wrap);
   bindCalendarScrollFix();
   updateCalendarNameColumnLock();
   renderCurrentTimeLine(wrap);
