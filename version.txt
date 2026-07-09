@@ -1,2 +1,1 @@
-Nagelstudio PWA Version 3.09 final
-Wenn diese Datei unter https://liamtrinh.github.io/nagelstudio-app/version.txt nicht erreichbar ist, wurde die neue Version nicht auf GitHub Pages hochgeladen.
+Nagelstudio PWA Version 3.10 partial absence / stundenweise Sperrzeit

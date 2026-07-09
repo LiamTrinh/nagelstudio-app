@@ -7,10 +7,10 @@
   <title>Nagelstudio Terminplaner</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="logo-192.png">
-  <link rel="stylesheet" href="style.css?v=3.09-final">
+  <link rel="stylesheet" href="style.css?v=3.10-partial-absence">
 
   <script>
-  // Version 3.09: GitHub/PWA-Hard-Refresh direkt in index.html.
+  // Version 3.10: GitHub/PWA-Hard-Refresh direkt in index.html.
   // Läuft nur einmal pro Browser-Session, damit keine Endlos-Schleife entsteht.
   (function(){
     var KEY = "nagelstudio_309_cache_reset_done";
@@ -21,8 +21,8 @@
       .then(function(){ return (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) ? navigator.serviceWorker.getRegistrations().then(function(regs){ return Promise.all(regs.map(function(r){ return r.unregister(); })); }) : null; })
       .then(function(){
         var u = new URL(location.href);
-        if (u.searchParams.get("v") !== "3.09") {
-          u.searchParams.set("v", "3.09");
+        if (u.searchParams.get("v") !== "3.10") {
+          u.searchParams.set("v", "3.10");
           location.replace(u.toString());
         }
       })
@@ -494,7 +494,7 @@
       <div class="settings-grid system-info-grid">
         <div class="settings-section wide-section">
           <h3 data-i18n="systemInfo">System Info</h3>
-          <p class="hint"><strong data-i18n="versionLabel">Version:</strong> <span id="appVisibleVersion">3.09</span></p>
+          <p class="hint"><strong data-i18n="versionLabel">Version:</strong> <span id="appVisibleVersion">3.10</span></p>
           <p class="hint"><strong data-i18n="developerLabel">Hersteller / Entwickler:</strong> Liam Trinh</p>
           <p class="hint"><strong data-i18n="copyrightLabel">Copyright:</strong> Copyright © 2026 Liam Trinh 鄭慶廉</p>
           <div class="system-clean-actions">
@@ -855,15 +855,15 @@
   </dialog>
 
   <div id="licenseFooterBar" class="license-footer-bar hidden" aria-live="polite">Lizenz wird geprüft …</div>
-<script>window.NAGELSTUDIO_APP_VERSION="3.09";</script>
-<script src="app.js?v=3.09-final"></script>
+<script>window.NAGELSTUDIO_APP_VERSION="3.10";</script>
+<script src="app.js?v=3.10-partial-absence"></script>
 <script>
 (function(){
   function forceVersion(){
-    window.NAGELSTUDIO_APP_VERSION="3.09";
+    window.NAGELSTUDIO_APP_VERSION="3.10";
     var el=document.getElementById("appVisibleVersion");
-    if(el) el.textContent="3.09";
-    try{ localStorage.setItem("nagelstudio_live_build_version","3.09"); }catch(e){}
+    if(el) el.textContent="3.10";
+    try{ localStorage.setItem("nagelstudio_live_build_version","3.10"); }catch(e){}
   }
   forceVersion();
   document.addEventListener("DOMContentLoaded", forceVersion);

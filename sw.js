@@ -1,5 +1,5 @@
-const CACHE_NAME = "nail-studio-pwa-v309-final-reset";
-const ASSETS = ["./", "index.html", "style.css?v=3.09-final", "app.js?v=3.09-final", "manifest.json", "logo-192.png", "logo-512.png", "logo-header.png", "lotus-lt-system-logo.png"];
+const CACHE_NAME = "nail-studio-pwa-v310-partial-absence";
+const ASSETS = ["./", "index.html", "style.css?v=3.10-partial-absence", "app.js?v=3.10-partial-absence", "manifest.json", "logo-192.png", "logo-512.png", "logo-header.png", "lotus-lt-system-logo.png"];
 self.addEventListener("install", event => { self.skipWaiting(); event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)).catch(()=>{})); });
 self.addEventListener("activate", event => { event.waitUntil((async()=>{ const names=await caches.keys(); await Promise.all(names.filter(n=>n!==CACHE_NAME).map(n=>caches.delete(n))); await self.clients.claim(); })()); });
 self.addEventListener("fetch", event => {

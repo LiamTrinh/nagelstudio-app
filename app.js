@@ -1,4 +1,4 @@
-const APP_VERSION="3.09";
+const APP_VERSION="3.10";
 const KEY = "nail_studio_pwa_v63";
 const OLD_KEYS = ["nail_studio_pwa_v62", "nail_studio_pwa_v61", "nail_studio_pwa_v60", "nail_studio_pwa_v59", "nail_studio_pwa_v58", "nail_studio_pwa_v57", "nail_studio_pwa_v56", "nail_studio_pwa_v55", "nail_studio_pwa_v54", "nail_studio_pwa_v53", "nail_studio_pwa_v52", "nail_studio_pwa_v51", "nail_studio_pwa_v50", "nail_studio_pwa_v49", "nail_studio_pwa_v48", "nail_studio_pwa_v47", "nail_studio_pwa_v46", "nail_studio_pwa_v45", "nail_studio_pwa_v44", "nail_studio_pwa_v43", "nail_studio_pwa_v42", "nail_studio_pwa_v41", "nail_studio_pwa_v40", "nail_studio_pwa_v39", "nail_studio_pwa_v38", "nail_studio_pwa_v37", "nail_studio_pwa_v36", "nail_studio_pwa_v35", "nail_studio_pwa_v34", "nail_studio_pwa_v33", "nail_studio_pwa_v32", "nail_studio_pwa_v31", "nail_studio_pwa_v30", "nail_studio_pwa_v29", "nail_studio_pwa_v28", "nail_studio_pwa_v27", "nail_studio_pwa_v26", "nail_studio_pwa_v25", "nail_studio_pwa_v24", "nail_studio_pwa_v23", "nail_studio_pwa_v22", "nail_studio_pwa_v21", "nail_studio_pwa_v20", "nail_studio_pwa_v19", "nail_studio_pwa_v18", "nail_studio_pwa_v17", "nail_studio_pwa_v16", "nail_studio_pwa_v15", "nail_studio_pwa_v14", "nail_studio_pwa_v13", "nail_studio_pwa_v12", "nail_studio_pwa_v11", "nail_studio_pwa_v10", "nail_studio_pwa_v9", "nail_studio_pwa_v8", "nail_studio_pwa_v7", "nail_studio_pwa_v6", "nail_studio_pwa_v5", "nail_studio_pwa_v4", "nail_studio_pwa_v3", "nail_studio_pwa_v2", "nail_studio_pwa_v1"];
 const $ = id => document.getElementById(id);
@@ -627,6 +627,7 @@ function defaultEmployeeWorkSettings(){
     vacationFrom:"",
     vacationTo:"",
     vacationDates:[],
+    vacationPeriods:[],
     weeklyWork:{enabled:false, days:{}},
     specialWorkDates:[],
     note:""
@@ -663,6 +664,33 @@ function normalizeSpecialWorkDates(items){
     map.set(date, {date, start, end});
   });
   return Array.from(map.values()).sort((a,b) => a.date.localeCompare(b.date));
+}
+function normalizeVacationPeriods(items){
+  const map = new Map();
+  (Array.isArray(items) ? items : []).forEach(item => {
+    const date = String(item?.date || "");
+    const start = String(item?.start || "");
+    const end = String(item?.end || "");
+    const note = String(item?.note || "").trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    if(!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) return;
+    if(timeToMinutes(start) >= timeToMinutes(end)) return;
+    map.set(`${date}|${start}|${end}|${note}`, {date, start, end, note});
+  });
+  return Array.from(map.values()).sort((a,b) => (a.date+a.start+a.end).localeCompare(b.date+b.start+b.end));
+}
+function employeeVacationPeriodConflicts(emp, date, startTime, duration){
+  const w = emp?.workSettings || defaultEmployeeWorkSettings();
+  const periods = normalizeVacationPeriods(w.vacationPeriods).filter(item => item.date === date);
+  if(!periods.length || !startTime) return null;
+  const start = timeToMinutes(startTime);
+  const end = start + Math.max(1, Number(duration || 60));
+  return periods.find(item => start < timeToMinutes(item.end) && end > timeToMinutes(item.start)) || null;
+}
+function employeeVacationPeriodIssueText(emp, item){
+  if(!item) return "";
+  const reason = item.note ? ` (${item.note})` : "";
+  return `${emp.name} ist am ${formatDateShort(item.date)} von ${item.start} bis ${item.end} gesperrt / nicht anwesend${reason}.`;
 }
 function employeeSpecialWorkForDate(emp, date){
   const w = emp?.workSettings || defaultEmployeeWorkSettings();
@@ -713,6 +741,7 @@ function normalizeEmployeeRecord(emp, index=0){
   work.vacationFrom = work.vacationFrom || "";
   work.vacationTo = work.vacationTo || "";
   work.vacationDates = Array.isArray(work.vacationDates) ? [...new Set(work.vacationDates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort() : [];
+  work.vacationPeriods = normalizeVacationPeriods(work.vacationPeriods);
   work.weeklyWork = normalizeWeeklyWork(work.weeklyWork);
   work.specialWorkDates = normalizeSpecialWorkDates(work.specialWorkDates);
   work.note = work.note || "";
@@ -802,6 +831,8 @@ function employeeAvailabilityIssue(emp, date, startTime, duration){
   if(!startTime) return "Bitte Uhrzeit eintragen.";
   const start = timeToMinutes(startTime);
   const end = start + Math.max(1, Number(duration || 60));
+  const vacationPeriod = employeeVacationPeriodConflicts(emp, date, startTime, duration);
+  if(vacationPeriod) return employeeVacationPeriodIssueText(emp, vacationPeriod);
   const window = employeeWorkWindowForDate(emp, date);
   if(!window.available){
     const label = WEEKDAY_LABELS[window.dayKey] || "diesem Tag";
@@ -2196,7 +2227,7 @@ function applyLanguage(){
 
 function renderAll(){
   applyDeviceView();
-  // Version 3.09: sichtbare System-Info-Version bei jedem Rendern erzwingen.
+  // Version 3.10: sichtbare System-Info-Version bei jedem Rendern erzwingen.
   window.NAGELSTUDIO_APP_VERSION = APP_VERSION;
   state.version = APP_VERSION;
   $("studioTitle").textContent = state.studioName || "Nagelstudio";
@@ -2385,7 +2416,7 @@ function renderWorkTimeList(){
         <div class="worktime-section worktime-section-vacation">
           <div class="worktime-section-head">
             <strong>Urlaub / Sperrtage</strong>
-            <small>Zeitraum oder einzelne Urlaubstage blockieren</small>
+            <small>Ganze Tage oder einzelne Stunden blockieren</small>
           </div>
           <div class="worktime-vacation-row">
             <label class="inline-checkbox"><input type="checkbox" data-work-field="vacationEnabled" ${w.vacationEnabled ? "checked" : ""}> Urlaub / Sperrtage aktivieren</label>
@@ -2401,6 +2432,28 @@ function renderWorkTimeList(){
           <div class="worktime-vacation-dates" data-vacation-dates>
             ${(w.vacationDates || []).map(d => `<span class="vacation-date-chip" data-vacation-date="${escapeHtml(d)}">${formatDateShort(d)} <button type="button" data-remove-vacation-date="${escapeHtml(d)}" aria-label="Urlaubstag entfernen">×</button></span>`).join("") || '<small class="hint">Noch keine einzelnen Urlaubstage hinterlegt.</small>'}
           </div>
+          <div class="worktime-partial-vacation">
+            <strong>Stundenweise Sperrzeit / Abwesenheit</strong>
+            <small class="hint">Für Arzttermine, private Termine oder kurze Abwesenheiten: Nur dieser Zeitraum wird im Tagesplan gesperrt.</small>
+            <div class="worktime-partial-vacation-add">
+              <label>Datum
+                <input type="date" data-work-field="vacationPeriodDate">
+              </label>
+              <label>Von
+                <input type="time" data-work-field="vacationPeriodStart" value="${escapeHtml(w.workStart || state.openTime || "08:00")}">
+              </label>
+              <label>Bis
+                <input type="time" data-work-field="vacationPeriodEnd" value="${escapeHtml(w.workStart || state.openTime || "08:00")}">
+              </label>
+              <label>Grund optional
+                <input data-work-field="vacationPeriodNote" placeholder="z. B. Arzttermin">
+              </label>
+              <button type="button" data-add-vacation-period="${escapeHtml(emp.id)}">Sperrzeit hinzufügen</button>
+            </div>
+            <div class="worktime-vacation-periods" data-vacation-periods>
+              ${normalizeVacationPeriods(w.vacationPeriods).map(v => vacationPeriodChipHtml(v)).join("") || '<small class="hint">Noch keine stundenweisen Sperrzeiten hinterlegt.</small>'}
+            </div>
+          </div>
         </div>
         <label>Notiz
           <input data-work-field="note" value="${escapeHtml(w.note || "")}" placeholder="z. B. nur nach Absprache">
@@ -2408,7 +2461,7 @@ function renderWorkTimeList(){
         <div class="worktime-actions">
           <button type="button" data-save-worktime="${escapeHtml(emp.id)}">Arbeitszeit speichern</button>
           <button type="button" class="secondary" data-clear-vacation="${escapeHtml(emp.id)}">Urlaub / Sperrtage entfernen</button>
-          <small>Der Terminplaner zeigt Zeiten außerhalb der Freigabe, Sonntage und aktiv gespeicherte Urlaubstage gesperrt an. Sonntag ist fest geschlossen.</small>
+          <small>Der Terminplaner zeigt Zeiten außerhalb der Freigabe, Sonntage, Urlaubstage und stundenweise Sperrzeiten gesperrt an. Sonntag ist fest geschlossen.</small>
         </div>
       </div>`;
   }).join("");
@@ -2417,6 +2470,8 @@ function renderWorkTimeList(){
   box.querySelectorAll("[data-remove-special-work-date]").forEach(btn => btn.onclick = () => removeSpecialWorkDateFromWorkTimeCard(btn));
   box.querySelectorAll("[data-add-vacation-date]").forEach(btn => btn.onclick = () => addVacationDateToWorkTimeCard(btn.dataset.addVacationDate));
   box.querySelectorAll("[data-remove-vacation-date]").forEach(btn => btn.onclick = () => removeVacationDateFromWorkTimeCard(btn));
+  box.querySelectorAll("[data-add-vacation-period]").forEach(btn => btn.onclick = () => addVacationPeriodToWorkTimeCard(btn.dataset.addVacationPeriod));
+  box.querySelectorAll("[data-remove-vacation-period]").forEach(btn => btn.onclick = () => removeVacationPeriodFromWorkTimeCard(btn));
   box.querySelectorAll("[data-clear-vacation]").forEach(btn => btn.onclick = () => clearEmployeeVacation(btn.dataset.clearVacation, true));
   box.querySelectorAll('[data-work-field="vacationEnabled"]').forEach(chk => chk.onchange = () => {
     if(!chk.checked){
@@ -2470,6 +2525,62 @@ function vacationDateChipHtml(date){
 function refreshVacationDateRemoveButtons(card){
   card.querySelectorAll("[data-remove-vacation-date]").forEach(btn => btn.onclick = () => removeVacationDateFromWorkTimeCard(btn));
 }
+function vacationPeriodChipHtml(item){
+  const note = item.note ? ` · ${escapeHtml(item.note)}` : "";
+  return `<span class="vacation-period-chip" data-vacation-period-date="${escapeHtml(item.date)}" data-vacation-period-start="${escapeHtml(item.start)}" data-vacation-period-end="${escapeHtml(item.end)}" data-vacation-period-note="${escapeHtml(item.note || "")}">${formatDateShort(item.date)} · ${escapeHtml(item.start)}–${escapeHtml(item.end)}${note} <button type="button" data-remove-vacation-period aria-label="Sperrzeit entfernen">×</button></span>`;
+}
+function refreshVacationPeriodRemoveButtons(card){
+  card.querySelectorAll("[data-remove-vacation-period]").forEach(btn => btn.onclick = () => removeVacationPeriodFromWorkTimeCard(btn));
+}
+function addVacationPeriodToWorkTimeCard(id){
+  const card = Array.from(document.querySelectorAll(".worktime-card")).find(el => el.dataset.employeeId === id);
+  if(!card) return;
+  const dateInput = card.querySelector('[data-work-field="vacationPeriodDate"]');
+  const startInput = card.querySelector('[data-work-field="vacationPeriodStart"]');
+  const endInput = card.querySelector('[data-work-field="vacationPeriodEnd"]');
+  const noteInput = card.querySelector('[data-work-field="vacationPeriodNote"]');
+  const list = card.querySelector("[data-vacation-periods]");
+  const date = dateInput?.value || "";
+  const start = startInput?.value || "";
+  const end = endInput?.value || "";
+  const note = noteInput?.value.trim() || "";
+  if(!date){ alert("Bitte zuerst ein Datum für die Sperrzeit auswählen."); return; }
+  if(!start || !end || timeToMinutes(start) >= timeToMinutes(end)){
+    alert("Bitte eine gültige Sperrzeit eintragen: Von muss vor Bis liegen.");
+    return;
+  }
+  const existing = Array.from(list.querySelectorAll("[data-vacation-period-date]")).map(el => ({
+    date:el.dataset.vacationPeriodDate,
+    start:el.dataset.vacationPeriodStart,
+    end:el.dataset.vacationPeriodEnd,
+    note:el.dataset.vacationPeriodNote || ""
+  }));
+  const newStart = timeToMinutes(start);
+  const newEnd = timeToMinutes(end);
+  const conflict = existing.find(item => item.date === date && newStart < timeToMinutes(item.end) && newEnd > timeToMinutes(item.start));
+  if(conflict){
+    alert(`Diese Sperrzeit überschneidet sich mit ${formatDateShort(conflict.date)} ${conflict.start}–${conflict.end}.`);
+    return;
+  }
+  const all = normalizeVacationPeriods([...existing, {date, start, end, note}]);
+  list.innerHTML = all.map(vacationPeriodChipHtml).join("");
+  dateInput.value = "";
+  if(noteInput) noteInput.value = "";
+  const chk = card.querySelector('[data-work-field="vacationEnabled"]');
+  if(chk) chk.checked = true;
+  refreshVacationPeriodRemoveButtons(card);
+  saveEmployeeWorkTime(id, true);
+  alert("Stundenweise Sperrzeit wurde gespeichert.");
+}
+function removeVacationPeriodFromWorkTimeCard(btn){
+  const card = btn.closest(".worktime-card");
+  const list = btn.closest("[data-vacation-periods]");
+  const id = card?.dataset.employeeId;
+  btn.closest("[data-vacation-period-date]")?.remove();
+  if(list && !list.querySelector("[data-vacation-period-date]")) list.innerHTML = '<small class="hint">Noch keine stundenweisen Sperrzeiten hinterlegt.</small>';
+  if(card) refreshVacationPeriodRemoveButtons(card);
+  if(id) saveEmployeeWorkTime(id, true);
+}
 function addVacationDateToWorkTimeCard(id){
   const card = Array.from(document.querySelectorAll(".worktime-card")).find(el => el.dataset.employeeId === id);
   if(!card) return;
@@ -2508,10 +2619,14 @@ function clearVacationFieldsInCard(card){
   set("vacationFrom", "");
   set("vacationTo", "");
   set("vacationSingleDate", "");
+  set("vacationPeriodDate", "");
+  set("vacationPeriodNote", "");
   const chk = card.querySelector('[data-work-field="vacationEnabled"]');
   if(chk) chk.checked = false;
   const list = card.querySelector("[data-vacation-dates]");
   if(list) list.innerHTML = '<small class="hint">Noch keine einzelnen Urlaubstage hinterlegt.</small>';
+  const periodList = card.querySelector("[data-vacation-periods]");
+  if(periodList) periodList.innerHTML = '<small class="hint">Noch keine stundenweisen Sperrzeiten hinterlegt.</small>';
 }
 function clearEmployeeVacation(id, showAlert=false){
   const emp = state.employees.find(e => e.id === id);
@@ -2524,7 +2639,8 @@ function clearEmployeeVacation(id, showAlert=false){
     vacationEnabled:false,
     vacationFrom:"",
     vacationTo:"",
-    vacationDates:[]
+    vacationDates:[],
+    vacationPeriods:[]
   };
   saveState();
   renderAll();
@@ -2568,13 +2684,20 @@ function saveEmployeeWorkTime(id, silent=false){
     end:el.dataset.specialWorkEnd
   })));
 
+  let vacationPeriods = normalizeVacationPeriods(Array.from(card.querySelectorAll("[data-vacation-period-date]")).map(el => ({
+    date:el.dataset.vacationPeriodDate,
+    start:el.dataset.vacationPeriodStart,
+    end:el.dataset.vacationPeriodEnd,
+    note:el.dataset.vacationPeriodNote || ""
+  })));
+
   let vacationFrom = get("vacationFrom")?.value || "";
   let vacationTo = get("vacationTo")?.value || "";
   const pendingVacationDate = get("vacationSingleDate")?.value || "";
   const vacationDates = Array.from(card.querySelectorAll("[data-vacation-date]")).map(el => el.dataset.vacationDate).filter(Boolean);
   if(pendingVacationDate) vacationDates.push(pendingVacationDate);
   let uniqueVacationDates = [...new Set(vacationDates)].sort();
-  const hasVacationData = !!(vacationFrom || vacationTo || uniqueVacationDates.length);
+  const hasVacationData = !!(vacationFrom || vacationTo || uniqueVacationDates.length || vacationPeriods.length);
   const vacationEnabled = !!get("vacationEnabled")?.checked || hasVacationData;
   if(vacationEnabled){
     if((vacationFrom && !vacationTo) || (!vacationFrom && vacationTo)){
@@ -2586,6 +2709,7 @@ function saveEmployeeWorkTime(id, silent=false){
     vacationFrom = "";
     vacationTo = "";
     uniqueVacationDates = [];
+    vacationPeriods = [];
   }
   emp.workSettings = {
     employmentType:normalizeEmploymentType(get("employmentType")?.value),
@@ -2597,6 +2721,7 @@ function saveEmployeeWorkTime(id, silent=false){
     vacationFrom,
     vacationTo,
     vacationDates:uniqueVacationDates,
+    vacationPeriods,
     note:get("note")?.value.trim() || ""
   };
   saveState();
@@ -3004,7 +3129,7 @@ function renderCalendarAppointmentLayer(wrap, grid, appointmentLayer, appointmen
     const employeeCell = employeeCells[employeeIndex];
     if(!header || !employeeCell) continue;
 
-    // Version 3.09: Positionen werden aus den echten DOM-Zellen gemessen.
+    // Version 3.10: Positionen werden aus den echten DOM-Zellen gemessen.
     // Das ist wichtig, weil iPad/Safari CSS-Variablen mit clamp() nicht als einfache Pixelzahl liefert.
     // Dadurch lagen Termine vorher zu tief oder nur als schmale Balken außerhalb der Mitarbeiter-Zeile.
     const left = header.offsetLeft;
@@ -3032,7 +3157,7 @@ function renderCalendar(){
 
   const appointmentLayer=document.createElement("div");
   appointmentLayer.className="calendar-appointment-layer";
-  // Version 3.09: Klicks werden zusätzlich per Delegation direkt auf der
+  // Version 3.10: Klicks werden zusätzlich per Delegation direkt auf der
   // Overlay-Ebene behandelt. In 3.08 wurde die Overlay-Ebene per
   // requestAnimationFrame neu gezeichnet; dadurch gingen die direkten
   // onclick-Handler der Termine verloren und Termine waren nicht anklickbar.
@@ -3064,7 +3189,7 @@ function renderCalendar(){
     const gridRow = employeeIndex + 2;
     grid.insertAdjacentHTML("beforeend",`<div class="employee-cell employee-row-colored" data-employee-row="${escapeHtml(emp.id)}" ${employeeRowStyle(emp, `grid-column:1;grid-row:${gridRow};`)}><span class="employee-name-colored" style="color:${escapeHtml(emp.color || "#d94f93")}">${escapeHtml(emp.name)}</span></div>`);
 
-    // Version 3.09: Das Raster enthält nur feste Zellen. Termine werden danach anhand
+    // Version 3.10: Das Raster enthält nur feste Zellen. Termine werden danach anhand
     // der echten Zellgrößen in eine Overlay-Ebene gesetzt.
     for(const [slotIndex, slotTimeValue] of s.entries()){
       const slotMin = timeToMinutes(slotTimeValue);
@@ -5266,7 +5391,7 @@ function showAppointment(id){
 installIpadKeyboardFocusFix();
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("sw.js?v=3.09-final").then(reg => {
+    navigator.serviceWorker.register("sw.js?v=3.10-partial-absence").then(reg => {
       reg.update && reg.update();
     }).catch(() => {});
   });
