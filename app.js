@@ -1,3 +1,4 @@
+const APP_VERSION="3.09";
 const KEY = "nail_studio_pwa_v63";
 const OLD_KEYS = ["nail_studio_pwa_v62", "nail_studio_pwa_v61", "nail_studio_pwa_v60", "nail_studio_pwa_v59", "nail_studio_pwa_v58", "nail_studio_pwa_v57", "nail_studio_pwa_v56", "nail_studio_pwa_v55", "nail_studio_pwa_v54", "nail_studio_pwa_v53", "nail_studio_pwa_v52", "nail_studio_pwa_v51", "nail_studio_pwa_v50", "nail_studio_pwa_v49", "nail_studio_pwa_v48", "nail_studio_pwa_v47", "nail_studio_pwa_v46", "nail_studio_pwa_v45", "nail_studio_pwa_v44", "nail_studio_pwa_v43", "nail_studio_pwa_v42", "nail_studio_pwa_v41", "nail_studio_pwa_v40", "nail_studio_pwa_v39", "nail_studio_pwa_v38", "nail_studio_pwa_v37", "nail_studio_pwa_v36", "nail_studio_pwa_v35", "nail_studio_pwa_v34", "nail_studio_pwa_v33", "nail_studio_pwa_v32", "nail_studio_pwa_v31", "nail_studio_pwa_v30", "nail_studio_pwa_v29", "nail_studio_pwa_v28", "nail_studio_pwa_v27", "nail_studio_pwa_v26", "nail_studio_pwa_v25", "nail_studio_pwa_v24", "nail_studio_pwa_v23", "nail_studio_pwa_v22", "nail_studio_pwa_v21", "nail_studio_pwa_v20", "nail_studio_pwa_v19", "nail_studio_pwa_v18", "nail_studio_pwa_v17", "nail_studio_pwa_v16", "nail_studio_pwa_v15", "nail_studio_pwa_v14", "nail_studio_pwa_v13", "nail_studio_pwa_v12", "nail_studio_pwa_v11", "nail_studio_pwa_v10", "nail_studio_pwa_v9", "nail_studio_pwa_v8", "nail_studio_pwa_v7", "nail_studio_pwa_v6", "nail_studio_pwa_v5", "nail_studio_pwa_v4", "nail_studio_pwa_v3", "nail_studio_pwa_v2", "nail_studio_pwa_v1"];
 const $ = id => document.getElementById(id);
@@ -405,7 +406,7 @@ function ensureBuiltInServices(list){
   return services;
 }
 function defaultState(){ return {
-	  version:"3.03", configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", scheduleIntervalMinutes:15, dashboardReturnEnabled:true, dashboardReturnDelayMs:60000, cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
+	  version:APP_VERSION, configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", scheduleIntervalMinutes:15, dashboardReturnEnabled:true, dashboardReturnDelayMs:60000, cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
   employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[], employeeDailyRevenueRecords:[], revenue2Entries:[], revenue2DeletedAppointmentIds:[], revenue2CashEntries:[], revenue2CashDeletedAppointmentIds:[], cashWithdrawals:[], cashDeposits:[], journalRevenueCorrections:{}, journalRevenueDeletedDays:[], periodRevenueManualEdits:{week:{},month:{}}, paymentSales:[],
   selectedDate:todayISO(), journalDate:todayISO(), storageMode:"local"
 };}
@@ -419,7 +420,7 @@ function loadState(){
       }
     }
     data = data || defaultState();
-    data.version = 70;
+    data.version = APP_VERSION;
     data.services = ensureBuiltInServices(data.services && data.services.length ? data.services : defaultServices());
     data.excludedRevenueDays = data.excludedRevenueDays || [];
     data.manualRevenueItems = data.manualRevenueItems || [];
@@ -2195,13 +2196,13 @@ function applyLanguage(){
 
 function renderAll(){
   applyDeviceView();
-  // Version 3.03: sichtbare System-Info-Version bei jedem Rendern erzwingen.
-  window.NAGELSTUDIO_APP_VERSION = "3.03";
-  if($("appVisibleVersion")) $("appVisibleVersion").textContent = "3.03";
-  state.version = "3.03";
+  // Version 3.09: sichtbare System-Info-Version bei jedem Rendern erzwingen.
+  window.NAGELSTUDIO_APP_VERSION = APP_VERSION;
+  state.version = APP_VERSION;
   $("studioTitle").textContent = state.studioName || "Nagelstudio";
   renderStudioContactLine();
   applyLanguage();
+  if($("appVisibleVersion")) $("appVisibleVersion").textContent = APP_VERSION;
   dedupeCustomers();
   $("currentDateInput").value = state.selectedDate;
   if($("reportDate")) $("reportDate").value ||= state.selectedDate;
@@ -2986,6 +2987,39 @@ function clearSelectedCalendarSlot(){
   if(calendar) calendar.querySelectorAll(".slot.selected-free-slot").forEach(el => el.classList.remove("selected-free-slot"));
 }
 
+function renderCalendarAppointmentLayer(wrap, grid, appointmentLayer, appointmentItems){
+  if(!wrap || !grid || !appointmentLayer) return;
+  const intervalMinutes = getSlotIntervalMinutes();
+  const headers = Array.from(grid.querySelectorAll(".time-header[data-time]"));
+  const employeeCells = Array.from(grid.querySelectorAll(".employee-cell"));
+  const gridWidth = Math.max(grid.scrollWidth || 0, grid.offsetWidth || 0);
+  const gridHeight = Math.max(grid.scrollHeight || 0, grid.offsetHeight || 0);
+  appointmentLayer.style.width = gridWidth + "px";
+  appointmentLayer.style.height = gridHeight + "px";
+  appointmentLayer.innerHTML = "";
+
+  for(const item of appointmentItems){
+    const {a, emp, employeeIndex, slotIndex, startMin} = item;
+    const header = headers[slotIndex];
+    const employeeCell = employeeCells[employeeIndex];
+    if(!header || !employeeCell) continue;
+
+    // Version 3.09: Positionen werden aus den echten DOM-Zellen gemessen.
+    // Das ist wichtig, weil iPad/Safari CSS-Variablen mit clamp() nicht als einfache Pixelzahl liefert.
+    // Dadurch lagen Termine vorher zu tief oder nur als schmale Balken außerhalb der Mitarbeiter-Zeile.
+    const left = header.offsetLeft;
+    const top = employeeCell.offsetTop;
+    const slotWidth = Math.max(1, header.offsetWidth || header.getBoundingClientRect().width || 1);
+    const rowHeight = Math.max(1, employeeCell.offsetHeight || employeeCell.getBoundingClientRect().height || 1);
+    const rawDuration = Math.max(intervalMinutes, Number(a.duration || intervalMinutes));
+    const maxWidth = Math.max(slotWidth, gridWidth - left);
+    const width = Math.min(maxWidth, Math.max(slotWidth, (rawDuration / intervalMinutes) * slotWidth));
+    const appointmentStyle = `left:${left}px;top:${top}px;width:${width}px;height:${rowHeight}px;`;
+    const slotMin = startMin;
+    appointmentLayer.insertAdjacentHTML("beforeend",`<div class="appointment-slot appointment-overlay employee-row-colored${slotMin % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, appointmentStyle)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
+  }
+}
+
 function renderCalendar(){
   const s=slots(), active=state.employees.filter(e=>e.active).sort(byName), todays=state.appointments.filter(a=>a.date===state.selectedDate);
   $("appointmentCount").textContent=`${todays.length} Termine`;
@@ -2996,14 +3030,42 @@ function renderCalendar(){
   grid.innerHTML=`<div class="corner" style="grid-column:1;grid-row:1;">${t("employee")}</div>`+
     s.map((slotTime, slotIndex)=>`<div class="time-header${timeToMinutes(slotTime) % 60 === 0 ? " full-hour" : ""}" data-time="${slotTime}" style="grid-column:${slotIndex + 2};grid-row:1;">${slotTime}</div>`).join("");
 
+  const appointmentLayer=document.createElement("div");
+  appointmentLayer.className="calendar-appointment-layer";
+  // Version 3.09: Klicks werden zusätzlich per Delegation direkt auf der
+  // Overlay-Ebene behandelt. In 3.08 wurde die Overlay-Ebene per
+  // requestAnimationFrame neu gezeichnet; dadurch gingen die direkten
+  // onclick-Handler der Termine verloren und Termine waren nicht anklickbar.
+  appointmentLayer.addEventListener("click", (event) => {
+    const el = event.target && event.target.closest ? event.target.closest(".appointment[data-id]") : null;
+    if(!el || !appointmentLayer.contains(el)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    clearTimeout(longPressTimer);
+    suppressAppointmentClick = false;
+    showAppointment(el.dataset.id);
+  });
+  appointmentLayer.addEventListener("pointerup", (event) => {
+    const el = event.target && event.target.closest ? event.target.closest(".appointment[data-id]") : null;
+    if(!el || !appointmentLayer.contains(el)) return;
+    if(touchDragGhost) return;
+    if(event.pointerType === "touch" || event.pointerType === "pen"){
+      event.preventDefault();
+      event.stopPropagation();
+      clearTimeout(longPressTimer);
+      suppressAppointmentClick = true;
+      showAppointment(el.dataset.id);
+      setTimeout(()=>{ suppressAppointmentClick=false; }, 120);
+    }
+  });
+  const appointmentItems=[];
+
   for(const [employeeIndex, emp] of active.entries()){
     const gridRow = employeeIndex + 2;
-    grid.insertAdjacentHTML("beforeend",`<div class="employee-cell employee-row-colored" ${employeeRowStyle(emp, `grid-column:1;grid-row:${gridRow};`)}><span class="employee-name-colored" style="color:${escapeHtml(emp.color || "#d94f93")}">${escapeHtml(emp.name)}</span></div>`);
+    grid.insertAdjacentHTML("beforeend",`<div class="employee-cell employee-row-colored" data-employee-row="${escapeHtml(emp.id)}" ${employeeRowStyle(emp, `grid-column:1;grid-row:${gridRow};`)}><span class="employee-name-colored" style="color:${escapeHtml(emp.color || "#d94f93")}">${escapeHtml(emp.name)}</span></div>`);
 
-    // Version 3.03: Zuerst werden ALLE Raster-Zellen fest aufgebaut.
-    // Termine werden danach als Overlay auf feste Spalten gelegt. Dadurch kann ein Termin
-    // mit manueller Dauer (z. B. 125 Min) keine Zellen einfügen, überspringen oder die
-    // horizontale Zeitleiste/Mitarbeiterleiste verschieben.
+    // Version 3.09: Das Raster enthält nur feste Zellen. Termine werden danach anhand
+    // der echten Zellgrößen in eine Overlay-Ebene gesetzt.
     for(const [slotIndex, slotTimeValue] of s.entries()){
       const slotMin = timeToMinutes(slotTimeValue);
       const gridColumn = slotIndex + 2;
@@ -3025,24 +3087,22 @@ function renderCalendar(){
       .filter(a => a.employeeId === emp.id)
       .sort((a,b) => timeToMinutes(a.startTime || "00:00") - timeToMinutes(b.startTime || "00:00"));
     for(const a of employeeAppointments){
-      const slotIndex = s.indexOf(a.startTime);
-      if(slotIndex < 0) continue;
       const intervalMinutes = getSlotIntervalMinutes();
-      const slotMin = timeToMinutes(a.startTime);
-      const gridColumn = slotIndex + 2;
-      const rawDuration = Number(a.duration || intervalMinutes);
-      const rawSpan = Math.max(1, Math.ceil(rawDuration / intervalMinutes));
-      const remainingSlots = Math.max(1, s.length - slotIndex);
-      const span = Math.min(rawSpan, remainingSlots);
-      const appointmentStyle = `grid-column:${gridColumn} / span ${span};grid-row:${gridRow};`;
-      grid.insertAdjacentHTML("beforeend",`<div class="slot appointment-slot employee-row-colored${slotMin % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, appointmentStyle)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
+      const startMin = timeToMinutes(a.startTime || "00:00");
+      const openMin = timeToMinutes(state.openTime);
+      let slotIndex = Math.round((startMin - openMin) / intervalMinutes);
+      if(!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex >= s.length) continue;
+      appointmentItems.push({a, emp, employeeIndex, slotIndex, startMin});
     }
   }
   $("calendar").innerHTML="";
   const wrap=document.createElement("div");
   wrap.className="calendar-grid-wrap";
   wrap.appendChild(grid);
+  wrap.appendChild(appointmentLayer);
   $("calendar").appendChild(wrap);
+  renderCalendarAppointmentLayer(wrap, grid, appointmentLayer, appointmentItems);
+  requestAnimationFrame(() => renderCalendarAppointmentLayer(wrap, grid, appointmentLayer, appointmentItems));
   bindCalendarScrollFix();
   updateCalendarNameColumnLock();
   renderCurrentTimeLine(wrap);
@@ -3140,7 +3200,6 @@ function renderCalendar(){
     };
   });
 }
-
 
 function updateCalendarNameColumnLock(){
   const calendar = $("calendar");
@@ -4900,12 +4959,12 @@ function buildBackupPayload(type){
       backupType:type || "Normal",
       createdAt:nowStampHuman(),
       createdAtISO:new Date().toISOString(),
-      appVersion:"3.17",
+      appVersion:APP_VERSION,
       note:type === "Bereinigung"
         ? "Backup nach Bereinigung: Alle Termine von heute und Vergangenheit sowie alle Umsatzdaten aus Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz wurden vorher endgültig entfernt. Nur Zukunft-Termine bleiben erhalten."
         : "Normales Backup."
     },
-    data:{...state, version:"3.03"}
+    data:{...state, version:APP_VERSION}
   };
 }
 function setLocalBackupStatus(filename){
@@ -5131,7 +5190,7 @@ function importBackup(e){
       state={
         ...defaultState(),
         ...imported,
-        version:"3.03",
+        version:APP_VERSION,
         configured:true,
         services:Array.isArray(imported.services) && imported.services.length ? imported.services : defaultServices(),
         customers:Array.isArray(imported.customers) ? imported.customers : [],
@@ -5205,5 +5264,11 @@ function showAppointment(id){
   $("appointmentDialog").showModal();
 }
 installIpadKeyboardFocusFix();
-if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js")); }
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("sw.js?v=3.09-final").then(reg => {
+      reg.update && reg.update();
+    }).catch(() => {});
+  });
+}
 boot();
