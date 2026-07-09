@@ -405,7 +405,7 @@ function ensureBuiltInServices(list){
   return services;
 }
 function defaultState(){ return {
-	  version:"3.0", configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", scheduleIntervalMinutes:15, dashboardReturnEnabled:true, dashboardReturnDelayMs:60000, cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
+	  version:"3.01", configured:false, studioName:"", studioPhone:"", studioAddress:"", revenueEnabled:false, language:"de", displayDeviceMode:"auto", scheduleZoom:"normal", reportPrintFormat:"a4", scheduleIntervalMinutes:15, dashboardReturnEnabled:true, dashboardReturnDelayMs:60000, cloudBackupEnabled:false, cloudBackupProvider:"onedrive", cloudBackupAfterCleanup:false, lastLocalBackup:"", lastCloudBackup:"", openTime:"08:00", closeTime:"20:00",
   employees:[], customers:[], services:defaultServices(), appointments:[], excludedRevenueDays:[], manualRevenueItems:[], employeeDailyRevenueRecords:[], revenue2Entries:[], revenue2DeletedAppointmentIds:[], revenue2CashEntries:[], revenue2CashDeletedAppointmentIds:[], cashWithdrawals:[], cashDeposits:[], journalRevenueCorrections:{}, journalRevenueDeletedDays:[], periodRevenueManualEdits:{week:{},month:{}}, paymentSales:[],
   selectedDate:todayISO(), journalDate:todayISO(), storageMode:"local"
 };}
@@ -2985,36 +2985,45 @@ function clearSelectedCalendarSlot(){
 function renderCalendar(){
   const s=slots(), active=state.employees.filter(e=>e.active).sort(byName), todays=state.appointments.filter(a=>a.date===state.selectedDate);
   $("appointmentCount").textContent=`${todays.length} Termine`;
-  const grid=document.createElement("div"); grid.className="grid"; grid.style.setProperty("--slots",s.length);
-  grid.innerHTML=`<div class="corner">${t("employee")}</div>`+s.map(slotTime=>`<div class="time-header${timeToMinutes(slotTime) % 60 === 0 ? " full-hour" : ""}" data-time="${slotTime}">${slotTime}</div>`).join("");
-  for(const emp of active){
-    grid.insertAdjacentHTML("beforeend",`<div class="employee-cell employee-row-colored" ${employeeRowStyle(emp)}><span class="employee-name-colored" style="color:${escapeHtml(emp.color || "#d94f93")}">${escapeHtml(emp.name)}</span></div>`);
+  const grid=document.createElement("div");
+  grid.className="grid";
+  grid.style.setProperty("--slots",s.length);
+  grid.style.gridTemplateRows = `56px repeat(${active.length}, var(--row-h))`;
+  grid.innerHTML=`<div class="corner" style="grid-column:1;grid-row:1;">${t("employee")}</div>`+
+    s.map((slotTime, slotIndex)=>`<div class="time-header${timeToMinutes(slotTime) % 60 === 0 ? " full-hour" : ""}" data-time="${slotTime}" style="grid-column:${slotIndex + 2};grid-row:1;">${slotTime}</div>`).join("");
+
+  for(const [employeeIndex, emp] of active.entries()){
+    const gridRow = employeeIndex + 2;
+    grid.insertAdjacentHTML("beforeend",`<div class="employee-cell employee-row-colored" ${employeeRowStyle(emp, `grid-column:1;grid-row:${gridRow};`)}><span class="employee-name-colored" style="color:${escapeHtml(emp.color || "#d94f93")}">${escapeHtml(emp.name)}</span></div>`);
     let skipUntil = null;
-    for(const t of s){
-      if(skipUntil && timeToMinutes(t) < skipUntil) continue;
+    for(const [slotIndex, t] of s.entries()){
+      const slotMin = timeToMinutes(t);
+      if(skipUntil && slotMin < skipUntil) continue;
       const a=todays.find(x=>x.employeeId===emp.id && x.startTime===t);
+      const gridColumn = slotIndex + 2;
       if(a){
         const intervalMinutes = getSlotIntervalMinutes();
-        // Version 2.97: Dauer darf manuell geändert werden und muss nicht exakt zum Tagesplan-Takt passen.
-        // Wichtig: Die Anzahl der übersprungenen Rasterfelder muss exakt zur CSS-Grid-Spalte passen.
-        // Mit Math.round() konnte z. B. 20 Min bei 15-Min-Takt nur 1 Spalte breit sein,
-        // aber trotzdem 2 Zeitfelder blockieren. Dadurch rutschten Mitarbeiterleiste und Zeitleiste auseinander.
-        const rawSpan=Math.max(1,Math.ceil(Number(a.duration || intervalMinutes)/intervalMinutes));
-        const remainingSlots=Math.max(1, s.length - s.indexOf(t));
+        // Version 3.01: Jedes Tagesplan-Element bekommt eine feste Grid-Position.
+        // Dadurch kann ein Termin mit manueller Dauer (z. B. 125 Min) keine zusätzlichen
+        // Auto-Grid-Zellen erzeugen. Mitarbeiterleiste und horizontale Zeitleiste bleiben synchron.
+        const rawDuration = Number(a.duration || intervalMinutes);
+        const rawSpan=Math.max(1,Math.ceil(rawDuration/intervalMinutes));
+        const remainingSlots=Math.max(1, s.length - slotIndex);
         const span=Math.min(rawSpan, remainingSlots);
-        skipUntil=timeToMinutes(a.startTime)+(span * intervalMinutes);
-        grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored${timeToMinutes(t) % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
+        skipUntil=slotMin+(span * intervalMinutes);
+        grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored${slotMin % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, `grid-column:${gridColumn} / span ${span};grid-row:${gridRow};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
       }else{
+        const fixedPosition = `grid-column:${gridColumn};grid-row:${gridRow};`;
         const pastIssue = isAppointmentDateTimeInPast(state.selectedDate, t) ? pastAppointmentWarningText() : "";
         const issue = pastIssue || employeeAvailabilityIssue(emp, state.selectedDate, t, getSlotIntervalMinutes());
         if(issue){
           if(pastIssue){
-            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot past-slot${timeToMinutes(t) % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"></div>`);
+            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot past-slot${slotMin % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, fixedPosition)} title="${escapeHtml(issue)}"></div>`);
           }else{
-            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot${timeToMinutes(t) % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp)} title="${escapeHtml(issue)}"><span class="slot-lock">Gesperrt</span></div>`);
+            grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored unavailable-slot${slotMin % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, fixedPosition)} title="${escapeHtml(issue)}"><span class="slot-lock">Gesperrt</span></div>`);
           }
         }else{
-          grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored ${timeToMinutes(t) % 60 === 0 ? 'full-hour-slot ' : ''}${selectedCalendarSlotMatches(emp.id, t) ? 'selected-free-slot' : ''}" ${employeeRowStyle(emp)} data-employee="${emp.id}" data-time="${t}"></div>`);
+          grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored ${slotMin % 60 === 0 ? 'full-hour-slot ' : ''}${selectedCalendarSlotMatches(emp.id, t) ? 'selected-free-slot' : ''}" ${employeeRowStyle(emp, fixedPosition)} data-employee="${emp.id}" data-time="${t}"></div>`);
         }
       }
     }
@@ -4886,7 +4895,7 @@ function buildBackupPayload(type){
         ? "Backup nach Bereinigung: Alle Termine von heute und Vergangenheit sowie alle Umsatzdaten aus Mitarbeiter Umsatz, Einnahme, Kasse, Wochen Umsatz und Monat Umsatz wurden vorher endgültig entfernt. Nur Zukunft-Termine bleiben erhalten."
         : "Normales Backup."
     },
-    data:{...state, version:"3.0"}
+    data:{...state, version:"3.01"}
   };
 }
 function setLocalBackupStatus(filename){
@@ -5112,7 +5121,7 @@ function importBackup(e){
       state={
         ...defaultState(),
         ...imported,
-        version:"3.0",
+        version:"3.01",
         configured:true,
         services:Array.isArray(imported.services) && imported.services.length ? imported.services : defaultServices(),
         customers:Array.isArray(imported.customers) ? imported.customers : [],

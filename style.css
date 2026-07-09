@@ -3862,3 +3862,20 @@ body.app-device-ipad .employee-cell{
 .calendar .slot{
   box-sizing:border-box;
 }
+
+
+/* Version 3.01: Tagesplan-Zeilen vollständig fix positionieren.
+   Verhindert, dass manuelle Dauer-Werte wie 125 Minuten das Auto-Grid verschieben. */
+.calendar .grid{
+  grid-auto-flow:row !important;
+  grid-auto-rows:var(--row-h);
+}
+.calendar .time-header,
+.calendar .employee-cell,
+.calendar .slot{
+  box-sizing:border-box;
+}
+.calendar .slot{
+  min-width:0;
+  max-width:none;
+}
