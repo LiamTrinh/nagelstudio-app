@@ -3788,40 +3788,66 @@ body.app-device-ipad .worktime-special-add{
 }
 
 
-/* iPad/Safari Tastatur-Fix: Textfelder müssen den Touch direkt annehmen dürfen. */
-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
-textarea{
-  touch-action:manipulation;
+/* Version 2.96: sichere Übernahme aus 2.92 + iPad Tastatur-Fix + Mitarbeiterleiste stabil */
+.calendar{
+  position:relative;
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+}
+.calendar-grid-wrap{
+  position:relative;
+  display:inline-block;
+  min-width:max-content;
+}
+.grid{
+  grid-auto-flow:row;
+  align-items:stretch;
+}
+.corner,
+.employee-cell{
+  position:sticky !important;
+  left:0 !important;
+  right:auto !important;
+  transform:none !important;
+  width:var(--employee-col) !important;
+  min-width:var(--employee-col) !important;
+  max-width:var(--employee-col) !important;
+  flex:0 0 var(--employee-col) !important;
+  box-sizing:border-box;
+}
+.corner{
+  z-index:40 !important;
+}
+.employee-cell{
+  z-index:35 !important;
+  overflow:hidden;
+}
+.time-header{
+  z-index:20 !important;
+}
+.slot{
+  min-width:var(--time-col);
+  overflow:hidden;
+}
+.appointment{
+  max-width:100%;
+  overflow:hidden;
+  touch-action:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+body.app-device-ipad input,
+body.app-device-ipad textarea{
   -webkit-user-select:text;
   user-select:text;
-  -webkit-touch-callout:default;
+  touch-action:manipulation;
 }
-label input,
-label textarea{
-  cursor:text;
+body.app-device-ipad .calendar .appointment{
+  -webkit-touch-callout:none;
 }
-body.app-device-ipad input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
-body.app-device-ipad textarea{
-  -webkit-appearance:none;
-  appearance:none;
+body.app-device-ipad .corner,
+body.app-device-ipad .employee-cell{
+  background-clip:padding-box;
+  contain:paint;
 }
-body.app-device-ipad input[type="date"],
-body.app-device-ipad input[type="time"]{
-  -webkit-appearance:auto;
-  appearance:auto;
-}
-
-/* V154: Sicherer Start + Mitarbeiterleiste stabil, ohne riskante Kalender-Neuberechnung.
-   Die linke Mitarbeiter-Spalte bleibt sticky/fest, Termine dürfen die Spaltenbreite nicht beeinflussen. */
-.calendar{position:relative;overflow:auto;-webkit-overflow-scrolling:touch;}
-.calendar-grid-wrap{position:relative;display:inline-block;width:max-content;min-width:max-content;}
-.grid{grid-template-columns:var(--employee-col) repeat(var(--slots), var(--time-col)) !important;grid-auto-flow:row;align-items:stretch;}
-.corner,.employee-cell{position:sticky !important;left:0 !important;right:auto !important;transform:none !important;will-change:auto !important;min-width:var(--employee-col);max-width:var(--employee-col);box-sizing:border-box;overflow:hidden;}
-.corner{z-index:40 !important;}
-.employee-cell{z-index:35 !important;}
-.time-header{z-index:20 !important;}
-.slot{box-sizing:border-box;min-width:0;overflow:hidden;}
-.appointment{box-sizing:border-box;max-width:100%;overflow:hidden;}
-.appointment .name,.appointment .meta{overflow:hidden;text-overflow:ellipsis;}
-body.app-device-ipad .calendar{overscroll-behavior:contain;touch-action:pan-x pan-y;}
-body.app-device-ipad .corner,body.app-device-ipad .employee-cell{-webkit-backface-visibility:hidden;backface-visibility:hidden;}

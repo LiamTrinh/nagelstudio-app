@@ -268,6 +268,49 @@ let editingEmployeeId = null;
 let editingCustomerId = null;
 let dashboardReturnTimer = null;
 
+function isIpadSafariLike(){
+  const ua = navigator.userAgent || "";
+  const isiPad = /iPad/i.test(ua) || (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1);
+  return isiPad || document.body.classList.contains("app-device-ipad");
+}
+function clearAppointmentDragBeforeInputFocus(){
+  clearTimeout(longPressTimer);
+  if(touchDragGhost) cleanupTouchDragAppointment();
+  if(movingAppointmentId) cancelMoveAppointment();
+  suppressAppointmentClick = false;
+}
+function installIpadKeyboardFocusFix(){
+  if(window.__ipadKeyboardFocusFixInstalled) return;
+  window.__ipadKeyboardFocusFixInstalled = true;
+  const focusableInputTypes = new Set(["", "text", "search", "tel", "url", "email", "password", "number"]);
+  const shouldDirectFocus = (el) => {
+    if(!el || el.disabled || el.readOnly) return false;
+    const tag = (el.tagName || "").toLowerCase();
+    if(tag === "textarea") return true;
+    if(tag !== "input") return false;
+    return focusableInputTypes.has(String(el.type || "text").toLowerCase());
+  };
+  const focusFromRealTouch = (event) => {
+    if(!isIpadSafariLike()) return;
+    const target = event.target && event.target.closest ? event.target.closest("input, textarea") : null;
+    if(!shouldDirectFocus(target)) return;
+    clearAppointmentDragBeforeInputFocus();
+    try{
+      target.focus({preventScroll:true});
+      const len = typeof target.value === "string" ? target.value.length : 0;
+      if(typeof target.setSelectionRange === "function" && len >= 0){
+        try{ target.setSelectionRange(len, len); }catch(err){}
+      }
+    }catch(err){
+      try{ target.focus(); }catch(e){}
+    }
+  };
+  document.addEventListener("touchend", focusFromRealTouch, {capture:true, passive:true});
+  document.addEventListener("pointerdown", (event) => {
+    if(event.pointerType === "touch") focusFromRealTouch(event);
+  }, {capture:true, passive:true});
+}
+
 function normalizeDashboardReturnDelay(value){
   const ms = Math.round(Number(value));
   // Individuelle Zeiten erlauben: mindestens 1 Sekunde, maximal 60 Minuten.
@@ -1442,8 +1485,6 @@ async function boot(){
   try{
     const currentDateInput = $("currentDateInput");
     if(currentDateInput) currentDateInput.value = state.selectedDate || todayISO();
-
-    installIPadKeyboardFocusFix();
 
     bindLicenseEvents();
 
@@ -2784,77 +2825,6 @@ function addService(){
 }
 
 
-
-
-function isIOSLikeDevice(){
-  const ua = navigator.userAgent || "";
-  return /iPad|iPhone|iPod/i.test(ua) || ((navigator.maxTouchPoints || 0) > 1 && /Macintosh/i.test(ua));
-}
-
-function isKeyboardTextControl(el){
-  if(!el || el.disabled || el.readOnly) return false;
-  const tag = String(el.tagName || "").toLowerCase();
-  if(tag === "textarea") return true;
-  if(tag !== "input") return false;
-  const type = String(el.getAttribute("type") || "text").toLowerCase();
-  return ["text","search","tel","url","email","password","number","decimal"].includes(type);
-}
-
-function keyboardFocusTargetFromEvent(e){
-  let target = e.target;
-  if(!target) return null;
-  if(isKeyboardTextControl(target)) return target;
-  const label = target.closest ? target.closest("label") : null;
-  if(label){
-    const control = label.querySelector("input, textarea");
-    if(isKeyboardTextControl(control)) return control;
-  }
-  return null;
-}
-
-function focusKeyboardControl(el){
-  if(!isKeyboardTextControl(el)) return;
-  // Wenn ein Termin-Touch-Drag noch aktiv war, blockiert Safari manchmal das nächste Tastatur-Öffnen.
-  cleanupTouchDragAppointment({cancelMove:true});
-  try{ el.focus({preventScroll:false}); }catch(err){ try{ el.focus(); }catch(err2){} }
-  try{
-    const value = String(el.value || "");
-    if(typeof el.setSelectionRange === "function") el.setSelectionRange(value.length, value.length);
-  }catch(err){}
-}
-
-function installIPadKeyboardFocusFix(){
-  if(window.__ipadKeyboardFocusFixInstalled) return;
-  window.__ipadKeyboardFocusFixInstalled = true;
-  let touchStart = null;
-  const rememberTouchStart = e => {
-    const t = e.changedTouches && e.changedTouches[0];
-    if(!t) return;
-    touchStart = {x:t.clientX, y:t.clientY, target:e.target};
-  };
-  const focusFromTouchEnd = e => {
-    if(!isIOSLikeDevice()) return;
-    const t = e.changedTouches && e.changedTouches[0];
-    if(!t) return;
-    const moved = touchStart ? Math.abs(t.clientX - touchStart.x) + Math.abs(t.clientY - touchStart.y) : 0;
-    if(moved > 18) return;
-    const el = keyboardFocusTargetFromEvent(e) || keyboardFocusTargetFromEvent({target:document.elementFromPoint(t.clientX, t.clientY)});
-    if(el) focusKeyboardControl(el);
-  };
-  const focusFromPointer = e => {
-    if(!isIOSLikeDevice()) return;
-    if(e.pointerType && e.pointerType !== "touch") return;
-    const el = keyboardFocusTargetFromEvent(e);
-    if(el) focusKeyboardControl(el);
-  };
-  document.addEventListener("touchstart", rememberTouchStart, {capture:true, passive:true});
-  document.addEventListener("touchend", focusFromTouchEnd, {capture:true, passive:true});
-  document.addEventListener("pointerup", focusFromPointer, {capture:true, passive:true});
-  document.addEventListener("focusin", e => {
-    if(isKeyboardTextControl(e.target)) cleanupTouchDragAppointment({cancelMove:true});
-  }, {capture:true, passive:true});
-}
-
 function startMoveAppointment(id){
   movingAppointmentId = id;
   suppressAppointmentClick = true;
@@ -3024,7 +2994,10 @@ function renderCalendar(){
       if(skipUntil && timeToMinutes(t) < skipUntil) continue;
       const a=todays.find(x=>x.employeeId===emp.id && x.startTime===t);
       if(a){
-        const span=Math.max(1,Math.round(Number(a.duration)/getSlotIntervalMinutes())); skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
+        const rawSpan=Math.max(1,Math.round(Number(a.duration)/getSlotIntervalMinutes()));
+        const remainingSlots=Math.max(1, s.length - s.indexOf(t));
+        const span=Math.min(rawSpan, remainingSlots);
+        skipUntil=timeToMinutes(a.startTime)+Number(a.duration);
         grid.insertAdjacentHTML("beforeend",`<div class="slot employee-row-colored${timeToMinutes(t) % 60 === 0 ? " full-hour-slot" : ""}" ${employeeRowStyle(emp, `grid-column: span ${span};`)}><div class="${appointmentClass(a)}" data-id="${a.id}" draggable="true"><div class="name">${escapeHtml(a.customerName)} <span class="appointment-time-inline">${escapeHtml(a.startTime)}</span></div><div class="meta">${escapeHtml(a.serviceName||"Leistung")}</div><div class="meta appointment-phone-line">${escapeHtml(a.phone||"")}</div></div></div>`);
       }else{
         const pastIssue = isAppointmentDateTimeInPast(state.selectedDate, t) ? pastAppointmentWarningText() : "";
@@ -5207,5 +5180,6 @@ function showAppointment(id){
   $("appointmentDetails").innerHTML=`<p><strong>${escapeHtml(a.customerName)}</strong></p><p>${escapeHtml(a.serviceName || t("serviceFallback"))} · ${escapeHtml(a.startTime)} · ${a.duration} Min</p><p>${t("employeeLabel")}: ${escapeHtml(emp?.name||"")}</p><p>${t("phoneLabel")}: ${escapeHtml(a.phone||"-")}</p><p>${t("internalStatus")}: ${escapeHtml(employeeDailyRevenueStatusLabel(a.status||"Gebucht"))}</p><p>${t("priceLabel")}: ${money(a.price)}</p><p>${t("noteLabel")}: ${escapeHtml(a.note||"-")}</p>`;
   $("appointmentDialog").showModal();
 }
+installIpadKeyboardFocusFix();
 if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js")); }
 boot();
