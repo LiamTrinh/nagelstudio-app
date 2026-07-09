@@ -1443,6 +1443,8 @@ async function boot(){
     const currentDateInput = $("currentDateInput");
     if(currentDateInput) currentDateInput.value = state.selectedDate || todayISO();
 
+    installIPadKeyboardFocusFix();
+
     bindLicenseEvents();
 
     if(typeof startCurrentTimeTicker === "function") startCurrentTimeTicker();
@@ -2781,6 +2783,77 @@ function addService(){
   saveState(); renderServiceList(); renderServiceDatalist();
 }
 
+
+
+
+function isIOSLikeDevice(){
+  const ua = navigator.userAgent || "";
+  return /iPad|iPhone|iPod/i.test(ua) || ((navigator.maxTouchPoints || 0) > 1 && /Macintosh/i.test(ua));
+}
+
+function isKeyboardTextControl(el){
+  if(!el || el.disabled || el.readOnly) return false;
+  const tag = String(el.tagName || "").toLowerCase();
+  if(tag === "textarea") return true;
+  if(tag !== "input") return false;
+  const type = String(el.getAttribute("type") || "text").toLowerCase();
+  return ["text","search","tel","url","email","password","number","decimal"].includes(type);
+}
+
+function keyboardFocusTargetFromEvent(e){
+  let target = e.target;
+  if(!target) return null;
+  if(isKeyboardTextControl(target)) return target;
+  const label = target.closest ? target.closest("label") : null;
+  if(label){
+    const control = label.querySelector("input, textarea");
+    if(isKeyboardTextControl(control)) return control;
+  }
+  return null;
+}
+
+function focusKeyboardControl(el){
+  if(!isKeyboardTextControl(el)) return;
+  // Wenn ein Termin-Touch-Drag noch aktiv war, blockiert Safari manchmal das nächste Tastatur-Öffnen.
+  cleanupTouchDragAppointment({cancelMove:true});
+  try{ el.focus({preventScroll:false}); }catch(err){ try{ el.focus(); }catch(err2){} }
+  try{
+    const value = String(el.value || "");
+    if(typeof el.setSelectionRange === "function") el.setSelectionRange(value.length, value.length);
+  }catch(err){}
+}
+
+function installIPadKeyboardFocusFix(){
+  if(window.__ipadKeyboardFocusFixInstalled) return;
+  window.__ipadKeyboardFocusFixInstalled = true;
+  let touchStart = null;
+  const rememberTouchStart = e => {
+    const t = e.changedTouches && e.changedTouches[0];
+    if(!t) return;
+    touchStart = {x:t.clientX, y:t.clientY, target:e.target};
+  };
+  const focusFromTouchEnd = e => {
+    if(!isIOSLikeDevice()) return;
+    const t = e.changedTouches && e.changedTouches[0];
+    if(!t) return;
+    const moved = touchStart ? Math.abs(t.clientX - touchStart.x) + Math.abs(t.clientY - touchStart.y) : 0;
+    if(moved > 18) return;
+    const el = keyboardFocusTargetFromEvent(e) || keyboardFocusTargetFromEvent({target:document.elementFromPoint(t.clientX, t.clientY)});
+    if(el) focusKeyboardControl(el);
+  };
+  const focusFromPointer = e => {
+    if(!isIOSLikeDevice()) return;
+    if(e.pointerType && e.pointerType !== "touch") return;
+    const el = keyboardFocusTargetFromEvent(e);
+    if(el) focusKeyboardControl(el);
+  };
+  document.addEventListener("touchstart", rememberTouchStart, {capture:true, passive:true});
+  document.addEventListener("touchend", focusFromTouchEnd, {capture:true, passive:true});
+  document.addEventListener("pointerup", focusFromPointer, {capture:true, passive:true});
+  document.addEventListener("focusin", e => {
+    if(isKeyboardTextControl(e.target)) cleanupTouchDragAppointment({cancelMove:true});
+  }, {capture:true, passive:true});
+}
 
 function startMoveAppointment(id){
   movingAppointmentId = id;
